@@ -1,2 +1,12 @@
-posts/*.html
-tags/*.html
+#posts/*.html
+#tags/*.html
+#templates/*html
+js/MathJax/
+#font/
+#emoji/
+#css/
+#index.html
+generator-rs/
+.DS_Store
+gen
+rss.xml

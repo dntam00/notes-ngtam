@@ -1,0 +1,115 @@
+<html>
+
+<head>
+  <title>Mapping 1-1 relationship in hibernate | Huy's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Mapping 1-1 relationship in hibernate</h1>
+      <h2><a href="#preliminary" aria-hidden="true" class="anchor" id="preliminary"></a>Preliminary</h2>
+<p>Mọi số hữu tỉ đều có thể được viết dưới dạng $\frac{a}{b}$ trong đó $a \in \mathbb{Z}$</p>
+<p>Hibernate uses @OneToOne annotation to model 1-1 relationship in RDBMS. When we want to travel through entity
+relationship, we model these relationships as bidirectional ones. But with @OneToOne relationship, <code>hibernate</code> will
+trigger additional query to fetch child entity.</p>
+<h2><a href="#solution" aria-hidden="true" class="anchor" id="solution"></a>Solution</h2>
+<p>In <strong>hibernate context</strong>, an object will be identified by <code>id</code> and <code>entity type</code> (aka class). [1]</p>
+<p>When we model relationship as regular bidirectional @OneToOne like two entity below:</p>
+<pre><code class="language-java">public class QuizEntity {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @OneToOne(fetch = LAZY, mappedBy = &quot;quiz&quot;, optional = false)
+  private QuizResultEntity result;
+
+  // other fields
+}
+
+public class QuizResultEntity {
+
+  @OneToOne(fetch = LAZY, optional = false)
+  @JoinColumn(name = &quot;quiz_id&quot;)
+  private QuizEntity quiz;
+
+  // other fields
+}
+</code></pre>
+<p>and fetch an entity of QuizEntity, hibernate will trigger an additional query to check whether the associated QuizResultEntity object
+existing or not to provide appropriate strategy to initialize relationship. If QuizResultEntity object exists, hibernate will create
+a proxy, otherwise this field is set to <code>null</code>.</p>
+<p>So if we add <code>optional = false</code> properties to @OneToOne annotation, will hibernate trigger additional query?</p>
+<p>Unfortunately, based on [1], hibernate will still trigger additional query because the identifier of QuizResultEntity is <em>unknown</em>.</p>
+<p>-&gt; Use @OneToOne with <code>@MapIds</code> can solve this problem.</p>
+<pre><code class="language-java">public class QuizResultEntity {
+
+  @OneToOne(fetch = LAZY)
+  @MapsId
+  @JoinColumn(name = &quot;quiz_id&quot;)
+  private QuizEntity quiz;
+
+  // other fields
+}
+</code></pre>
+<p>By mapping this way, child entity will share the primary key with parent entity (foreign key and primary key) and when fetching parent entity,
+it will know the identifier of child entity, so the additional query is no longer triggered.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/java.html'>java</a><a class='topic-tag' href='/tags/hibernate.html'>hibernate</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>

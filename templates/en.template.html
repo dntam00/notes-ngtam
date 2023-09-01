@@ -1,49 +1,53 @@
 <html>
-    <head>
-        <title>{%title%} | Huy's Blog</title>
-        <meta charset="utf-8">
-        <meta http-equiv="content-type" content="text/html;"><meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
-        {%meta%}
-        <link href="../css/inconsolata.css" rel="stylesheet" type="text/css">
 
-        <link href="../css/theme-dark.css" rel="stylesheet" type="text/css">
-        <link href="../css/highlight/tomorrow-night.css" rel="stylesheet" type="text/css">
-        <link rel="stylesheet" href="../css/fontello.css">
-        <script src="../js/highlight.pack.js"></script>
-        <script src="../js/autosizing.js"></script>
-        <script src="../js/fetch.js"></script>
-        <script>
-        hljs.initHighlightingOnLoad();
-        </script>
-    </head>
-    <body>
-        <div class="header">
-          <a href="/en"><span class="avatar"></span><span class="header-link">Huy's Blog</span></a> 
-        </div>
-        <div class="container">
-            <div class="main">
-                {%content%}
-                <div id="fb-root"></div>
-                <script>(function(d, s, id) {
-                  var js, fjs = d.getElementsByTagName(s)[0];
-                  if (d.getElementById(id)) return;
-                  js = d.createElement(s); js.id = id;
-                  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.9&appId=462066520669072";
-                  fjs.parentNode.insertBefore(js, fjs);
-                }(document, 'script', 'facebook-jssdk'));</script>
-                <div class="fb-like" data-href="{%posturl%}" data-width="700" data-layout="standard" data-action="like" data-size="small" data-show-faces="true" data-share="true" data-colorscheme="dark"></div>
-            </div>
-        </div>
-	    <div class="footer">
-            <p>Created with <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
-            <div class="social">
-                <a target="_blank" href="http://twitter.com/huydotnet"><i class="icon-twitter-squared"></i></a>
-                <a target="_blank" href="http://github.com/huytd"><i class="icon-github-squared"></i></a>
-                <a target="_blank" href="https://thefullsnack.com/en"><i class="icon-emo-coffee"></i></a>
-            </div>
-        </div>
-        <script type="text/javascript" async src="https://cdn.rawgit.com/mathjax/MathJax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script type="text/x-mathjax-config">
+<head>
+  <title>{%title%} | Huy's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  {%meta%}
+  <link href="../css/inconsolata.css" rel="stylesheet" type="text/css">
+
+  <link href="../css/theme-dark.css" rel="stylesheet" type="text/css">
+  <link href="../css/highlight/tomorrow-night.css" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/en"><span class="avatar"></span><span class="header-link">Huy's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      {%content%}
+      <div id="fb-root"></div>
+      <!-- <script>(function (d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) return;
+          js = d.createElement(s); js.id = id;
+          js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.9&appId=462066520669072";
+          fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));</script> -->
+      <div class="fb-like" data-href="{%posturl%}" data-width="700" data-layout="standard" data-action="like"
+        data-size="small" data-show-faces="true" data-share="true" data-colorscheme="dark"></div>
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async
+    src="https://cdn.rawgit.com/mathjax/MathJax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+  <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
           tex2jax: {
             inlineMath: [['$','$'], ['\\(','\\)']],
@@ -51,7 +55,7 @@
           }
         });
         </script>
-        <script>
+  <!-- <script>
           // Tracking
           let serialize = function(obj) {
             var str = [];
@@ -82,11 +86,12 @@
             }
             store.setItem('huyBlogTracker', JSON.stringify(tracker));
           }
-        </script>
-       <style>
-        .fb_iframe_widget {
-          margin-top: 0;
-        }
-       </style>
-    </body>
+        </script> -->
+  <style>
+    .fb_iframe_widget {
+      margin-top: 0;
+    }
+  </style>
+</body>
+
 </html>

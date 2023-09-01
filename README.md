@@ -1,4 +1,4 @@
-# Ristretto: An opinionated blog engine
+<!-- # Ristretto: An opinionated blog engine
 
 This is the blog engine that powered my blog (https://thefullsnack.com)
 
@@ -51,4 +51,4 @@ Run the previewer:
 ./gen preview
 ```
 
-Then you can go to `http://localhost:3123/view/<file-name-without-the-extension>`, for example: `http://localhost:3123/view/life-with-robot`.
+Then you can go to `http://localhost:3123/view/<file-name-without-the-extension>`, for example: `http://localhost:3123/view/life-with-robot`. -->
