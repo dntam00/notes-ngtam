@@ -395,7 +395,7 @@ table tr:nth-last-child(1) td {
   border-radius: 23px;
   content: " ";
   display: inline-block;
-  background: url(../img/avatar.jpg) no-repeat center center;
+  background: url(../img/avatar.png) no-repeat center center;
   background-size: contain;
   float: left;
 }
@@ -884,7 +884,7 @@ figure#user_logo a,
 figure#user_foot a,
 nav#overlord.user_top figure#logo_top a,
 figure.kudo.complete div.filling {
-  background-image: url('../img/avatar.jpg')
+  background-image: url('../img/avatar.png')
 }
 
 figure.kudo.activated div.filling,

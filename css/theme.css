@@ -264,7 +264,9 @@ code {
   font-family: 'Iosevka Mono', monospace;
   font-feature-settings: initial;
   font-variant-ligatures: none;
-  font-size: 15px
+  font-size: 15px;
+  background: #f6f7f6;
+  color: #c5c8c6;
 }
 
 p>code,
@@ -453,7 +455,7 @@ table tr:nth-last-child(1) td {
   border-radius: 23px;
   content: " ";
   display: inline-block;
-  background: url(../img/avatar.jpg) no-repeat center center;
+  background: url(../img/avatar.png) no-repeat center center;
   background-size: contain;
   float: left
 }
@@ -943,7 +945,7 @@ figure#user_logo a,
 figure#user_foot a,
 nav#overlord.user_top figure#logo_top a,
 figure.kudo.complete div.filling {
-  background-image: url('../img/avatar.jpg')
+  background-image: url('../img/avatar.png')
 }
 
 figure.kudo.activated div.filling,
@@ -977,7 +979,7 @@ nav.pagination span.next a:hover,
 nav.pagination span.prev a:hover,
 section#readnext:hover p span,
 nav#overlord.user_top figure#logo_top {
-  border-color: #021216
+  border-color: #3F4F53;
 }
 
 figure.avatar,
@@ -992,7 +994,7 @@ nav.pagination span.next a:hover,
 nav.pagination span.prev a:hover,
 figure#user_logo a,
 figure#user_foot a {
-  background-color: #021216
+  background-color: #3F4F53;
 }
 
 h6.separator_title.read_first,

@@ -37,14 +37,15 @@
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Mapping 1-1 relationship in hibernate</h1>
-      <h2><a href="#preliminary" aria-hidden="true" class="anchor" id="preliminary"></a>Preliminary</h2>
-<p>Mọi số hữu tỉ đều có thể được viết dưới dạng $\frac{a}{b}$ trong đó $a \in \mathbb{Z}$</p>
-<p>Hibernate uses @OneToOne annotation to model 1-1 relationship in RDBMS. When we want to travel through entity
-relationship, we model these relationships as bidirectional ones. But with @OneToOne relationship, <code>hibernate</code> will
-trigger additional query to fetch child entity.</p>
+      <h2><a href="#context" aria-hidden="true" class="anchor" id="context"></a>Context</h2>
+<ul>
+<li>Hibernate uses <code>@OneToOne</code> annotation to model 1-1 relationship in RDBMS. When we want to travel through entity
+relationship, we model these relationships as bidirectional ones. But with <code>one-to-one</code> relationship, <code>hibernate</code> will
+trigger additional query to fetch child entity if we map the relationship like others relationship.</li>
+<li>In <strong>hibernate context</strong>, an object will be identified by <code>id</code> and <code>entity type</code> (aka class) [1].</li>
+</ul>
 <h2><a href="#solution" aria-hidden="true" class="anchor" id="solution"></a>Solution</h2>
-<p>In <strong>hibernate context</strong>, an object will be identified by <code>id</code> and <code>entity type</code> (aka class). [1]</p>
-<p>When we model relationship as regular bidirectional @OneToOne like two entity below:</p>
+<p>When we model relationship as regular bidirectional <code>one-to-one</code> relationship like two entity below:</p>
 <pre><code class="language-java">public class QuizEntity {
 
   @Id
@@ -59,6 +60,10 @@ trigger additional query to fetch child entity.</p>
 
 public class QuizResultEntity {
 
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
   @OneToOne(fetch = LAZY, optional = false)
   @JoinColumn(name = &quot;quiz_id&quot;)
   private QuizEntity quiz;
@@ -66,13 +71,22 @@ public class QuizResultEntity {
   // other fields
 }
 </code></pre>
-<p>and fetch an entity of QuizEntity, hibernate will trigger an additional query to check whether the associated QuizResultEntity object
+<p>and fetch an entity of <code>QuizEntity type</code>, hibernate will trigger an additional query to check whether the associated QuizResultEntity object
 existing or not to provide appropriate strategy to initialize relationship. If QuizResultEntity object exists, hibernate will create
 a proxy, otherwise this field is set to <code>null</code>.</p>
-<p>So if we add <code>optional = false</code> properties to @OneToOne annotation, will hibernate trigger additional query?</p>
+<p>So if we add <code>optional = false</code> properties to <code>@OneToOne</code> annotation, will hibernate trigger additional query?</p>
 <p>Unfortunately, based on [1], hibernate will still trigger additional query because the identifier of QuizResultEntity is <em>unknown</em>.</p>
-<p>-&gt; Use @OneToOne with <code>@MapIds</code> can solve this problem.</p>
+<p>Query log:</p>
+<pre><code class="language-sql">select q1_0.id from quiz q1_0 where q1_0.id=?
+select q1_0.id,q1_0.quiz_id from quiz_result q1_0 where q1_0.quiz_id=?
+</code></pre>
+<p>-&gt; Use <code>@OneToOne</code> mapping with <code>@MapIds</code> at <code>QuizResultEntity</code> side can solve this problem. This will work because at <code>QuizEntity</code> side, hibernate knows the <code>ID</code> of associated <code>QuizResult</code> entity when it queries data.</p>
 <pre><code class="language-java">public class QuizResultEntity {
+
+  @Id
+  // Note: we don't use auto generate strategy here.
+  // @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
   @OneToOne(fetch = LAZY)
   @MapsId
@@ -82,8 +96,10 @@ a proxy, otherwise this field is set to <code>null</code>.</p>
   // other fields
 }
 </code></pre>
-<p>By mapping this way, child entity will share the primary key with parent entity (foreign key and primary key) and when fetching parent entity,
-it will know the identifier of child entity, so the additional query is no longer triggered.</p>
+<p>Query log:</p>
+<pre><code class="language-sql">select q1_0.id from quiz q1_0 where q1_0.id=?
+</code></pre>
+<p>Source: <a href="https://github.com/dangngoctam00/learning-spring/tree/master/one-to-one">one to one mapping</a></p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/java.html'>java</a><a class='topic-tag' href='/tags/hibernate.html'>hibernate</a></div>
       <!-- <div class="copyright">
