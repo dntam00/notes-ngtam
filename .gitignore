@@ -6,7 +6,7 @@ js/MathJax/
 #emoji/
 #css/
 #index.html
-generator-rs/
+#generator-rs/
 .DS_Store
 gen
 rss.xml
