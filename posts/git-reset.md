@@ -70,7 +70,7 @@ With the above status, if we run command
 
 This option resets the history and staging area to target commit (we could verify the status of staging area by command `git ls-files -s` mentioned above). *Any file which is difference from the state of staging area at target commit will be moved to working directory.*
 
-From the state of git folder after running command in `--hard` part, we add `file_5.txt` to git add create a new commit for this change and run command `git reset` with `--mixed` option
+From the state of git folder after running command in `--hard` part, we add `file_5.txt` to git and create a new commit for this change, then run command `git reset` with `--mixed` option
 
 ```bash
     $ git add file_5.txt
@@ -91,7 +91,7 @@ Verify result:
     100644 fd84a7bbfc96edac1e356a4a1bd61fe0fbc682c0 0       file_1.txt
 ```
 
-The result is very aligned with description above. At commit 1, we did't have file `file_5.txt`, so git detects a difference here and ***remove this file from tracking***, the staging area is **empty** because all files added to this area has already commited. So what will happen if at commit 1, we have committed file `file_5.txt`? We could based on the description to answer this question, file `file_5.txt` will be put in working directory if it has been changed in the reseted commits, otherwise, nothing happend.
+The result is very aligned with description above. At commit 1, we did't have file `file_5.txt`, so git detects a difference here and ***remove this file from tracking***, the staging area is **empty** because all files added to this area has already commited. So what will happen if at commit 1, we have committed file `file_5.txt`? The answer is file `file_5.txt` will be put in working directory if it has been changed in the reseted commits, otherwise, nothing happend.
 
 > **Usage:** We could use this option to reset commit and keep all changes from `HEAD^n` commit to `HEAD` (state before applying git reset command) to prepare for new commit, because these changes is put into working area so you could decide which files will be put into next commit.
 

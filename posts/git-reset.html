@@ -89,7 +89,7 @@
 <p><code>file_5.txt</code> is still being present because it has not been added to git, git leaves these file untouch.</p>
 <h2><a href="#--mixed" aria-hidden="true" class="anchor" id="--mixed"></a>--mixed</h2>
 <p>This option resets the history and staging area to target commit (we could verify the status of staging area by command <code>git ls-files -s</code> mentioned above). <em>Any file which is difference from the state of staging area at target commit will be moved to working directory.</em></p>
-<p>From the state of git folder after running command in <code>--hard</code> part, we add <code>file_5.txt</code> to git add create a new commit for this change and run command <code>git reset</code> with <code>--mixed</code> option</p>
+<p>From the state of git folder after running command in <code>--hard</code> part, we add <code>file_5.txt</code> to git and create a new commit for this change, then run command <code>git reset</code> with <code>--mixed</code> option</p>
 <pre><code class="language-bash">    $ git add file_5.txt
     $ git commit -m &quot;add file 5&quot;
     $ git reset --mixed HEAD^1
@@ -105,7 +105,7 @@
     $ git ls-files -s
     100644 fd84a7bbfc96edac1e356a4a1bd61fe0fbc682c0 0       file_1.txt
 </code></pre>
-<p>The result is very aligned with description above. At commit 1, we did't have file <code>file_5.txt</code>, so git detects a difference here and <em><strong>remove this file from tracking</strong></em>, the staging area is <strong>empty</strong> because all files added to this area has already commited. So what will happen if at commit 1, we have committed file <code>file_5.txt</code>? We could based on the description to answer this question, file <code>file_5.txt</code> will be put in working directory if it has been changed in the reseted commits, otherwise, nothing happend.</p>
+<p>The result is very aligned with description above. At commit 1, we did't have file <code>file_5.txt</code>, so git detects a difference here and <em><strong>remove this file from tracking</strong></em>, the staging area is <strong>empty</strong> because all files added to this area has already commited. So what will happen if at commit 1, we have committed file <code>file_5.txt</code>? The answer is file <code>file_5.txt</code> will be put in working directory if it has been changed in the reseted commits, otherwise, nothing happend.</p>
 <blockquote>
 <p><strong>Usage:</strong> We could use this option to reset commit and keep all changes from <code>HEAD^n</code> commit to <code>HEAD</code> (state before applying git reset command) to prepare for new commit, because these changes is put into working area so you could decide which files will be put into next commit.</p>
 </blockquote>
