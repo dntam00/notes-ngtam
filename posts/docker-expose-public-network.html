@@ -1,0 +1,106 @@
+<html>
+
+<head>
+  <title>Docker expose and publish command | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Docker expose and publish command</h1>
+      <p>Yesterday, I got stuck when trying to write a docker compose file of several services including redis, mysql and web services. The log of all web services showed that they couldn't connect to mysql database, after trying debugging and reading documentation, I've found that I misunderstood the usage of <code>expose</code> and <code>publish</code> command in dockerfile and docker-compose file. So I write this post to explain how <code>expose</code> and <code>publish</code> command work.</p>
+<h2><a href="#docker-network" aria-hidden="true" class="anchor" id="docker-network"></a>Docker network</h2>
+<!-- <span style="color:#f03c15"></span> -->
+<p>In the scope of this post, I would only mention <code>docker bridge</code> network mode. Let's cite the definition from oficial documentation first:</p>
+<blockquote>
+<p><code>A bridge network uses a software bridge which allows containers connected to the same bridge network to communicate, while providing isolation from containers which are not connected to that bridge network. The Docker bridge driver automatically installs rules in the host machine so that containers on different bridge networks cannot communicate directly with each other.</code></p>
+</blockquote>
+<p>In the above definition, you could easily see the function of this network driver: <span style="color:#f03c15">allows containers connected to the same bridge network to communicate</span>, so basically you can commiunicate with others container through container name and port. This driver is the default one when you don't specify the driver of container.</p>
+<pre><code class="language-bash">    $ docker network ls --filter &quot;name=bridge&quot;
+    NETWORK ID     NAME      DRIVER    SCOPE
+    4064fdbdf055   bridge    bridge    local
+</code></pre>
+<h2><a href="#expose" aria-hidden="true" class="anchor" id="expose"></a>Expose</h2>
+<p>The <code>expose</code> is just an instruction from the author of dockerfile for whom intends to use the image built from the dockerfile, it doens't actually publish the port of container.</p>
+<h2><a href="#publish" aria-hidden="true" class="anchor" id="publish"></a>Publish</h2>
+<p>Firstly, please see the below image for docker network.</p>
+<p><img src="img/docker-network.png" alt="" /></p>
+<p>If we don't public ports, we cannot access the container through the outside, like typing <code>https://127.0.0.1/path</code> in search bar of web browser of host machine. We could do this through <code>-p</code> option when running docker, or through port mapping of docker compose.</p>
+<p>Example:</p>
+<pre><code class="language-shell">    $ docker run -p 5000:3000 --name signalling --rm signalling:1.0
+</code></pre>
+<pre><code class="language-yaml">    signal_server_1: &amp;signal_server_1
+    container_name: signal_server_1
+    build:
+     context: ./../signalling
+    ports:
+      - &quot;5000:3000&quot;
+    restart: always
+    depends_on:
+      - matchmaker
+      - redis
+</code></pre>
+<p>Behind the scenes, docker do all the things for us like creating the necessary Linux bridges, virtual network interface, ip table rules, routing,...</p>
+<p>Now, you can access the container through port <code>5000</code>, but do you see the difference of boundary in the above image?</p>
+<p>Port <code>5000</code> is the mapping between the host manchine and docker, could I use this port to connect web container from database container? <span style="color:#f03c15">The answer is no</span>, we cannot do something like</p>
+<pre><code class="language-shell">    curl https://web_container:5000
+</code></pre>
+<p>from inside the database container. This is also the thing I want to focus in this post. We can only access the <code>web container</code> through port <code>3000</code> because these two container are in the same network.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/docker.html'>docker</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
