@@ -1,0 +1,156 @@
+<html>
+
+<head>
+  <title>Networking (1) I/O multiplexing | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Networking (1) I/O multiplexing</h1>
+      <p>Trong 2 tháng gần đây, mỗi ngày mình đều loay hoay với việc benchmark 1 opensource có liên quan tới chủ đề webRTC. Với 1 opensource cũng đã hơn chục năm, rất nhiều sao trên github nhưng kết quả test lại không đạt được như kì vọng về số connections, bitrate lẫn các metrics của server. Vì mình chưa có kinh nghiệm nhiều về mảng này nên chọn cách vào đọc source để hiểu được mô hình test cũng như đảm bảo mình đang viết đúng script test, và sau khi mày mò một thời gian dài, cuối cùng mình cũng thấy được việc mình có vấn đề trong cách tiếp cận một mảng kiến thức mới, sau khi đọc source và tìm hiểu thêm về webRTC, mình mới thực sự hiểu document của các tác giả :”).</p>
+<p>Mục tiêu đặt ra là test trên môi trường nội bộ của công ty và và sau đó là trên Oracle với server riêng lẻ và cluster. Tưởng chừng như sau khi có số liệu trên môi trường nội bộ của công ty rồi việc test trên Oracle server cũng suông sẻ nhưng không, nó còn đau khổ hơn xD, lại mất 2 3 tuần, đến lúc tuyệt vọng, anh senior team mình bảo mình yêu cầu team infrastructure cùng tham gia để tìm hiểu vấn đề, và cuối cùng thì thật là abcxyz khi họ nhờ Oracle team và biết vấn đề nằm ở network giữa 2 region của server.</p>
+<p>Anyway trước khi tới được kết quả, mình cũng đã có cơ hội tìm hiểu về một vài vấn đề liên quan đến network (chủ yếu là ở linux OS), những thứ mà hồi xưa học môn mạng máy tính ở trường không hiểu gì :))))),  nên vì thế, mình dự định viết một vài bài về những thứ mình đã biết trong 2 tháng vừa qua.</p>
+<p>Bài đầu tiên trong chuỗi này (và cũng không biết sẽ có bao nhiêu bài), về mô hình I/O multiplexing.</p>
+<p><strong>File Descriptor (FD): “In Linux, everything is a file”</strong></p>
+<p>Trong linux, FD là khái niệm chỉ sự định danh cho tệp tin, hoặc các tài nguyên I/O khác như socket khi một process thao tác với các tài nguyên này. Kernel lưu trữ thông tin các file được mở của mỗi process và FD là giá trị index trỏ tới các bản ghi này.</p>
+<p>Mô hình I/O multiplexing hỗ trợ 1 thread có thể theo dõi vào nhiều FD cùng 1 lúc, bị block, chờ và nhận được thông báo về các FD sẵn sàng cho việc đọc dữ liệu. Ưu điểm của mô hình này so với mô hình truyền thống I/O blocking là giảm context switch giữa các threads vì chúng ta chỉ có 1 main thread để nhận request, xử lý cũng như đọc gói tin, tránh được race condition trong lập trình multithreads, có thể handle được số lượng lớn requests cùng lúc, tuy nhiên, mô hình này lại bị giới hạn bởi 1 CPU.</p>
+<p>Các system call giúp bạn gọi Linux theo dõi các FD là poll, select và epoll.</p>
+<p><strong>poll/select</strong></p>
+<pre><code class="language-go">int select(int nfds,
+           fd_set *restrict readfds,
+           fd_set *restrict writefds,
+           fd_set *restrict errorfds,
+           struct timeval *restrict timeout);
+</code></pre>
+<p>Cách <code>select</code> hoạt động là truyền vào một danh sách các FD cần theo dõi và timeout, kernel sẽ lặp qua lần lượt các FD và kiểm tra xem các FD có thể đọc, ghi hay có khả năng lỗi. Giá trị timeout quyết định thời gian thread bị blocked khi hàm select được gọi.</p>
+<ul>
+<li>Hàm <code>select</code> sẽ block thread cho tới khi có FD sẵn sàng cho việc đọc, ghi, có khả năng lỗi hoặc thời gian timeout đã trôi qua</li>
+<li>Nếu timeout được gán giá trị <code>NULL</code>, hàm select sẽ block thread cho tới khi nào có FD sẵn sàng</li>
+<li>Nếu timeout được gán giá trị 0, hàm select sẽ return ngay lập tức</li>
+</ul>
+<p><img src="img/io-multiplexing.png" alt="I/O Multiplexing" /></p>
+<p>Mô hình này có nhiều nhược điểm:</p>
+<ul>
+<li>Số FD được mở bởi 1 process bị giới hạn bởi giá trị FD_SETSIZE, giá trị mặc định là 1024</li>
+<li>FD cần được theo dõi được truyền từ user space sang kernel state, đây là một chi phí CPU lớn khi có nhiều FD cần theo dõi</li>
+<li>Kernel kiểm tra các FD bằng cách lặp qua tất cả giá trị, độ phức tạp là O(n), vì vậy CPU time cần để sử lý sẽ tăng tuyến tính với số lượng FD cần kiểm tra</li>
+</ul>
+<p><strong>epoll</strong></p>
+<p><code>epoll</code> là một phiên bản cải tiến của poll/select, giải quyết vấn đề hiệu năng và số lượng FD.</p>
+<pre><code class="language-go">int listenfd = socket(AF_INET, SOCK_STREAM, 0);   
+bind(listenfd, ...)
+listen(listenfd, ...)
+
+int epfd = epoll_create(...);
+epoll_ctl(epfd,...);
+
+while(1){
+    int n = epoll_wait(...)
+    for(data from socket){
+        // TODO
+    }
+}
+</code></pre>
+<p>Đầu tiên tạo một epoll object với hàm <code>epoll_create</code>, cấu trúc của 1 epoll instance:</p>
+<ul>
+<li>danh sách các FD để theo dõi với cấu trúc red-black tree</li>
+<li>danh sách các FD sẵn sàng với cấu trúc linked list</li>
+</ul>
+<p>FD được theo dõi được thêm vào epoll instant với hàm <code>epoll_ctl</code>, cuối cùng, gọi hàm <code>epoll_wait</code> để block và lắng nghe I/O events ở những FD đã được thêm vào. Khi một hoặc nhiều FD sẵn sàng, hàm <code>epoll_wait</code> return ngay lập tức.</p>
+<p>Ưu điểm của epoll:</p>
+<ul>
+<li>FD được lưu trong read black tree, vì vậy có thể được sử dụng kết hợp với hàm callback của hàm <code>epoll_ctl</code> để lấy được tất cả các FD sẵn sàng.</li>
+<li>Tất cả các FD được lưu trữ ở kernel space trước khi gọi hàm <code>epoll_wait</code>, tránh việc truyền dữ liệu nhiều giữa user space và kernel space.</li>
+<li>Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.</li>
+</ul>
+<p><strong>Level-Triggered vs Edge-Triggered</strong></p>
+<ul>
+<li>get a list of every file descriptor you’re interested in that is readable (“level-triggered”)</li>
+<li>get notifications every time a file descriptor becomes readable (“edge-triggered”)</li>
+</ul>
+<p>Mặc định, <code>epoll</code> sẽ hoạt động với <code>level-triggered</code>, điều này làm nó gần như giống với <code>poll/select</code> nhưng tối ưu hơn về hiệu năng.</p>
+<p>Ngoài ra, <code>epoll</code> còn có thể hoạt động với <code>edge-triggered</code>, <code>epoll_wait</code> trả về cho chúng ta có sự thay đổi nào trên FD kể từ lần gọi trước hay không.</p>
+<p>Để sử dụng <code>edge-triggered</code> với <code>epoll</code>, chúng ta sử dụng cờ <code>EPOLLET</code> ở <code>ev.events</code> khi gọi hàm <code>epoll_ctl</code>.</p>
+<p>Để làm rõ hơn sự khác nhau giữa 2 level, xem ví dụ sau:
+Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có các bước như sau:</p>
+<ol>
+<li>Dữ liệu đến socket.</li>
+<li>Thực hiện gọi hàm <code>epoll_wait</code>, kết quả trả về của hàm này là FD đã sẵn sàng cho dù chúng ta đang sử dụng <code>level-triggered</code> hay <code>edged-triggered</code>.</li>
+<li>Thực hiện gọi hàm <code>epoll_wait</code> 1 lần nữa.</li>
+</ol>
+<p>Nếu chúng ta đang sử dụng <code>level-triggered</code>, kết quả sẽ trả về FD đang sẵn sàng, ngược lại, đối với <code>edge-triggered</code> thì lệnh gọi hàm sẽ block vì không có dữ liệu mới đến socket. Để tránh bị block, chúng ta nên sử dụng <code>edge-triggered</code> với nonblocking FD và cờ EAGAIN để kiểm tra liệu FD có dữ liệu mới hay chưa.</p>
+<p><strong>Tổng kết</strong></p>
+<p>Qua bài viết này, mình đã tóm gọn lại về tổng quát cách mô hình I/O multiplexing hoạt động với các cơ chế ở đằng sau như poll, select và epoll.</p>
+<p>Hiện nay, nhiều công cụ và framework nổi tiếng cũng áp dụng <code>epoll</code>:</p>
+<ul>
+<li>Node.js xài <a href="https://github.com/libuv/libuv">libuv</a>.</li>
+<li>Python, Coturn (đây là anh chàng mà mình đau khổ hơn 2 tháng .-.) xài <a href="https://blog.gevent.org/2011/04/28/libev-and-libevent/">libev/libevent</a>.</li>
+<li>Java xài <a href="https://netty.io/">Netty</a>.</li>
+<li>Golang thì tự code (<a href="https://github.com/golang/go/blob/master/src/runtime/netpoll_epoll.go">netpoller</a>).</li>
+</ul>
+<p><strong>Tham khảo</strong></p>
+<ul>
+<li><a href="https://www.sobyte.net/post/2022-01/go-netpoller/#io-multiplexing">https://www.sobyte.net/post/2022-01/go-netpoller/#io-multiplexing</a></li>
+<li><a href="https://tuhuynh.com/posts/nio-under-the-hood/">https://tuhuynh.com/posts/nio-under-the-hood/</a></li>
+<li><a href="https://www.quora.com/How-can-Redis-give-multiple-responses-for-multiple-users-with-a-single-thread-mechanism">https://www.quora.com/How-can-Redis-give-multiple-responses-for-multiple-users-with-a-single-thread-mechanism</a></li>
+<li>Sách: <a href="https://man7.org/tlpi/">The Linux Programming Interface - Chapter 63: Alternative I/O</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/golang.html'>golang</a><a class='topic-tag' href='/tags/networking.html'>networking</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
