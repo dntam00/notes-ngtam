@@ -84,4 +84,4 @@ Query log:
 select q1_0.id from quiz q1_0 where q1_0.id=?
 ```
 
-Source: [one to one mapping](https://github.com/dangngoctam00/learning-spring/tree/master/one-to-one)
+Example source code: https://github.com/dangngoctam00/learning-spring/tree/master/one-to-one

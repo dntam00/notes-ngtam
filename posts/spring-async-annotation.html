@@ -1,0 +1,295 @@
+<html>
+
+<head>
+  <title>Async annotation in Spring | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Async annotation in Spring</h1>
+      <p>Spring - framework toi yeu. :&quot;)</p>
+<p>Khi sử dụng Spring để phát triển các ứng dụng web, annotation là một phần không thể thiếu,
+từ thuở bắt đầu, Spring sử dụng xml để cấu hình mọi thứ, nhưng rõ ràng cách này rất cồng kềnh và mất thời gian,
+thời gian trôi qua, mọi thứ đều phát triển, Spring cũng vậy, thay vì sử dụng xml,
+bạn có thể sử dụng các annotation để cấu hình,
+lập trình với chương trình của mình.
+Tuy nhiên, có bao giờ bạn thắc mắc tại điều gì xảy ra bên dưới những cái annotation đó?
+Sau khi sử dụng framework 1 thời gian, mình cũng cố gắng tìm hiểu những thứ đó,
+và nó dẫn tới bài này (và 1 vài bài tiếp theo?). Để hiểu được nguyên lí đằng sau những annotation,
+bạn cần tìm hiểu về các phần sau:</p>
+<ul>
+<li>Bean life cycle</li>
+<li>Spring AOP</li>
+<li>Dynamic proxy</li>
+</ul>
+<p>—-----</p>
+<p>Trong bài này, mình sẽ viết về annotation <code>Async</code>.</p>
+<p>Annotation này cho phép bạn thực hiện lời gọi hàm bất đồng bộ,
+hàm được gọi sẽ được thực thi trong một thread khác và hàm gọi không cần chờ hàm được gọi thực thi xong để tiếp tục hay kết thúc,
+điều này giúp bạn tối ưu performance khi có những công việc tốn thời gian mà không cần thực thi theo thứ tự,
+một trường hợp thường gặp đó là việc gửi thông báo cho người dùng.</p>
+<p>Để dùng annotation này, bạn chỉ cần sử dụng:</p>
+<ul>
+<li><code>@EnableAsync</code></li>
+<li><code>@Async</code></li>
+<li>Thread pool executor</li>
+</ul>
+<pre><code class="language-java">@Service
+@Slf4j
+@EnableAsync
+public class ExecutorService {
+
+    @Async(&quot;asyncExecutor&quot;)
+    public void sample() {
+        log.info(&quot;hello :))&quot;);
+    }
+}
+
+@Configuration
+@Slf4j
+@RequiredArgsConstructor
+public class ExecutorThreadPool {
+
+    private final ThreadPoolProperties properties;
+
+    @Bean(name = &quot;asyncExecutor&quot;)
+    public Executor asyncExecutor() throws InterruptedException {
+        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+
+        taskExecutor.setCorePoolSize(properties.getCoreSize());
+        taskExecutor.setMaxPoolSize(properties.getMaxSize());
+        taskExecutor.setQueueCapacity(properties.getQueueSize());
+        taskExecutor.setThreadNamePrefix(properties.getPrefixName());
+        taskExecutor.setPrestartAllCoreThreads(properties.isPreStart());
+        taskExecutor.setRejectedExecutionHandler(properties.getPolicy().getHandler());
+        taskExecutor.setBeanName(&quot;asyncExecutor&quot;);
+        taskExecutor.initialize();
+        log.info(&quot;Initialize ThreadPoolTaskExecutor: {}&quot;, properties);
+        printStats(taskExecutor);
+
+        return taskExecutor;
+    }
+}
+</code></pre>
+<p>Về lí thuyết, bạn có thể không cần sử dụng thread pool executor vì Spring sẽ tự động quản lý,
+nhưng trong thực tế, chúng ta nên cấu hình một thread pool tuỳ thuộc vào nhu cầu và cấu hình của server,
+việc này sẽ mang lại nhiều lợi ích:</p>
+<ul>
+<li>quản lý được tài nguyên được sử dụng</li>
+<li>chỉ định prefix tên thread, dễ dàng trace log</li>
+<li>chỉ định được queue size</li>
+<li>chỉ định cách executor xử lý khi số job vượt quá những thông số đã được cấu hình</li>
+</ul>
+<p>Tiếp theo, làm thế nào Spring xử lý được annotation <code>@Async</code>?
+Câu trả lời nằm ở dynamic proxy.</p>
+<p><img src="img/proxy-async.png" alt="Proxy async object" /></p>
+<p>Flow hoạt động:</p>
+<ul>
+<li><code>object caller</code> giữ không phải là <code>target object</code> mà là <code>proxy object</code>,
+điều này được hiện thực khi Spring khởi tạo chương trình</li>
+<li><code>proxy object</code> có hàm <code>method</code> giống với <code>target object</code>,
+trong hàm này nó hiện thực thêm logic submit task vào queue,
+task này sẽ chứa logic gọi hàm <code>method</code> của <code>target object</code></li>
+<li><code>executor</code> sẽ chịu trách nhiệm lấy task từ queue và thực thi</li>
+</ul>
+<p>Vẫn chưa rõ ràng lắm, vậy <code>proxy object</code> ở đâu ra mà nó được inject vào <code>caller object</code>?</p>
+<p>Câu trả lời nằm ở lúc Spring khởi tạo bean,
+Spring chia quá trình khởi tạo ra nhiều giai đoạn:</p>
+<ul>
+<li>Instantiation</li>
+<li>Populating Properties</li>
+<li>Pre-Initialization</li>
+<li>AfterPropertiesSet</li>
+<li>Custom Initialization</li>
+<li><font color="red">Post-Initialization</font></li>
+</ul>
+<p>Ở giai đoạn <code>Post-Initialization</code>, Spring sẽ xác định bean có cần được bọc lại
+bởi object proxy hay không? Đây là đoạn code:</p>
+<pre><code class="language-java">AbstractAdvisingBeanPostProcessor#postProcessAfterInitialization
+
+public Object postProcessAfterInitialization(Object bean, String beanName) {
+    if (this.advisor == null || bean instanceof AopInfrastructureBean) {
+        // Ignore AOP infrastructure such as scoped proxies.
+        return bean;
+    }
+
+    if (bean instanceof Advised advised) {
+        if (!advised.isFrozen() &amp;&amp; isEligible(AopUtils.getTargetClass(bean))) {
+            // Add our local Advisor to the existing proxy's Advisor chain.
+            if (this.beforeExistingAdvisors) {
+                    advised.addAdvisor(0, this.advisor);
+            }
+            
+            // omitted for briefly....
+            
+            return bean;
+        }
+    }
+
+    if (isEligible(bean, beanName)) {
+        ProxyFactory proxyFactory = prepareProxyFactory(bean, beanName);
+        proxyFactory.addAdvisor(this.advisor);
+        customizeProxyFactory(proxyFactory);
+        
+        // omitted for briefly....
+        
+        return proxyFactory.getProxy(classLoader);
+    }
+
+    // No proxy needed.
+    return bean;
+}
+</code></pre>
+<p>Trong trường hợp object proxy được tạo, chú ý cách mà Spring khởi tạo proxy factory,
+framework thêm <code>advisor</code> vào <code>proxy factory</code> trước khi tạo ra object proxy
+bằng câu lệnh <code>proxyFactory.getProxy(classLoader)</code>.</p>
+<p><code>Advisor</code> trong trường hợp của <code>@Async</code> annotation là <code>AsyncAnnotationAdvisor</code>,
+dưới đây là đoạn code khởi tạo <code>advisor</code>:</p>
+<pre><code class="language-java">public AsyncAnnotationAdvisor(@Nullable Supplier&lt;Executor&gt; executor, 
+            @Nullable Supplier&lt;AsyncUncaughtExceptionHandler&gt; exceptionHandler) {
+
+    Set&lt;Class&lt;? extends Annotation&gt;&gt; asyncAnnotationTypes = new LinkedHashSet&lt;&gt;(2);
+    asyncAnnotationTypes.add(Async.class);
+
+    ClassLoader classLoader = AsyncAnnotationAdvisor.class.getClassLoader();
+    try {
+        asyncAnnotationTypes.add((Class&lt;? extends Annotation&gt;)
+                ClassUtils.forName(&quot;jakarta.ejb.Asynchronous&quot;, classLoader));
+    }
+    catch (ClassNotFoundException ex) {
+        // If EJB API not present, simply ignore.
+    }
+    try {
+        asyncAnnotationTypes.add((Class&lt;? extends Annotation&gt;)
+                ClassUtils.forName(&quot;jakarta.enterprise.concurrent.Asynchronous&quot;, classLoader));
+    }
+    catch (ClassNotFoundException ex) {
+        // If Jakarta Concurrent API not present, simply ignore.
+    }
+
+    this.advice = buildAdvice(executor, exceptionHandler);
+    this.pointcut = buildPointcut(asyncAnnotationTypes);
+}
+
+protected Advice buildAdvice(@Nullable Supplier&lt;Executor&gt; executor, 
+                             @Nullable Supplier&lt;AsyncUncaughtExceptionHandler&gt; exceptionHandler) {
+
+    AnnotationAsyncExecutionInterceptor interceptor = new AnnotationAsyncExecutionInterceptor(null);
+    interceptor.configure(executor, exceptionHandler);
+    return interceptor;
+}
+</code></pre>
+<p><code>Advice</code> được sử dụng là <code>AnnotationAsyncExecutionInterceptor</code>, vậy đến đây,
+bạn có thể đoạn rằng khi gọi hàm được đánh annotation <code>@Async</code> của <code>target object</code>,
+một hàm trong class <code>AnnotationAsyncExecutionInterceptor</code> hoặc
+parent class của nó sẽ được gọi. Để xác thực, mình dùng Intellij để debug:</p>
+<p><img src="img/interceptor.png" alt="Interceptor" /></p>
+<p>khi mình gọi hàm sample, các bạn thấy nó nằm trong object proxy <code>$$SpringCGLIB$$0</code>,
+và cuối cùng đến hàm invoke  của class <code>AsyncExecutionInterceptor</code>,
+class này là parent của class <code>AnnotationAsyncExecutionInterceptor</code>
+như mình đề cập ở trên.</p>
+<pre><code class="language-java">public Object invoke(final MethodInvocation invocation) throws Throwable {
+    Class&lt;?&gt; targetClass = (invocation.getThis() != null ? AopUtils.getTargetClass(invocation.getThis()) : null);
+    Method specificMethod = ClassUtils.getMostSpecificMethod(invocation.getMethod(), targetClass);
+    final Method userDeclaredMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);
+
+    AsyncTaskExecutor executor = determineAsyncExecutor(userDeclaredMethod);
+    if (executor == null) {
+        throw new IllegalStateException(
+                &quot;No executor specified and no default executor set on AsyncExecutionInterceptor either&quot;);
+    }
+
+    Callable&lt;Object&gt; task = () -&gt; {
+        try {
+            Object result = invocation.proceed();
+            if (result instanceof Future&lt;?&gt; future) {
+                return future.get();
+            }
+        }
+        catch (ExecutionException ex) {
+            handleError(ex.getCause(), userDeclaredMethod, invocation.getArguments());
+        }
+        catch (Throwable ex) {
+            handleError(ex, userDeclaredMethod, invocation.getArguments());
+        }
+        return null;
+    };
+
+    return doSubmit(task, executor, invocation.getMethod().getReturnType());
+}
+</code></pre>
+<p>ở hàm <code>invoke</code>, Spring wrap đoạn code gọi hàm <code>invocation.proceed()</code> lại
+và submit vào executor để nó thực thi bất đồng bộ, lưu ý <code>invocation.proceed()</code>
+có thể là target method,
+hoặc một method <code>invoke</code> khác trong chain bởi vì chúng ta có thể áp dụng
+nhiều aspect cho cùng một method.</p>
+<p>Cuối cùng, mình chạy chương trình và monitor thread pool executor để xem thống kê:</p>
+<pre><code class="language-bash">2024-04-30T14:14:23.958+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Pool Size: 2
+2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Active Threads: 0
+2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks Completed: 24
+2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks in Queue: 0
+</code></pre>
+<p>Qua bài viết này mình đã phân tích cách Spring khởi tạo cũng như hiện thực annotation <code>@Async</code>,
+để có thể hiểu rõ và ứng dụng tương tự vào các annotation khác của Spring,
+bạn có thể sẽ phải nghiên cứu kĩ hơn các phần mình đề cập ở đầu bài viết.</p>
+<p>Bạn có thể tham khảo source code ở đây: <a href="https://github.com/dangngoctam00/learning-spring/tree/master/asycn-annotation">https://github.com/dangngoctam00/learning-spring/tree/master/asycn-annotation</a></p>
+<p>Cảm ơn bạn đã đọc đến đây, hẹn gặp lại vào bài viết tiếp theo.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/spring.html'>spring</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
