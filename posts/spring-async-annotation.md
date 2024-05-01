@@ -14,7 +14,7 @@ từ thuở bắt đầu, Spring sử dụng xml để cấu hình mọi thứ, 
 thời gian trôi qua, mọi thứ đều phát triển, Spring cũng vậy, thay vì sử dụng xml,
 bạn có thể sử dụng các annotation để cấu hình,
 lập trình với chương trình của mình.
-Tuy nhiên, có bao giờ bạn thắc mắc tại điều gì xảy ra bên dưới những cái annotation đó?
+Tuy nhiên, có bao giờ bạn thắc mắc điều gì xảy ra bên dưới những cái annotation đó?
 Sau khi sử dụng framework 1 thời gian, mình cũng cố gắng tìm hiểu những thứ đó,
 và nó dẫn tới bài này (và 1 vài bài tiếp theo?). Để hiểu được nguyên lí đằng sau những annotation,
 bạn cần tìm hiểu về các phần sau:
@@ -196,16 +196,16 @@ protected Advice buildAdvice(@Nullable Supplier<Executor> executor,
 ```
 
 `Advice` được sử dụng là `AnnotationAsyncExecutionInterceptor`, vậy đến đây,
- bạn có thể đoạn rằng khi gọi hàm được đánh annotation `@Async` của `target object`,
-  một hàm trong class `AnnotationAsyncExecutionInterceptor` hoặc
-  parent class của nó sẽ được gọi. Để xác thực, mình dùng Intellij để debug:
+bạn có thể đoán rằng khi gọi hàm được đánh annotation `@Async` của `target object`,
+một hàm trong class `AnnotationAsyncExecutionInterceptor` hoặc
+parent class của nó sẽ được gọi. Để xác thực, mình dùng Intellij để debug:
 
 ![Interceptor](img/interceptor.png)
 
 khi mình gọi hàm sample, các bạn thấy nó nằm trong object proxy `$$SpringCGLIB$$0`,
- và cuối cùng đến hàm invoke  của class `AsyncExecutionInterceptor`,
-  class này là parent của class `AnnotationAsyncExecutionInterceptor`
-  như mình đề cập ở trên.
+và cuối cùng đến hàm invoke  của class `AsyncExecutionInterceptor`,
+class này là parent của class `AnnotationAsyncExecutionInterceptor`
+như mình đề cập ở trên.
 
 ```java
 public Object invoke(final MethodInvocation invocation) throws Throwable {
@@ -242,8 +242,8 @@ public Object invoke(final MethodInvocation invocation) throws Throwable {
 ở hàm `invoke`, Spring wrap đoạn code gọi hàm `invocation.proceed()` lại
 và submit vào executor để nó thực thi bất đồng bộ, lưu ý `invocation.proceed()`
 có thể là target method,
- hoặc một method `invoke` khác trong chain bởi vì chúng ta có thể áp dụng
-  nhiều aspect cho cùng một method.
+hoặc một method `invoke` khác trong chain bởi vì chúng ta có thể áp dụng
+nhiều aspect cho cùng một method.
 
 Cuối cùng, mình chạy chương trình và monitor thread pool executor để xem thống kê:
 
