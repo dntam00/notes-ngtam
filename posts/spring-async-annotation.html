@@ -43,7 +43,7 @@ từ thuở bắt đầu, Spring sử dụng xml để cấu hình mọi thứ, 
 thời gian trôi qua, mọi thứ đều phát triển, Spring cũng vậy, thay vì sử dụng xml,
 bạn có thể sử dụng các annotation để cấu hình,
 lập trình với chương trình của mình.
-Tuy nhiên, có bao giờ bạn thắc mắc tại điều gì xảy ra bên dưới những cái annotation đó?
+Tuy nhiên, có bao giờ bạn thắc mắc điều gì xảy ra bên dưới những cái annotation đó?
 Sau khi sử dụng framework 1 thời gian, mình cũng cố gắng tìm hiểu những thứ đó,
 và nó dẫn tới bài này (và 1 vài bài tiếp theo?). Để hiểu được nguyên lí đằng sau những annotation,
 bạn cần tìm hiểu về các phần sau:</p>
@@ -210,7 +210,7 @@ protected Advice buildAdvice(@Nullable Supplier&lt;Executor&gt; executor,
 }
 </code></pre>
 <p><code>Advice</code> được sử dụng là <code>AnnotationAsyncExecutionInterceptor</code>, vậy đến đây,
-bạn có thể đoạn rằng khi gọi hàm được đánh annotation <code>@Async</code> của <code>target object</code>,
+bạn có thể đoán rằng khi gọi hàm được đánh annotation <code>@Async</code> của <code>target object</code>,
 một hàm trong class <code>AnnotationAsyncExecutionInterceptor</code> hoặc
 parent class của nó sẽ được gọi. Để xác thực, mình dùng Intellij để debug:</p>
 <p><img src="img/interceptor.png" alt="Interceptor" /></p>

@@ -1,0 +1,265 @@
+<html>
+
+<head>
+  <title>Networking (2) TCP Close connection | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Networking (2) TCP Close connection</h1>
+      <p>Dạo gần đây mình có cơ hội làm việc với nhiều thứ liên quan đến TCP/UDP protocol mà mơ hồ quá nên phải dành thời gian đọc lại chủ đề này, rồi mình phát hiện ra môn Mạng máy tính ở BK mình học không hiểu gì cả :v, không biết sao qua môn được nữa :)). À mà cũng đúng thôi, hồi đó học không hiểu gì toàn trốn xuống H1 hoặc ngủ trên lớp với mấy đứa bạn xD, công nhận tiết học này mình có sức ngủ thật ~~.</p>
+<p>Vì đọc vẫn còn nhiều thứ mơ hồ nên mình muốn viết ra để tự vấn lại bản thân những thứ mình tìm hiểu được, bài hôm nay sẽ  viết về cách TCP connection được đóng.</p>
+<p><img src="img/tcp-close.png" alt="TCP close connection process" /></p>
+<p>TCP là giao thức <strong>bidirectional</strong> và <strong>full-duplex</strong>, có nghĩa là mỗi phía có thể vừa nhận, vừa gửi dữ liệu và hai việc này có thể diễn ra đồng thời. Tạm gọi 2 đầu của connection là <code>client - peer</code> (đối xứng), <code>client - peer</code> sẽ tự quản lý đầu connection của nó, vì thế, 1 trong 2 có thể yêu cầu đóng connection, quá trình này diễn ra với nguyên tắc <strong>4-way handshake</strong>, phía chủ động đóng connection sẽ tương ứng với <code>initiator</code>, phía còn lại là <code>receiver</code> như hình trên:</p>
+<ul>
+<li><code>initiator</code> gửi gói tin <code>FIN</code> đến <code>receiver</code> để yêu cầu đóng connection, biểu thị rằng mình không gửi dữ liệu nữa và bước vào trạng gái <code>FIN_WAIT_1</code></li>
+<li><code>receiver</code> nhận được gói tin <code>FIN</code> sẽ phản hồi bằng gói tin <code>ACK</code> (cách hoạt động thường thấy của TCP), nó có ý nghĩa cho initiator biết rằng receiver đã nhận được gói tin <code>FIN</code>, lúc này, <code>receiver</code> bước vào trạng thái <code>CLOSE_WAIT</code></li>
+<li><code>receiver</code> gửi gói tin <code>FIN</code> đến <code>initiator</code> để yêu cầu đóng connection, bước vào giai đoạn <code>LAST_ACK</code></li>
+<li><code>initiator</code> nhận được <code>FIN</code> sẽ phản hồi bằng <code>ACK</code>, bước vào giai đoạn <code>TIME_WAIT</code></li>
+<li><code>receiver</code> nhận được gói tin <code>ACK</code>, <code>initiator</code> vẫn sẽ ở trạng thái <code>TIME_WAIT</code></li>
+</ul>
+<p>Nếu các bước này diễn ra đúng, <code>receiver</code> sẽ đóng connection bình thường, <code>receiver</code> sẽ ở trạng thái <code>TIME_WAIT</code> trong khoảng <code>2MSL</code> trước khi nó thực sự đóng connection.</p>
+<blockquote>
+<p>MSL is <strong>the maximum time a TCP segment is expected to live, or stay in the network</strong>. The original TCP specification, RFC 793, defines this as 2 minutes.</p>
+</blockquote>
+<blockquote>
+<p>Tạm dịch: MSL là khoảng thời gian tối đa một gói tin TCP tồn tại trong đường truyền mạng. Theo thiết kế ban đầu RFC 793, nó có giá trị 2 phút.</p>
+</blockquote>
+<p>Vậy tại sao một TCP connection lại có trạng thái <code>TIME_WAIT</code>, liệu nó thực sự quan trọng?</p>
+<h2><a href="#time_wait" aria-hidden="true" class="anchor" id="time_wait"></a>TIME_WAIT</h2>
+<p>Lý do phía chủ động đóng TCP connection bước vào trạng thái <code>TIME_WAIT</code> trong khoảng thời gian 2MSL thay vì trực tiếp bước vào trạng thái <code>CLOSED</code>:</p>
+<ul>
+<li>ngăn chặn việc những việc gói tin bị delayed do network được nhận bởi một connection mới → nếu việc này xảy ra, TCP không còn là một giao thức tin cậy nữa</li>
+<li>đảm bảo TCP connection được đóng lại chính xác ở peer, tức peer có thể nhận được gói tin <code>FIN</code></li>
+</ul>
+<h3><a href="#tính-tin-cậy-trong-việc-truyền-dữ-liệu" aria-hidden="true" class="anchor" id="tính-tin-cậy-trong-việc-truyền-dữ-liệu"></a>Tính tin cậy trong việc truyền dữ liệu</h3>
+<p>Nếu client tạo một connection mới ngay sau khi gửi gói tin <code>ACK</code> và port của connection này trùng với connection trước đó, có thể xảy ra trường hợp những gói tin của connection trước bị delay và sẽ được xử lý bởi connection mới, điều này xảy ra đồng nghĩa với việc giao thức TCP không còn là một giao thức truyền dữ liệu đáng tin cậy nữa.</p>
+<p><img src="img/delay-packet.png" alt="Delayed packet process" /></p>
+<p>Ví dụ gói tin với SEQ=301, nếu không có trạng thái <code>TIME_WAIT</code> hoặc giá trị của <code>TIME_WAIT</code> không đúng, nó có thể được xử lý bởi connection mới.</p>
+<h3><a href="#tính-đúng-đắn-của-việc-đóng-connection" aria-hidden="true" class="anchor" id="tính-đúng-đắn-của-việc-đóng-connection"></a>Tính đúng đắn của việc đóng connection</h3>
+<p>Nếu client tạo mới một connection tới peer ngay lập tức mà không quan tâm liệu peer có nhận được gói tin <code>ACK</code> cuối cùng không thì sẽ xảy ra vấn đề, peer vẫn xem connection hiện tại là hợp lệ và sẽ gửi gói tin <code>RST</code> khi client cố gắng tạo connection mới bằng gói tin <code>SYN</code> (3-handshake).</p>
+<p>Trạng thái <code>TIME_WAIT</code> sẽ đảm bảo được:</p>
+<ul>
+<li>peer sẽ nhận được gói tin <code>ACK</code> và đóng connection bình thường</li>
+<li>nếu không nhận được gói tin <code>ACK</code>, peer có thể kích hoạt cơ chế <strong>retransmission</strong> gói tin <code>FIN</code></li>
+</ul>
+<p><img src="img/rst-packet.png" alt="RST packet process" /></p>
+<p>Ví dụ khi client tạo connection mới với gói tin <code>SYN</code>, <code>SEQ=100</code>, peer phản hồi bằng gói tin <code>RST</code> để từ chối tạo connection mới.</p>
+<h2><a href="#ví-dụ-go--netstat" aria-hidden="true" class="anchor" id="ví-dụ-go--netstat"></a>Ví dụ Go + Netstat</h2>
+<h3><a href="#trạng-thái-của-tcp-connection" aria-hidden="true" class="anchor" id="trạng-thái-của-tcp-connection"></a>Trạng thái của TCP connection</h3>
+<pre><code class="language-go">// server
+func main() {
+	ln, err := net.Listen(&quot;tcp&quot;, &quot;:12345&quot;)
+	if err != nil {
+		fmt.Println(&quot;Error setting up server:&quot;, err)
+		return
+	}
+	fmt.Println(&quot;Server listening on port 12345&quot;)
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println(&quot;Error accepting connection:&quot;, err)
+			continue
+		}
+		fmt.Println(&quot;Client connected&quot;)
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	// sleep when client connect
+	time.Sleep(30 * time.Second)
+}
+
+// client
+func main() {
+	conn, err := net.Dial(&quot;tcp4&quot;, &quot;127.0.0.1:12345&quot;)
+	if err != nil {
+		fmt.Println(&quot;Error connecting to server:&quot;, err)
+		return
+	}
+	fmt.Println(&quot;Connected to server&quot;)
+
+	conn.Close()
+	// sleep to keep process
+	time.Sleep(10 * time.Second)
+}
+
+</code></pre>
+<p>Ví dụ này mô phỏng một client đóng kết nối ngay sau khi connect tới server, sau đó dùng <code>netstat</code> để xem các connection liên quan đến port &quot;12345&quot;, kết quả như sau:</p>
+<pre><code class="language-bash">&gt; netstat -an | grep 12345
+tcp4       0      0  127.0.0.1.12345        127.0.0.1.62965        CLOSE_WAIT
+tcp4       0      0  127.0.0.1.62965        127.0.0.1.12345        FIN_WAIT_2
+tcp46      0      0  *.12345                *.*                    LISTEN
+
+</code></pre>
+<ul>
+<li>client là phía chủ động đóng connection, nó sẽ ở trạng thái “FIN_WAIT_2” sau khi nhận gói tin <code>ACK</code> của server</li>
+<li>server sau khi nhận gói tin <code>FIN</code> của client và phản hồi bằng <code>ACK</code> nhưng chưa gửi lại <code>FIN</code> sẽ ở trạng thái <code>CLOSE_WAIT</code></li>
+</ul>
+<p>Đây là một ví dụ về <strong>half-closed</strong> của một TCP connection.</p>
+<p>Tiếp theo, nếu server gửi gói về gói tin <code>FIN</code> và client phản hồi bằng <code>ACK</code>, connection sẽ được đóng thành công, client sẽ vẫn ở trạng thái <code>TIME_WAIT</code>, điều này được kiểm chứng bằng công cụ <code>netstat</code>.</p>
+<pre><code class="language-bash">&gt; netstat -an | grep 12345
+tcp46      0      0  *.12345                *.*                    LISTEN
+tcp4       0      0  127.0.0.1.65482        127.0.0.1.12345        TIME_WAIT
+
+</code></pre>
+<h3><a href="#connection-reset-by-peer" aria-hidden="true" class="anchor" id="connection-reset-by-peer"></a>Connection reset by peer</h3>
+<p>Đối với các ứng dụng thông thường, developer sẽ làm việc với các giao thức ở tầng ứng dụng, ví dụ HTTP. Nếu từng sử dụng các thư viện client HTTP, ít nhiều mọi người đã từng thấy lỗi <strong>Connection reset by peer</strong>, đây là một lỗi xảy ra ở tầng transport, khi client nhận được gói tin <code>RST</code> từ server. Như đã được đề cập ở trên, TCP connection được quản lý bởi client và peer, nên có thể xảy ra trường hợp client chưa nhận thức được connection đã được đóng từ phía peer.</p>
+<p>Mình sẽ demo bằng bằng Go và dùng Wireshark để capture gói tin:</p>
+<pre><code class="language-go">// server
+func main() {
+	ln, err := net.Listen(&quot;tcp&quot;, &quot;:12345&quot;)
+	if err != nil {
+		fmt.Println(&quot;Error setting up server:&quot;, err)
+		return
+	}
+	fmt.Println(&quot;Server listening on port 12345&quot;)
+
+	for {
+		// Accept a connection.
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println(&quot;Error accepting connection:&quot;, err)
+			continue
+		}
+		fmt.Println(&quot;Client connected&quot;)
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	var bs = make([]byte, 1024)
+	for {
+		// set read timeout to make this read error and close connection
+		conn.SetDeadline(time.Now().Add(5 * time.Second))
+		n, err := conn.Read(bs)
+		if err != nil {
+			log.Println(&quot;read messed up: &quot; + err.Error())
+			conn.Close()
+			break
+		} else {
+			fmt.Println(&quot;read&quot;, n, &quot;bytes&quot;)
+			fmt.Println(&quot;read: &quot; + string(bs))
+		}
+		time.Sleep(time.Second)
+	}
+	fmt.Println(&quot;Connection closed by server&quot;)
+}
+
+// client
+func main() {
+	// Connect to the server on localhost, port 12345.
+	conn, err := net.Dial(&quot;tcp4&quot;, &quot;127.0.0.1:12345&quot;)
+	if err != nil {
+		fmt.Println(&quot;Error connecting to server:&quot;, err)
+		return
+	}
+	fmt.Println(&quot;Connected to server&quot;)
+
+	time.Sleep(7 * time.Second)
+
+	_, err = conn.Write([]byte(&quot;Hello from client&quot;))
+	if err != nil {
+		log.Println(&quot;write error: &quot; + err.Error())
+	}
+
+	// sleep to make sure client receive &quot;RST&quot; packet
+	time.Sleep(1 * time.Second)
+
+	var bs = make([]byte, 1024)
+	for {
+		n, err := conn.Read(bs)
+		if err != nil {
+			log.Println(&quot;read messed up: &quot; + err.Error())
+			if err := conn.Close(); err != nil {
+				log.Println(&quot;close connection error: &quot; + err.Error())
+			}
+			break
+		} else {
+			fmt.Println(&quot;read&quot;, n, &quot;bytes&quot;)
+			fmt.Println(&quot;read: &quot; + string(bs))
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+</code></pre>
+<p>Kết quả từ log của client:</p>
+<pre><code class="language-bash">2024/06/02 18:25:08 read messed up: read tcp4 127.0.0.1:58258-&gt;127.0.0.1:12345: read: connection reset by peer
+
+</code></pre>
+<p>Wireshark:</p>
+<p><img src="img/wireshark.png" alt="Wireshark" /></p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Bài viết này đề cập đến quá trình đóng TCP connection và một số vấn đề liên quan nếu quá trình này xảy ra không đúng, một số keyword ở bài này:</p>
+<ul>
+<li>4-way handshake</li>
+<li>SYN, FIN, ACK, RST</li>
+<li>Connection reset by peer</li>
+</ul>
+<h3><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h3>
+<ul>
+<li><a href="https://www.sobyte.net/post/2021-12/whys-the-design-tcp-time-wait/">https://www.sobyte.net/post/2021-12/whys-the-design-tcp-time-wait/</a></li>
+<li><a href="https://medium.com/@xuan11290/tcp-connection-termination-in-go-d786ecd071f2">https://medium.com/@xuan11290/tcp-connection-termination-in-go-d786ecd071f2</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/tcp.html'>tcp</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
