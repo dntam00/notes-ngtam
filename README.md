@@ -13,6 +13,8 @@ Preview post:
     ./gen preview
 ```
 
+Then go to: `http://localhost:3123/view/<name-file-without-extension>` to see post.
+
 Generate html from markdown:
 
 ```bash
