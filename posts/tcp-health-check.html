@@ -1,0 +1,122 @@
+<html>
+
+<head>
+  <title>Health check using TCP | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Health check using TCP</h1>
+      <p>Hello ~</p>
+<p>Today is a post about performing health check to manage a cluster of services using <code>TCP</code>, why <code>TCP</code>? Because I need to monitor a type of service which don't provide Restful API or anything similar.</p>
+<p>My current project uses Golang, the easiest approach is to use <code>http/net</code> package to create a new TCP connection each time, the initial code might look like this:</p>
+<pre><code class="language-go">func CheckTcpPort(host string, port string, timeoutSecond int) {
+	timeout := time.Second * time.Duration(timeoutSecond)
+	conn, err := net.DialTimeout(&quot;tcp&quot;, net.JoinHostPort(host, port), timeout)
+	if err != nil {
+		fmt.Println(&quot;connect failed: &quot;, err)
+	}
+	if conn != nil {
+		defer func(conn net.Conn) {
+			_ = conn.Close()
+		}(conn)
+	}
+}
+</code></pre>
+<p>Done? No, after deploying this code snippet to QA2 environment, I need to consider two further problems:</p>
+<ul>
+<li>If I have multiple instances, then how could I manage these jobs?</li>
+<li>Does the <code>dial function</code> block?</li>
+</ul>
+<p>For the first question, the answer is to use <code>distributed lock</code> method. Since this isn't the main topic of this post, let's move to the second question.</p>
+<p>The answer of the second one is <code>yes</code>. <code>dial function</code> will be blocked if the destination doesn't return the <code>SYN</code> packet, for example:</p>
+<ul>
+<li>dial to a unkown IP address (I learned from my colleague :V).</li>
+<li>packet is dropped by firewall.</li>
+</ul>
+<h2><a href="#dial-to-unkown-ip-address" aria-hidden="true" class="anchor" id="dial-to-unkown-ip-address"></a>Dial to unkown ip address</h2>
+<p>I run above program and capture packet by <code>wireshark</code> tool:</p>
+<p><img src="img/unknow-ip.png" alt="wirehsark-dial-to-unknown-ip" /></p>
+<p>A fews things that are worth analyzing:</p>
+<ul>
+<li><code>SYN</code> packet is sent.</li>
+<li>There is no response from the remote host because IP address <code>127.0.3.2</code> is a undefined one.</li>
+<li>TCP performs multiple retransmissions and the distance between retransmissions is based on an exponential backoff algorithm.</li>
+</ul>
+<p>After a period of time (timeout), I know the health check is failed.</p>
+<h2><a href="#packet-is-dropped-by-firewall" aria-hidden="true" class="anchor" id="packet-is-dropped-by-firewall"></a>Packet is dropped by firewall</h2>
+<p>After asking ChatGPT, I know how to drop all TCP traffic on a specific port in a loopback network interface.</p>
+<p>Update file <code>/etc/pf.conf</code></p>
+<pre><code class="language-vim">block drop quick on lo0 proto tcp from any to any port 7995
+</code></pre>
+<p>then flush changes by 2 commands</p>
+<pre><code class="language-shell">sudo pfctl -f /etc/pf.conf
+sudo pfctl -e
+</code></pre>
+<p>After testing again, wireshark doesn't capture any packets and the result is the same as previous section.</p>
+<h2><a href="#no-listening-process-on-a-port" aria-hidden="true" class="anchor" id="no-listening-process-on-a-port"></a>No listening process on a port</h2>
+<p>In this part, I will test with a normal ip address and a port that has no process listening on it.</p>
+<p>Run above program with the destination IP <code>127.0.0.1</code> and port <code>7996</code>, the result of <code>wireshark</code>:</p>
+<p><img src="img/no-listen-process.png" alt="wirehsark-dial-to-know-ip" /></p>
+<p>because there is no process listening on port <code>7996</code>, <code>TCP stack</code> sends <code>RST</code> packet to client, the client knows there is no service running on this port and the <code>dial function</code> is not blocked.</p>
+<p>Having analysed these things, I need to be careful when setting the timeout value.</p>
+<p>That's all ~</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/tcp.html'>tcp</a><a class='topic-tag' href='/tags/network.html'>network</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
