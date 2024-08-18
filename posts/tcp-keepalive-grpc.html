@@ -1,0 +1,199 @@
+<html>
+
+<head>
+  <title>gRPC connection keep alive | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>gRPC connection keep alive</h1>
+      <p>Hello ~,</p>
+<p>Tuần rồi trong lúc anh QA thực hiện performance test thì ảnh thấy gRPC client có xuất hiện nhiều log error <code>connection reset by peer</code>:</p>
+<pre><code class="language-bash">09T06:50:41.340Z&quot;,&quot;caller&quot;:&quot;&lt;source_code&gt;&quot;,&quot;message&quot;:&quot;Error call to _: rpc error: code = Unavailable desc = error reading from server: read tcp &lt;src&gt;-&gt;&lt;dest&gt;: read: connection reset by peer&quot;,&quot;caller-detail&quot;:&quot;147b2e29-f3a4-43f0-8a98-20dad813da3d&quot;}
+</code></pre>
+<p>Mô hình triển khai hiện tại là gRPC server sẽ nằm sau một NLB để chia tải. Những lỗi kiểu này muôn thuở sẽ liên quan đến việc TCP connection bị đóng (có thể đúng hoặc không đúng cách) và tầng ứng dụng không phát hiện kịp thời nên vẫn sử dụng các connection này để gửi/nhận dữ liệu.</p>
+<p>Để xử lý những vấn đề này thì chắc hẳn mọi người đều nghĩ đến cơ chế <code>ping-pong</code> và <code>retry</code> rồi, tuy nhiên vì mình muốn tìm hiểu cụ thể vì sao connection bị đóng với mô hình hiện tại, nên có bài viết này :V.</p>
+<h2><a href="#nlb-aws" aria-hidden="true" class="anchor" id="nlb-aws"></a>NLB AWS</h2>
+<p>Tài liệu chính thức của AWS có đề cập tới cách họ hiện thực <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html#connection-idle-timeout">idle timeout</a> ở NLB. Sau khi đọc và chạy thử một số trường hợp, mình có rút ra vài ý sau đây:</p>
+<ul>
+<li>NLB hoạt động với keep alive packet của TCP connection, điều này khác với ALB.</li>
+<li>Người dùng không cấu hình được thời gian <code>idle timeout</code>.</li>
+<li>NLB giữ trạng thái của mỗi connection, khi <code>idle timeout</code> qua đi, NLB không đóng connection bằng các gói tin <code>FIN/RST</code> mà chỉ gửi những gói tin này khi client sử dụng lại connection sau thời gian <code>idle timeout</code>.</li>
+</ul>
+<h2><a href="#grpc-in-linux-os" aria-hidden="true" class="anchor" id="grpc-in-linux-os"></a>gRPC in Linux OS</h2>
+<p>Mời bạn tham khảo bài viết của <a href="https://blog.cloudflare.com/when-tcp-sockets-refuse-to-die">Cloudflare engineer</a> để hiểu được chi tiết về các yếu tố ảnh hưởng đến một TCP connection.</p>
+<ul>
+<li>Thông số TCP keep alive</li>
+</ul>
+<pre><code class="language-python">    SO_KEEPALIVE  # enable
+    TCP_KEEPIDLE  # idle timeout để TCP stack bắt đầu gửi gói tin keepalive
+    TCP_KEEPINTVL # khoảng cách giữa 2 gói tin keepalive
+    TCP_KEEPCNT   # số gói tin TCP keepalive tối đa được gửi trước khi connection bị đóng
+</code></pre>
+<ul>
+<li>TCP_USER_TIMEOUT: thời gian tối đa để nhận gói tin <code>ACK</code> của một gói tin đã được gửi đi</li>
+</ul>
+<p>Khi xem thêm source code của gRPC, mình thấy họ có cấu hình timeout dành cho server:</p>
+<pre><code class="language-go">// After having pinged for keepalive check, the server waits for a duration
+// of Timeout and if no activity is seen even after that the connection is
+// closed.
+Timeout time.Duration // The current default value is 20 seconds.
+</code></pre>
+<p>giá trị này có giá trị mặc định là 20 giây được sử dụng để gán cho <code>TCP_USER_TIMEOUT</code> khi tạo transport layer:</p>
+<pre><code>if kp.Time != infinity {
+    if err = syscall.SetTCPUserTimeout(rawConn, kp.Timeout); err != nil {
+        return nil, connectionErrorf(false, err, &quot;transport: failed to set TCP_USER_TIMEOUT: %v&quot;, err)
+    }
+}
+</code></pre>
+<p>Đối với các thông số TCP keep alive, gRPC sử dụng thư viện <code>net/http</code> của Go để tạo connection</p>
+<pre><code class="language-go">func newTCPConn(fd *netFD, keepAlive time.Duration, keepAliveHook func(time.Duration)) *TCPConn {
+	setNoDelay(fd, true)
+	if keepAlive == 0 {
+		keepAlive = defaultTCPKeepAlive // 15 seconds
+	}
+	if keepAlive &gt; 0 {
+		setKeepAlive(fd, true)
+		setKeepAlivePeriod(fd, keepAlive)
+		if keepAliveHook != nil {
+			keepAliveHook(keepAlive)
+		}
+	}
+	return &amp;TCPConn{conn{fd}}
+}
+
+// hàm này gán cả 2 thông số TCP_KEEPIDLE và TCP_KEEPINTVL với cùng 1 giá trị, mặc định là 15 giây.
+func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
+	// The kernel expects seconds so round to next highest second.
+	secs := int(roundDurationUp(d, time.Second))
+	if err := fd.pfd.SetsockoptInt(syscall.IPPROTO_TCP, syscall.TCP_KEEPINTVL, secs); err != nil {
+		return wrapSyscallError(&quot;setsockopt&quot;, err)
+	}
+	err := fd.pfd.SetsockoptInt(syscall.IPPROTO_TCP, syscall.TCP_KEEPIDLE, secs)
+	runtime.KeepAlive(fd)
+	return wrapSyscallError(&quot;setsockopt&quot;, err)
+}
+</code></pre>
+<p>Như vậy, với giá trị của những thông số mặc định này, nếu không có dữ liệu truyền qua 1 connection trong vòng 15 giây, TCP sẽ bắt đầu gửi keepalive và chỉ cần 2 gói tin keepalive không nhận về gói tin <code>ACK</code> thì TCP sẽ đóng connection và gửi gói tin <code>RST</code> đến NLB. Đối với trường hợp có 1 số lượng lớn connection thì hiện tượng này cũng có thể xảy ra thường xuyên.</p>
+<h2><a href="#giải-pháp" aria-hidden="true" class="anchor" id="giải-pháp"></a>Giải pháp</h2>
+<p>gRPC cung cấp cơ chế chủ động <code>ping-pong</code>, tầng ứng dụng nên sử dụng các cơ chế chủ động này thay vì phụ thuộc hoàn toàn vào các tầng thấp hơn.</p>
+<h3><a href="#server" aria-hidden="true" class="anchor" id="server"></a>Server</h3>
+<pre><code class="language-go">type ServerParameters struct {
+
+    // After a duration of this time if the server doesn't see any activity it
+    // pings the client to see if the transport is still alive.
+    // If set below 1s, a minimum value of 1s will be used instead.
+    Time time.Duration // The current default value is 2 hours.
+
+
+    // After having pinged for keepalive check, the server waits for a duration
+    // of Timeout and if no activity is seen even after that the connection is
+    // closed.
+    Timeout time.Duration // The current default value is 20 seconds.
+}
+
+// example
+var kasp = keepalive.ServerParameters{
+    //MaxConnectionIdle:     15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
+    //MaxConnectionAge:      30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
+    //MaxConnectionAgeGrace: 5 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
+    Time:    10 * time.Second, // Ping the client if it is idle for 10 seconds to ensure the connection is still active
+    Timeout: 20 * time.Second, // Wait 1 second for the ping ack before assuming the connection is dead
+}
+</code></pre>
+<p>Mình đã chạy gRPC với cấu hình ví dụ ở trên, sử dụng client để tạo 1 connection tới server và theo dõi qua wireshark, kết quả sau 10 giây thì server sẽ gửi 1 gói tin <code>ping frame</code> đến client.</p>
+<p><img src="img/grpc-ping-frame.png" alt="grpc-ping-frame" /></p>
+<p><code>Ping frame</code> có độ dài 17 bytes với cấu trúc như hình dưới với các đơn vị trong ngoặc là bit:</p>
+<pre><code>+--------------------------------------------------------------------+
+| Length (24) | Type (8) | Flags (8) | Reserved (1) | Stream ID (31) |
++--------------------------------------------------------------------+
+| Opaque Data (64)                                                   |
++--------------------------------------------------------------------+
+</code></pre>
+<p>tương ứng với đoạn code sau trong thư viện:</p>
+<pre><code class="language-go">func (f *Framer) WritePing(ack bool, data [8]byte) error {
+	var flags Flags
+	if ack {
+		flags = FlagPingAck
+	}
+	f.startWrite(FramePing, flags, 0)
+	f.writeBytes(data[:])
+	return f.endWrite()
+}
+</code></pre>
+<h3><a href="#client" aria-hidden="true" class="anchor" id="client"></a>Client</h3>
+<pre><code class="language-go">kaConfig := grpcConfig.GrpcKeepAlive
+		
+ka := grpc.WithKeepaliveParams(keepalive.ClientParameters{
+	Time:                time.Duration(kaConfig.PingInterval) * time.Second,
+	Timeout:             time.Duration(kaConfig.PingTimeout) * time.Second,
+	PermitWithoutStream: kaConfig.PermitWithoutStream,
+})
+</code></pre>
+<p>Ở phía client, những thông số này cần được suy nghĩ cẩn thận và phù hợp với phía server, giá trị càng nhỏ thì client sẽ ít gặp lỗi hơn, tuy nhiên việc gửi ping quá nhiều và liên tục cũng gây ảnh hưởng đến server.</p>
+<h2><a href="#kết-bài" aria-hidden="true" class="anchor" id="kết-bài"></a>Kết bài</h2>
+<p>Trong bài này mình đã tóm tắt lại những yếu tố ảnh hưởng đến trạng thái của một TCP connection cũng như cách thư viện gRPC của Go sử dụng để hiện thực protocol, có một vài từ khoá để bạn có thể nghiên cứu sâu thêm:</p>
+<ul>
+<li>TCP keepalive</li>
+<li>TCP user time out</li>
+<li>gRPC ping frame</li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/tcp.html'>tcp</a><a class='topic-tag' href='/tags/network.html'>network</a><a class='topic-tag' href='/tags/grpc.html'>grpc</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
