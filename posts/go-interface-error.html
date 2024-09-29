@@ -1,0 +1,133 @@
+<html>
+
+<head>
+  <title>Error checking in Golang  | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Error checking in Golang </h1>
+      <p>Trong thế giới của ngôn ngữ lập trình Golang, mọi người có thể bắt gặp việc sử dụng <code>if else</code> để kiểm tra lỗi ở mọi nơi, kiểu như thế này:</p>
+<pre><code class="language-Go">if err != nil {
+	return
+}
+// do next thing
+</code></pre>
+<p>Thường thì <code>error</code> trong Go là interface, có bao giờ mọi người tự hỏi khi nào thì <code>err == nil</code>? Có phải đơn giản là giá trị của biến bằng <code>nil</code> thì câu lệnh kiểm tra đó sẽ đúng? Thực ra mình cũng mặc định là vậy, cho tới một ngày mình gặp bug :|</p>
+<p>Nếu chương trình của chúng ta chỉ sử dụng mỗi <code>error interface</code> của Go để trả về lỗi thì có thể an tâm sử dụng, tuy nhiên đối với các ứng dụng phức tạp, chúng ta sẽ có nhu cầu tuỳ chỉnh một kiểu mới để có thể lưu trữ thông tin thêm cho lỗi ví dụ <code>stack trace</code>, <code>cause</code>, <code>error type</code>,... và từ đây, vấn đề sẽ xuất hiện nếu chúng ta không thực sự hiểu về interface trong Go.</p>
+<h2><a href="#interface" aria-hidden="true" class="anchor" id="interface"></a>Interface</h2>
+<p>Interface cho phép lập trình viên định nghĩa một tập các hàm mà bất cứ kiểu dữ liệu nào cũng có thể hiện thực, một thực thể interface (instance) nắm giữ giá trị và kiểu dữ liệu của một biến mà nó đang tham chiếu tới. Go định nghĩa cấu trúc dữ liệu để lưu trữ một thực thể interface như sau:</p>
+<pre><code class="language-Go">type iface struct {
+	tab  *itab
+	data unsafe.Pointer
+}
+
+type itab struct {
+	inter *interfacetype
+	_type *_type
+	hash  uint32
+	_     [4]byte
+	fun   [1]uintptr
+}
+</code></pre>
+<p><code>interfacetype</code> là kiểu của interface, <code>_type</code> là kiểu cụ thể (struct) mà một thực thể interface đang giữ giá trị.</p>
+<h2><a href="#custom-error-type" aria-hidden="true" class="anchor" id="custom-error-type"></a>Custom error type</h2>
+<p>Như mình đã đề cập ở trên, trong nhiều trường hợp <code>error interface</code> không phù hợp với những yêu cầu về nghiệp vụ và kĩ thuật, lúc đó, chúng ta thường định nghĩa một struct để quản lý error và sử dụng chúng trong suốt chương trình, ví dụ:</p>
+<pre><code class="language-Go">type AppError struct {
+	code      int
+	errorType string
+	cause     error
+}
+
+func (err *AppError) Error() string {
+	return fmt.Sprintf(&quot;code: %v, cause: %v&quot;, err.code, err.cause)
+}
+</code></pre>
+<h2><a href="#error-assignment" aria-hidden="true" class="anchor" id="error-assignment"></a>Error assignment</h2>
+<p>Lúc này, nếu không cần thận, chúng ta có thể khai báo một số hàm trả về kiểu <code>*AppError</code> và sử dụng interface <code>error</code> để lưu những giá trị này, và từ đó, bug sẽ xảy ra nếu chúng ra kiểm tra error có <code>nil</code> hay không. Được đề cập ở phần đầu, cấu trúc dữ liệu được dùng để lưu một thực thể interface gồm 2 phần, giá trị và kiểu của biến. Để một biến interface bằng <code>nil</code> (được kiểm tra bằng phép kiểm tra <code>==</code>) thì cả 2 phần của nó đều phải <code>nil</code>.</p>
+<pre><code class="language-Go">func checkAssignError() {
+	var err error
+	err = getErr()
+	if err == nil {
+		println(&quot;nil&quot;)
+	} else {
+		println(&quot;not nil&quot;)
+	}
+}
+
+func getErr() *AppError {
+	return nil
+}
+</code></pre>
+<p>Dựa vào kiến thức trên, giá trị được in ra console sẽ là <code>not nil</code>. Golang cung cấp gói <code>reflect</code> để chúng ta có thể làm việc với những giá trị dynamic lúc chạy chương trình, tiếp tục với đoạn code ở trên, chạy 2 dòng lệnh sau với biến <code>err</code>:</p>
+<pre><code class="language-Go">fmt.Println(reflect.TypeOf(err))
+fmt.Println(reflect.ValueOf(err).IsNil())
+
+// *main.AppError
+// true
+</code></pre>
+<p>Kiểu của <code>error</code> không phải <code>nil</code> mà là kiểu struct <code>*AppError</code>.</p>
+<h2><a href="#notes" aria-hidden="true" class="anchor" id="notes"></a>Notes</h2>
+<p>Với kiến thức này, bạn có thể thiết kế code xử lý lỗi một cách nhất quán, tránh những lỗi tìm ẩn và tiết kiệm thời gian debug, đặc biệt khi chương trình của bạn sử dụng các thư viện thứ 3 và sử dụng nhiều high order function, trong Golang thì mình gặp rất nhiều thư viện code theo style HOC, ví dụ <code>go breaker</code>, các hàm của <code>go breaker</code> sử dụng <code>error interface</code>, nếu hàm của bạn sử dụng <code>custom error type</code> như <code>AppError</code> ở trên thì chắc chắn câu lệnh kiểm tra <code>err == nil</code> sẽ sai. Một ví dụ:</p>
+<pre><code class="language-Go">func (cb *CircuitBreaker[T]) Execute(req func() (T, error)) (T, error) {}
+</code></pre>
+<p>Để sử dụng hàm này, bạn phải truyền vào một hàm có chữ ký hàm <code>func() (T, error)</code>, nếu bạn sử dụng <code>AppError</code>, code vẫn biên dịch được do <code>AppError</code> là một kiểu hiện thực <code>error interface</code>, nhưng hành vi của code sẽ không đúng như mong đợi.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/go.html'>go</a><a class='topic-tag' href='/tags/coding.html'>coding</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
