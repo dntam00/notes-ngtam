@@ -1,0 +1,192 @@
+<html>
+
+<head>
+  <title>Networking (3) Network namespace / Virtual ethernet (Veth) | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Networking (3) Network namespace / Virtual ethernet (Veth)</h1>
+      <h2><a href="#network-namespace" aria-hidden="true" class="anchor" id="network-namespace"></a>Network Namespace</h2>
+<p>Một từ khoá mà từ hồi năm 3 đại học đến bây giờ mình đã học và nghe rất nhiều đó là <code>isolation</code>, tiếng Việt có nghĩa là sự tách biệt, không ảnh hưởng lẫn nhau, những ngữ cảnh mình tiếp xúc với khái niệm này theo thời gian như sau:</p>
+<ul>
+<li><code>database transaction</code>: transaction phải thực thi độc lập và không được ảnh hưởng lẫn nhau.</li>
+<li><code>multi-tenant architecture</code>: nhóm mình sử dụng kiến trúc này để luận văn tốt nghiệp, đại ý thì tài nguyên, dữ liệu của các tenant phải được độc lập hoàn toàn với nhau.</li>
+<li><code>cloud</code>: sử dụng các công nghệ ảo hoá để tạo ra các máy trên chung một thiết bị vật lý, giống với việc ở trên thì nhà cung cấp dịch vụ cloud cần có cơ chế để các người dùng cuối không bị ảnh hưởng đến nhau, ví dụ số đơn vị tính toán vật lí (cpu) được chia sẻ theo đúng cấu hình máy ảo, routing đúng các gói tin,...</li>
+<li><code>linux namespace</code>: những process chạy trong những namespace khác nhau cũng hoàn toàn độc lập, không sử dụng chung tài nguyên.</li>
+</ul>
+<p>Ý cuối trong danh sách trên, <code>namespace</code> là một công nghệ cơ bản không thể thiếu trong thế giới ảo hoá ngày nay, với một ví dụ rất nổi tiếng, 2024, lập trình viên không ai là không biết docker.</p>
+<p>Về chức năng, <code>namespace</code> tạo ra các môi trường với sự độc lập về tài nguyên, trong linux, có các namespace sau:</p>
+<ul>
+<li><code>Mount</code> - cung cấp sự độc lập về việc mount hệ thống file (process trong cách ns khác nhau không thể xem file của nhau)</li>
+<li><code>UTS</code> - cung cấp sự độc lập lập về hostname và domain name</li>
+<li><code>IPC</code> - cung cấp sự độc lập về tài nguyên giao tiếp giữa các process</li>
+<li><code>PID</code> - cung cấp sự độc lập về số PID</li>
+<li><code>Network</code> - cung cấp sự độc lập về network interface</li>
+<li><code>User</code> - cung cấp sự độc lập về số UID/GID</li>
+<li><code>Cgroup</code> - cung cấp sự độc lập về thư mục gốc cgroup</li>
+</ul>
+<p>Bài này viết sẽ tập trung vào <code>network namespace</code>, có chứng năng tạo ra các môi trường network độc lập, cho phép các process trong các <code>network namespace</code> có network stack khác nhau, bao gồm routing policy, network interface, firewal policy,...</p>
+<h2><a href="#virtual-ethernet" aria-hidden="true" class="anchor" id="virtual-ethernet"></a>Virtual ethernet</h2>
+<p><code>Virtual ethernet</code> cho phép các process ở các <code>network namespace</code> giao tiếp với nhau, ví dụ điển hình nhất là cho phép các container giao tiếp với bên ngoài.</p>
+<p><img src="img/virtual-pair-ns.png" alt="virtual-pair-ns" /></p>
+<h3><a href="#veth-pair-cùng-network-namespace" aria-hidden="true" class="anchor" id="veth-pair-cùng-network-namespace"></a>Veth pair cùng network namespace</h3>
+<p>Tuy nhiên, đầu tiên hãy bắt đầu trước với mô hình 2 virtual ethernet trên cùng một network namespace.</p>
+<p><img src="img/virtual-pair.png" alt="virtual-pair" /></p>
+<p>Một virtual ethernet có 2 đầu, 1 đầu kết nối với network protocol stack, đầu còn lại kết nối trực tiếp với một virtual ethernet khác, một packet được gửi đi bởi một <code>veth</code> sẽ trực tiếp đi đến <code>veth</code> còn lại.</p>
+<p>Mỗi <code>virtual ethernet</code> có thể được cấu hình với một địa chỉ IP để tham gia vào quá trình routing ở layer 3 trong mô hình OSI. Để hiểu hơn cách các <code>veth</code> hoạt động, mình sử dụng công cụ <code>ip</code> và <code>tcpdump</code> để tạo ra 2 <code>veth</code> và bắt các gói tin đi qua các thiết bị này.</p>
+<p>Giống như mô hình ở trên, mình tạo ra 2 <code>veth</code> với địa chỉ tương ứng <code>20.1.0.10/24</code>, <code>20.1.0.10/24</code></p>
+<pre><code class="language-bash">ip link add veth1 type veth peer name veth2
+ip addr add 20.1.0.10/24 dev veth1
+ip addr add 20.1.0.11/24 dev veth2
+ip link set veth1 up
+ip link set veth2 up
+</code></pre>
+<p>Sử dụng lệnh <code>ip a</code>, chúng ta sẽ thấy 2 <code>veth</code> mới được tạo ra như sau:</p>
+<pre><code>15: veth2@veth1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 96:83:73:29:10:2a brd ff:ff:ff:ff:ff:ff
+    inet 20.1.0.11/24 scope global veth2
+       valid_lft forever preferred_lft forever
+16: veth1@veth2: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 8a:f2:73:9f:32:8f brd ff:ff:ff:ff:ff:ff
+    inet 20.1.0.10/24 scope global veth1
+       valid_lft forever preferred_lft forever
+</code></pre>
+<p>Sử dụng lệnh <code>ping</code> để kiểm tra routing giữa 2 <code>veth</code></p>
+<pre><code class="language-bash">ping -c 2 20.1.0.11 -I veth1
+</code></pre>
+<p>Kết quả:</p>
+<pre><code>PING 20.1.0.11 (20.1.0.11) from 20.1.0.10 veth1: 56(84) bytes of data.
+From 20.1.0.10 icmp_seq=1 Destination Host Unreachable
+From 20.1.0.10 icmp_seq=2 Destination Host Unreachable
+
+--- 20.1.0.11 ping statistics ---
+2 packets transmitted, 0 received, +2 errors, 100% packet loss, time 1052ms
+</code></pre>
+<p>Kết quả cho thấy packet được gửi đi từ <code>veth1</code> không tới được <code>veth2</code>, sử dụng <code>tcpdump</code> trên <code>veth2</code> mình thấy được:</p>
+<pre><code>09:58:45.556898 ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+09:58:46.608280 ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+09:58:47.631847 ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+</code></pre>
+<p><code>ARP</code> là một giao thức hoạt động với địa chỉ MAC, giao thức <code>ICMP</code> và <code>IP</code> sẽ được đóng gói tại layer 2, <code>ethernet frame</code> sẽ có địa chỉ MAC của thiết bị nguồn và đích, để biết được địa chỉ MAC của thiết bị đích, layer 2 sử dụng giao thức <code>ARP</code>, đối với một số hệ điều hành, thiết lập mặc định của kernel sẽ không cho phép <code>virtual ethernet</code> trả về gói tin <code>ARP</code>, để xử lý vấn đề này, chạy các câu lệnh sau:</p>
+<pre><code class="language-bash">echo 1 &gt; /proc/sys/net/ipv4/conf/veth1/accept_local
+echo 1 &gt; /proc/sys/net/ipv4/conf/veth2/accept_local
+echo 0 &gt; /proc/sys/net/ipv4/conf/veth1/rp_filter
+echo 0 &gt; /proc/sys/net/ipv4/conf/veth2/rp_filter
+echo 0 &gt; /proc/sys/net/ipv4/conf/all/rp_filter
+</code></pre>
+<p>Lúc này, kết quả của lệnh <code>tcpdump</code> ở <code>veth1</code> và <code>veth2</code> giống nhau:</p>
+<pre><code>10:51:11.613771 IP 20.1.0.10 &gt; 20.1.0.11: ICMP echo request, id 48, seq 1, length 64
+10:51:12.641213 IP 20.1.0.10 &gt; 20.1.0.11: ICMP echo request, id 48, seq 2, length 64
+</code></pre>
+<p>Tuy nhiên, nhìn vào kết quả, ta sẽ thấy điều bất thường, tại sao chỉ có mỗi gói tin <code>request</code>, gói tin <code>reply</code> ở đâu???</p>
+<p>Lý giải cho điều này, chúng ta hãy cùng nhìn lại mô hình ở hình trên, gói tin từ <code>veth2</code> sẽ được <code>network protocol stack</code> xử lý, nó nhận thấy <code>20.1.0.10</code> (địa chỉ nguồn gửi gói tin <code>PING</code>) là một địa chỉ local nên sẽ tạo ra gói tin <code>reply</code> và gửi vào interface <code>lo</code>, <code>lo</code> nhận được gói tin thì đẩy lên <code>network protocol stack</code> lại và được xử lý luôn bởi <code>ping process</code> đang chạy ở <code>user space</code>, kết quả của lệnh <code>tcpdump</code> trên <code>lo</code> chứng minh điều này:</p>
+<pre><code>10:55:47.347658 IP 20.1.0.11 &gt; 20.1.0.10: ICMP echo reply, id 50, seq 1, length 64
+10:55:48.412648 IP 20.1.0.11 &gt; 20.1.0.10: ICMP echo reply, id 50, seq 2, length 64
+</code></pre>
+<p>Từ ví dụ này, chúng ta có kết luận lại việc gói tin được gửi đi từ một <code>veth</code> thì sẽ đi vào <code>veth</code> còn lại.</p>
+<h3><a href="#veth-pair-khác-network-namespace" aria-hidden="true" class="anchor" id="veth-pair-khác-network-namespace"></a>Veth pair khác network namespace</h3>
+<p>Phần trên dành nhiều thời gian giải thích cách <code>veth pair</code> hoạt động, phần này mình sẽ đưa ra một ví dụ thực tế hơn, đó là việc giao tiếp giữa 2 network namespace khác nhau.</p>
+<pre><code class="language-bash"># tạo mới 1 network namespace
+ip netns add ns-example
+
+# tạo cặp veth
+ip link add veth3 type veth peer name veth4
+
+# gán veth4 vào namespace ns-example
+ip link set veth4 netns ns-example
+
+ip addr add 192.168.10.1/24 dev veth3
+ip link set veth3 up
+
+# setup veth in another network namespace
+ip netns exec ns-example ip addr add 192.168.10.2/24 dev veth4
+ip netns exec ns-example ip link set veth4 up
+ip netns exec ns-example ip link set lo up
+</code></pre>
+<p>Kiểm tra với lệnh <code>ping</code> và <code>tcpdump</code></p>
+<pre><code class="language-bash"># terminal 1
+ping -c 2 192.168.10.2
+
+# terminal 2
+ip netns exec ns-example tcpdump -i eth4
+</code></pre>
+<p>Kết quả của lệnh <code>tcpdump</code></p>
+<pre><code>11:12:25.968386 IP 192.168.10.1 &gt; 192.168.10.2: ICMP echo request, id 55, seq 1, length 64
+11:12:25.968465 IP 192.168.10.2 &gt; 192.168.10.1: ICMP echo reply, id 55, seq 1, length 64
+11:12:26.991266 IP 192.168.10.1 &gt; 192.168.10.2: ICMP echo request, id 55, seq 2, length 64
+11:12:26.991340 IP 192.168.10.2 &gt; 192.168.10.1: ICMP echo reply, id 55, seq 2, length 64
+</code></pre>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Qua bài này, hy vọng bạn có thể hiểu thêm về khái niệm <code>virtual ethernet</code> trong linux, cách hoạt động của lệnh <code>ping</code> và hành trình của gói tin trong hệ thống.</p>
+<ul>
+<li><code>Network namespace</code> cung cấp các môi trường network độc lập với cách tính năng đầy đủ nhưng <code>network protocol stack</code>, <code>routing policy</code>, <code>filewwall policy</code>,...</li>
+<li>Gói tin đi ra từ 1 <code>veth</code> thì sẽ đi vào trực tiếp <code>veth</code> còn lại trong <code>veth pair</code>.</li>
+<li>Các process trong các <code>network namespace</code> khác nhau có thể sử dụng <code>veth pair</code> để giao tiếp với nhau.</li>
+</ul>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ul>
+<li><a href="https://www.sobyte.net/post/2022-04/network-virtualization-veth-pair">https://www.sobyte.net/post/2022-04/network-virtualization-veth-pair</a></li>
+<li><a href="https://networklessons.com/cisco/ccie-routing-switching-written/arp-address-resolution-protocol-explained">https://networklessons.com/cisco/ccie-routing-switching-written/arp-address-resolution-protocol-explained</a></li>
+<li><a href="https://medium.com/@amazingandyyy/introduction-to-network-namespaces-and-virtual-ethernet-veth-devices-304e0c02d084">https://medium.com/@amazingandyyy/introduction-to-network-namespaces-and-virtual-ethernet-veth-devices-304e0c02d084</a></li>
+<li><a href="https://www.redhat.com/en/blog/7-linux-namespaces">https://www.redhat.com/en/blog/7-linux-namespaces</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/veth.html'>veth</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
