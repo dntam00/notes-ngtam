@@ -1,0 +1,179 @@
+<html>
+
+<head>
+  <title>Networking (4) Virtual bridge | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Networking (4) Virtual bridge</h1>
+      <p>Ở bài trước, mình đã tìm hiểu về <code>network namepsace</code> và <code>virtual ethernet</code>, hôm nay mình sẽ tiếp tục tìm hiểu về một thiết bị mạng ảo quan trọng khác, đó là <code>bridge</code>.</p>
+<h2><a href="#bridge" aria-hidden="true" class="anchor" id="bridge"></a>Bridge</h2>
+<p><code>Bridge</code> là một thiết bị mạng ảo (virtual network device), cũng giống như <code>veth</code> mình đã tìm hiểu ở bài trước, mặc định, <code>bridge</code> hoạt động ở layer 2 (mô hình OSI), và có chức năng tương tự như một switch (kết nối các máy tính ở cùng mạng LAN). Tuy nhiên, khi được gán cho địa chỉ IP, nó cũng có thể hoạt động ở layer 3.</p>
+<p><code>Bridge</code> kết nối vào <code>network protocol stack</code> (mình sẽ dùng <code>NPS</code> để chỉ cụm từ này trong xuyên suốt bài viết) và giống như switch, nó có các cổng để các thiết bị mạng ảo khác có thể kết nối vào như <code>veth</code>, <code>tap</code>,...</p>
+<p><img src="img/bridge-linux.png" alt="bridge-linux" /></p>
+<p>Trong linux, chúng ta có thể dùng lệnh <code>ip</code> để tương tác với các thiết bị mạng ảo, hãy cùng tạo ra mô hình như ảnh trên.</p>
+<pre><code class="language-bash">ip link add br0 type bridge
+ip link set br0 up
+
+ip link add veth0 type veth peer name veth1
+ip addr add 20.1.0.10/24 dev veth0
+ip addr add 20.1.0.11/24 dev veth1
+ip link set veth0 up
+ip link set veth1 up
+ip link set dev veth0 master br0
+# verify result
+bridge link
+brctl show
+</code></pre>
+<p>Kết quả có được sau khi chạy các câu lệnh trên:</p>
+<pre><code># bridge link
+6: veth0@veth1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 master br0 state forwarding priority 32 cost 2
+# brctl show
+bridge name	bridge id		STP enabled	interfaces
+br0		8000.8e5ec2c9742a	no		veth0
+</code></pre>
+<p>Ở bài viết về <a href="https://notes-ngtam.pages.dev/posts/virtual-ethernet">veth</a>, sau khi tạo 2 virtual ethernet thì <code>veth0</code> sẽ có 1 đầu kết nối với <code>NPS</code> và đây là một giao tiếp 2 chiều. Ở mô hình trên, mình kết nối <code>veth0</code> vào <code>br0</code>, vậy hãy xem thử có gì điều khác nhau bằng lệnh <code>ping</code> (lưu ý để <code>arp protocol</code> có thể hoạt động thì bạn phải cấu hình network như ở bài <a href="https://notes-ngtam.pages.dev/posts/virtual-ethernet">veth</a>).</p>
+<pre><code class="language-bash">ping -c 1 -I veth0 20.1.0.11
+</code></pre>
+<p>Sử dụng <code>tcpdump</code> để bắt gói tin trên tất cả <code>network interface</code>:</p>
+<pre><code class="language-bash">tcpdump -n -i any
+</code></pre>
+<p>Kết quả của lệnh <code>ping</code> và <code>tcpdump</code> như sau:</p>
+<pre><code># ping
+PING 20.1.0.11 (20.1.0.11) from 20.1.0.10 veth0: 56(84) bytes of data.
+From 20.1.0.10 icmp_seq=1 Destination Host Unreachable
+--- 20.1.0.11 ping statistics ---
+1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+
+
+# tcpdump
+11:05:40.901664 veth0 Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+11:05:40.901671 veth1 B   ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+11:05:40.901697 veth1 Out ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+11:05:40.901698 veth0 In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+11:05:40.901698 br0   In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+</code></pre>
+<p>Lần này, gói tin <code>ARP</code> được gửi đi từ <code>veth0</code> tới <code>veth1</code> và có phản hồi, tuy nhiên thay vì gói tin phản hồi đi trở lại <code>NPS</code> thì nó đi vào <code>br0</code>, kết quả là <code>NPS</code> không lấy được địa chỉ MAC của <code>veth1</code> để cập nhật bảng mapping <code>MAC address - IP address</code> cho <code>veth0</code>, mà thông tin này sẽ được cập nhật ở <code>br0</code>, sử dụng lệnh <code>arp -n</code> và <code>brctl showmacs br0</code> để kiểm chứng lại và nhận được kết quả:</p>
+<pre><code># arp -n
+
+Address                  HWtype  HWaddress           Flags Mask            Iface
+172.17.0.2               ether   02:42:ac:11:00:02   C                     eth0
+20.1.0.11                        (incomplete)                              veth0
+172.17.0.1               ether   02:42:9e:e4:b1:d5   C                     eth0
+20.1.0.10                ether   8e:5e:c2:c9:74:2a   C                     veth1
+
+
+# brctl showmacs br0 -&gt; mac address de:9a:36:c3:48:93 của veth1
+
+port no mac addr                is local?       ageing timer
+  1     8e:5e:c2:c9:74:2a       yes                0.00
+  1     8e:5e:c2:c9:74:2a       yes                0.00
+  1     de:9a:36:c3:48:93       no                 3.38
+</code></pre>
+<p>Để thực hiện được lệnh <code>ping</code> ở trên thông qua <code>br0</code>, ta phải gán địa chỉ <code>ip</code> cho <code>br0</code> thay vì <code>veth0</code>, lúc này <code>br0</code> sẽ có thêm vai trò routing thay vì chỉ đơn thuần là một virtual switch.</p>
+<pre><code class="language-bash">ip addr del 20.1.0.10/24 dev veth0
+ip addr add 20.1.0.10/24 dev br0
+</code></pre>
+<p>Chạy lại lệnh <code>ping</code> và <code>tcpdump</code>:</p>
+<pre><code class="language-bash">ping -c 1 -I br0 20.1.0.11
+</code></pre>
+<p>Ta được kết quả:</p>
+<pre><code># ping
+
+PING 20.1.0.11 (20.1.0.11) from 20.1.0.10 br0: 56(84) bytes of data.
+64 bytes from 20.1.0.11: icmp_seq=1 ttl=64 time=0.717 ms
+
+--- 20.1.0.11 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.717/0.717/0.717/0.000 ms
+
+# tcpdump
+
+12:00:17.086571 br0   Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+12:00:17.086611 veth0 Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+12:00:17.086616 veth1 B   ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
+12:00:17.086865 veth1 Out ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+12:00:17.086867 veth0 In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+12:00:17.086867 br0   In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
+12:00:17.086944 br0   Out IP 20.1.0.10 &gt; 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
+12:00:17.086947 veth0 Out IP 20.1.0.10 &gt; 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
+12:00:17.086948 veth1 In  IP 20.1.0.10 &gt; 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
+12:00:17.087104 lo    In  IP 20.1.0.11 &gt; 20.1.0.10: ICMP echo reply, id 106, seq 1, length 64
+</code></pre>
+<p><code>NPS</code> nhận được <code>ARP reply</code> và nếu sử dụng <code>arp -n</code> để xem lại kết quả, chúng ta sẽ thấy bản ghi của <code>veth1</code> ở <code>br0</code>:</p>
+<pre><code>Address               HWtype  HWaddress           Flags Mask     Iface
+20.1.0.11             ether   de:9a:36:c3:48:93   C              br0
+172.17.0.1            ether   02:42:9e:e4:b1:d5   C              eth0
+20.1.0.10             ether   8e:5e:c2:c9:74:2a   C              veth1
+</code></pre>
+<p>Hãy quay lại ví dụ lúc mà mình chưa thiết lập địa chỉ IP cho <code>br0</code>, nó sẽ là một thiết bị hoạt động đơn thuần ở <code>layer 2</code> với các <code>ethernet frame</code>, không có sự liên kết trực tiếp đến <code>NPS</code> (<code>layer 3</code>) thông qua routing, nên lúc này các kết nối đến máy chủ vật lý bằng địa chỉ IP thông qua <code>virtual bridge</code> là không thể xảy ra.</p>
+<h2><a href="#ứng-dụng" aria-hidden="true" class="anchor" id="ứng-dụng"></a>Ứng dụng</h2>
+<h3><a href="#virtual-machine" aria-hidden="true" class="anchor" id="virtual-machine"></a>Virtual machine</h3>
+<p><img src="img/bridge-vm.png" alt="bridge-vm" /></p>
+<p>Mô hình network cơ bản của VM đó là các NIC trong VM sẽ kết nối với <code>tun/tap</code> device và đi qua <code>br0</code>, lúc này <code>br0</code> đóng vai trò như 1 <code>switch layer 2</code>. Nếu muốn VM giao tiếp được với máy chủ, chúng ta phải cấu hình thêm địa chỉ IP cho <code>br0</code> và nó sẽ có thêm vai trò là 1 <code>gateway</code>.</p>
+<h3><a href="#docker-container" aria-hidden="true" class="anchor" id="docker-container"></a>Docker container</h3>
+<p><code>Bridge</code> được sử dụng như driver mặc định trong docker, cung cấp sự giao tiếp cho các container chạy trên cùng 1 máy chủ vật lý, mô hình hoạt động như sau:</p>
+<p><img src="img/docker-container.png" alt="bridge-linux" /></p>
+<p>Ở bài viết tiếp theo mình sẽ phân tích chi tiết hơn về mô hình này và cách docker dùng <code>port forwarding</code> bằng <code>iptables</code>.</p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Bài viết này mình đã tìm hiểu qua một thiết bị mạng ảo quan trọng đó là <code>bridge</code>, cách nó hoạt động ở <code>layer 2</code> và <code>layer 3</code> cũng như một số ứng dụng trong thực tế.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/docker.html'>docker</a><a class='topic-tag' href='/tags/network.html'>network</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
