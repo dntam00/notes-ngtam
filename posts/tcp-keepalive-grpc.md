@@ -25,6 +25,9 @@ Tài liệu chính thức của AWS có đề cập tới cách họ hiện th�
 
 - NLB hoạt động với keep alive packet của TCP connection, điều này khác với ALB.
 - Người dùng không cấu hình được thời gian `idle timeout`.
+
+**-> cập nhật ngày 10/11/2024:** AWS đã bổ sung tính năng điều chỉnh `idle timeout` trên NLB.
+> The default idle timeout value for TCP flows is 350 seconds, **but can be updated to any value between 60-6000 seconds**. Clients or targets can use TCP keepalive packets to restart the idle timeout. Keepalive packets sent to maintain TLS connections can't contain data or payload.
 - NLB giữ trạng thái của mỗi connection, khi `idle timeout` qua đi, NLB không đóng connection bằng các gói tin `FIN/RST` mà chỉ gửi những gói tin này khi client sử dụng lại connection sau thời gian `idle timeout`.
 
 ## gRPC in Linux OS
