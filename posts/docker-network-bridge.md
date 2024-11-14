@@ -1,151 +1,233 @@
 ---
-title: Networking (4) Docker network - bridge
-published: false
-date: 2024-11-09 20:07:00
+title: Networking (5) Docker network - bridge driver
+published: true
+date: 2024-11-14 15:24:00
 tags: docker, network
 description: Try to understand docker network bridge
 image: 
 ---
 
-Ở bài trước, mình đã tìm hiểu về `network namepsace` và `virtual ethernet`, hôm nay mình sẽ tiếp tục tìm hiểu về một thành phần thiết yếu nữa của docker network, đó là `bridge`.
+Tiếp tục chuỗi bài viết tìm hiểu về `virtual netowrk interface`, trái ngược với những bài viết trước hơi mang tính lí thuyết, bài viết hôm nay sẽ có tính ứng dụng hơn, đó là cách `docker` sử dụng `virtual ethernet` và `virtual bridge` để hiện thực một phần hệ thống `network`.
 
-Dựa theo tài liệu của [Docker](https://docs.docker.com/engine/network/#drivers), `bridge` là diver mặc định của docker network, `bridge driver` cho phép các container trên cùng 1 máy vật lý giao tiếp với nhau, đối với các container chạy trên các máy vật lý khác nhau, chúng ta cần sử dụng chế độ khác như `host`, `NAT`, `overlay (e.g VxLAN)`,...
+Dựa theo tài liệu của [Docker](https://docs.docker.com/engine/network/#drivers), `bridge` là diver mặc định của `docker network`, `bridge driver` cho phép các container chạy trên cùng 1 máy vật lý giao tiếp với nhau, đối với các container chạy trên các máy vật lý khác nhau, chúng ta cần sử dụng các `driver network` khác như `host`, `NAT`, `overlay (e.g VxLAN)`,...
 
-## Bridge
+## Overview
 
-Trước khi đi sâu hơn cách docker sử dụng `bridge`, chúng ta hiểu về nó trước, khái niệm cũng như nguyên lí hoạt động.
+Các container chạy trong các namespace khác nhau với sự độc lập về tài nguyên, network, hình dưới mô tả cách docker sử dụng `bridge driver`.
 
-`Bridge` là một thiết bị mạng ảo (virtual network device), cũng giống như `veth` mình đã tìm hiểu ở bài trước, mặc định, `bridge` hoạt động ở layer 2 (mô hình OSI), và có chứng năng tương tự như một switch (kết nối các máy tính ở cùng mạng LAN). Tuy nhiên, khi được gán cho địa chỉ IP, nó cũng có thể hoạt động ở layer 3.
+![docker-network-bridge](img/docker-bridge-network.png)
 
-`Bridge` kết nối vào `network protocol stack` (mình sẽ dùng `NPS` để chỉ cụm từ này trong xuyên suốt bài viết này) và giống như switch, nó có các cổng để các thiết bị mạng ảo khác có thể kết nối vào như `veth`, `tap`,...
+`bridge driver` cho phép các container trong cùng 1 `bridge` giao tiếp với nhau, có 2 thành phần trong mô hình này:
 
-![bridge-linux](img/bridge-linux.png)
+- `veth pair`: giao tiếp giữa máy chủ và namespace
+- `bridge`: giao tiếp giữa các `veth`
 
-Trong linux, chúng ta có thể dùng lệnh `ip` để tương tác với các thiết bị mạng ảo, hãy cùng tạo ra mô hình như ảnh trên.
+Các gói tin sẽ đi từ trong namespace ra máy chủ, qua `bridge` rồi đi vào namespace còn lại, `bridge` đóng vai trò như 1 gateway và điều chuyển các gói tin `ethernet`. 
 
-```bash
-ip link add br0 type bridge
-ip link set br0 up
+### Ví dụ
 
-ip link add veth0 type veth peer name veth1
-ip addr add 20.1.0.10/24 dev veth0
-ip addr add 20.1.0.11/24 dev veth1
-ip link set veth0 up
-ip link set veth1 up
-ip link set dev veth0 master br0
-# verify result
-bridge link
-brctl show
-```
+Mình sẽ chạy thử một ví dụ và capture gói tin bằng `tcpdump` để chứng minh flow ở trên.
 
-Kết quả có được sau khi chạy các câu lệnh trên:
-
-```
-# bridge link
-6: veth0@veth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 master br0 state forwarding priority 32 cost 2
-# brctl show
-bridge name	bridge id		STP enabled	interfaces
-br0		8000.8e5ec2c9742a	no		veth0
-```
-
-Ở bài viết về [veth](https://notes-ngtam.pages.dev/posts/virtual-ethernet), sau khi tạo 2 virtual ethernet thì `veth0` sẽ có 1 đầu kết nối với `NPS` và đây là một giao tiếp 2 chiều. Ở mô hình trên, mình kết nối `veth0` vào `br0`, vậy hãy xem thử có gì điều khác nhau bằng lệnh `ping` (lưu ý để `arp protocol` có thể hoạt động thì bạn phải cấu hình network như ở bài [veth](https://notes-ngtam.pages.dev/posts/virtual-ethernet)).
+Đầu tiên, tạo mới 1 network với driver `bridge` có tên `bridge_example` và kiểm tra bằng lệnh `docker network ls`
 
 ```bash
-ping -c 1 -I veth0 20.1.0.11
-```
+docker network create \
+    --driver bridge \
+    --subnet 192.180.1.0/24 \
+    --gateway 192.180.1.1 \
+    bridge_example
 
-Sử dụng `tcpdump` để bắt gói tin trên tất cả `network interface`
+# verify
+docker network ls
+
+NETWORK ID     NAME             DRIVER    SCOPE
+8e2893b1f2cc   bridge_example   bridge    local
+```
+Tiếp tục chạy 2 container và sử dụng driver vừa mới tạo.
 
 ```bash
+docker run -t -d --privileged \
+    --network bridge_example \
+    --name c-test-1 ubuntu
+
+docker run -t -d --privileged \
+    --network bridge_example \
+    --name c-test-2 ubuntu
+
+# verify
+docker container ps
+docker network inspect bridge_example
+```
+
+Kết quả khi kiểm tra `bridge bridge_example` (mình đã lược bỏ bớt những phần không cần thiết)
+
+```
+[
+    {
+        "Name": "bridge_example",
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.180.1.0/24",
+                    "Gateway": "192.180.1.1"
+                }
+            ]
+        },
+        "Containers": {
+            "784ce52efd837b214ade8f5b124c42e94a87f71230028fa7365251853d19fc67": {
+                "Name": "c-test-2",
+                "EndpointID": "92aab0450cdba799d9a6a11f464f7d4a7e625d41b9b55c8be2d63b215db6f271",
+                "MacAddress": "02:42:c0:b4:01:03",
+                "IPv4Address": "192.180.1.3/24",
+                "IPv6Address": ""
+            },
+            "fb8ec7decde7d57937d16d4da20ec00c36ca938af8896b599c6d5e942008e1dc": {
+                "Name": "c-test-1",
+                "EndpointID": "3de362f05f3e6c29898a726a8116191fb38a9609dd53a6f473a59bda1b6a940b",
+                "MacAddress": "02:42:c0:b4:01:02",
+                "IPv4Address": "192.180.1.2/24",
+                "IPv6Address": ""
+            }
+        }
+    }
+]
+```
+
+Kết quả cho thấy 2 containers đang sử dụng `bridge bridge_example`.
+
+Ở máy chủ, kiểm tra các `virtual network interface` bằng lệnh `ifconfig`
+
+```
+br-8e2893b1f2cc Link encap:Ethernet  HWaddr 02:42:11:82:AD:98
+          inet addr:192.180.1.1  Bcast:192.180.1.255  Mask:255.255.255.0
+          inet6 addr: fe80::42:11ff:fe82:ad98/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:7997 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:9651 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:420682 (410.8 KiB)  TX bytes:26921283 (25.6 MiB)
+
+docker0   Link encap:Ethernet  HWaddr 02:42:9E:E4:B1:D5
+          inet addr:172.17.0.1  Bcast:172.17.255.255  Mask:255.255.0.0
+          inet6 addr: fe80::42:9eff:fee4:b1d5/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:119202 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:159094 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:6285502 (5.9 MiB)  TX bytes:322699596 (307.7 MiB)
+
+eth0      Link encap:Ethernet  HWaddr D6:A6:FD:A7:05:37
+          inet addr:192.168.65.4  Bcast:0.0.0.0  Mask:255.255.255.255
+          inet6 addr: fe80::d4a6:fdff:fea7:537/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:171798 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:129430 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:356622698 (340.1 MiB)  TX bytes:8690969 (8.2 MiB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:60 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:60 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:5156 (5.0 KiB)  TX bytes:5156 (5.0 KiB)
+
+veth24d52fa Link encap:Ethernet  HWaddr C2:9A:A8:9E:3B:2D
+          inet6 addr: fe80::c09a:a8ff:fe9e:3b2d/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:42 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:58 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:3108 (3.0 KiB)  TX bytes:4296 (4.1 KiB)
+
+veth98a7f28 Link encap:Ethernet  HWaddr 82:B2:D9:7D:4C:55
+          inet6 addr: fe80::80b2:d9ff:fe7d:4c55/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:8018 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:9712 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:534194 (521.6 KiB)  TX bytes:26925817 (25.6 MiB)
+```
+
+Có 3 interface liên quan đến `bridge driver` và 2 containers, đó là `br-8e2893b1f2cc`, `veth24d52fa` và `veth98a7f28`, các gói tin sẽ đi qua các interface này.
+
+Mọi thứ đã được chuẩn bị xong, mình sẽ sử dụng lệnh `ping` để kiểm tra sự giao tiếp giữa 2 container này. Nếu container không có lệnh `ping`, bạn có thể cài đặt bằng lệnh:
+
+```
+apt-get update -y & apt-get install -y iputils-ping
+```
+
+Ở container `c-test-1`, chạy lệnh:
+
+```
+ping -c 2 192.180.1.3
+
+# result
+PING 192.180.1.3 (192.180.1.3) 56(84) bytes of data.
+64 bytes from 192.180.1.3: icmp_seq=1 ttl=64 time=0.569 ms
+64 bytes from 192.180.1.3: icmp_seq=2 ttl=64 time=0.144 ms
+
+--- 192.180.1.3 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1024ms
+rtt min/avg/max/mdev = 0.144/0.356/0.569/0.212 ms
+```
+
+Kết quả cho thấy 2 container có thể giao tiếp được với nhau, sử dụng `tcpdump` ở máy chủ để kiểm tra dòng của gói tin:
+
+```
 tcpdump -n -i any
+# result
+tcpdump: data link type LINUX_SLL2
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+10:32:50.205517 veth98a7f28 P   IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 132, seq 1, length 64
+10:32:50.205822 veth24d52fa Out IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 132, seq 1, length 64
+10:32:50.206052 veth24d52fa P   IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 132, seq 1, length 64
+10:32:50.206067 veth98a7f28 Out IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 132, seq 1, length 64
+10:32:51.208395 veth98a7f28 P   IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 132, seq 2, length 64
+10:32:51.208470 veth24d52fa Out IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 132, seq 2, length 64
+10:32:51.208587 veth24d52fa P   IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 132, seq 2, length 64
+10:32:51.208607 veth98a7f28 Out IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 132, seq 2, length 64
+
+
+tcpdunp -n -i br-8e2893b1f2cc
+# result
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on br-8e2893b1f2cc, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:35:06.201625 IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 133, seq 1, length 64
+10:35:06.201887 IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 133, seq 1, length 64
+10:35:07.205823 IP 192.180.1.2 > 192.180.1.3: ICMP echo request, id 133, seq 2, length 64
+10:35:07.205959 IP 192.180.1.3 > 192.180.1.2: ICMP echo reply, id 133, seq 2, length 64
 ```
 
-Kết quả của lệnh `ping` và `tcpdump` như sau:
-```
-# ping
-PING 20.1.0.11 (20.1.0.11) from 20.1.0.10 veth0: 56(84) bytes of data.
-From 20.1.0.10 icmp_seq=1 Destination Host Unreachable
---- 20.1.0.11 ping statistics ---
-1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
+Ở đây mình phải sử dụng câu lệnh thứ 2 để bắt gói tin trên `bridge` bởi vì lệnh `tcpdump -n -i any` sẽ không bắt được những gói tin trên các interface mà địa chỉ đích trên gói tin không phải là nó (tham khảo: [tcpdump-any](https://unix.stackexchange.com/questions/784186/why-tcpdump-i-any-cant-capture-unicast-traffic-in-br0-whilst-tcpdump-i-br0)).
 
+Các gói tin `ICMP request` đi từ veth `veth98a7f28` đến bridge `br-8e2893b1f2cc` rồi vào veth `veth24d52fa`, các gói tin `ICMP reply` sẽ có hướng ngược lại.
 
-# tcpdump
-11:05:40.901664 veth0 Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
-11:05:40.901671 veth1 B   ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
-11:05:40.901697 veth1 Out ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-11:05:40.901698 veth0 In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-11:05:40.901698 br0   In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-```
-
-Lần này, gói tin `ARP` được gửi đi từ `veth0` tới `veth1` và có phản hồi, tuy nhiên thay vì gói tin phản hồi đi trở lại `NPS` thì nó đi vào `br0`, kết quả là `NPS` không lấy được địa chỉ MAC của `veth1` để cập nhật bảng mapping `MAC address - IP address` cho `veth0`, mà thông tin này sẽ được cập nhật ở `br0`, sử dụng lệnh `arp -n` và `brctl showmacs br0` để kiểm chứng lại và nhận được kết quả:
-
-```
-# arp -n
-
-Address                  HWtype  HWaddress           Flags Mask            Iface
-172.17.0.2               ether   02:42:ac:11:00:02   C                     eth0
-20.1.0.11                        (incomplete)                              veth0
-172.17.0.1               ether   02:42:9e:e4:b1:d5   C                     eth0
-20.1.0.10                ether   8e:5e:c2:c9:74:2a   C                     veth1
-
-
-# brctl showmacs br0 -> mac address de:9a:36:c3:48:93 của veth1
-
-port no mac addr                is local?       ageing timer
-  1     8e:5e:c2:c9:74:2a       yes                0.00
-  1     8e:5e:c2:c9:74:2a       yes                0.00
-  1     de:9a:36:c3:48:93       no                 3.38
-```
-
-Để thực hiện được lệnh `ping` ở trên thông qua `br0`, ta phải gán địa chỉ `ip` cho `br0` thay vì `veth0`, lúc này `br0` sẽ có thêm vai trò routing thay vì chỉ đơn thuần là một virtual switch.
+Tiếp theo, kiểm tra mối liên hệ giữa `bridge` và 2 `veth` bằng lệnh `brctl show` và `brctl showmacs br-8e2893b1f2cc`
 
 ```bash
-ip addr del 20.1.0.10/24 dev veth0
-ip addr add 20.1.0.10/24 dev br0
+# brctl show
+bridge name         bridge id           STP enabled     interfaces
+br-8e2893b1f2cc     8000.02421182ad98   no              veth98a7f28
+                                                        veth24d52fa
+
+# brctl showmacs br-8e2893b1f2cc
+port no	mac addr		is local?	ageing timer
+  1	82:b2:d9:7d:4c:55	yes		   0.00
+  1	82:b2:d9:7d:4c:55	yes		   0.00
+  2	c2:9a:a8:9e:3b:2d	yes		   0.00
+  2	c2:9a:a8:9e:3b:2d	yes		   0.00
 ```
 
-Chạy lại lệnh `ping` và `tcpdump`:
-
-```bash
-ping -c 1 -I br0 20.1.0.11
-```
-
-Ta được kết quả:
-
-```
-# ping
-
-PING 20.1.0.11 (20.1.0.11) from 20.1.0.10 br0: 56(84) bytes of data.
-64 bytes from 20.1.0.11: icmp_seq=1 ttl=64 time=0.717 ms
-
---- 20.1.0.11 ping statistics ---
-1 packets transmitted, 1 received, 0% packet loss, time 0ms
-rtt min/avg/max/mdev = 0.717/0.717/0.717/0.000 ms
-
-# tcpdump
-
-12:00:17.086571 br0   Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
-12:00:17.086611 veth0 Out ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
-12:00:17.086616 veth1 B   ARP, Request who-has 20.1.0.11 tell 20.1.0.10, length 28
-12:00:17.086865 veth1 Out ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-12:00:17.086867 veth0 In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-12:00:17.086867 br0   In  ARP, Reply 20.1.0.11 is-at de:9a:36:c3:48:93, length 28
-12:00:17.086944 br0   Out IP 20.1.0.10 > 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
-12:00:17.086947 veth0 Out IP 20.1.0.10 > 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
-12:00:17.086948 veth1 In  IP 20.1.0.10 > 20.1.0.11: ICMP echo request, id 106, seq 1, length 64
-12:00:17.087104 lo    In  IP 20.1.0.11 > 20.1.0.10: ICMP echo reply, id 106, seq 1, length 64
-```
-
-`NPS` nhận được `ARP reply` và nếu sử dụng `arp -n` để xem lại kết quả, chúng ta sẽ thấy bản ghi của `veth1` ở `br0`:
-
-```
-Address               HWtype  HWaddress           Flags Mask     Iface
-20.1.0.11             ether   de:9a:36:c3:48:93   C              br0
-172.17.0.1            ether   02:42:9e:e4:b1:d5   C              eth0
-20.1.0.10             ether   8e:5e:c2:c9:74:2a   C              veth1
-```
+Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh `ifconfig`, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 `veth`, như vậy lúc này `bridge` sẽ có vai trò như 1 `switch` và điều chuyển gọi tin `ethernet` dựa trên địa chỉ MAC.
 
 
-## Bridge trong docker
+## Tổng kết
 
-Docker sử `bridge` kết hợp với các `veth pair`, cho phép các `container` có thể giao tiếp với nhau.
+Thông qua bài viết này, mình đã phân tích cách docker sử dụng `driver bridge` và kiểm chứng bằng các công cụ network như `tcpdump`, `ifconfig`, `ping`,... 
+Trong xu hướng công nghệ hiện nay, `docker` có thể được xem là 1 phần không thể thiếu trong công việc hàng ngày của mỗi lập trình viên, việc hiểu sâu hơn cách `docker` hoạt động cũng giúp mình nâng cao chất lượng công việc, giảm thời gian debug khi có lỗi xảy ra.
