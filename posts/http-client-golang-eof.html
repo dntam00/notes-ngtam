@@ -1,0 +1,233 @@
+<html>
+
+<head>
+  <title>Pooling HTTP client | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Pooling HTTP client</h1>
+      <!-- `HTTP` is a application protocol based on TCP transport (layer 4 OSI), I have a related post [[TCP Close connection](https://notes-ngtam.pages.dev/posts/close-tcp)], you could read it before going ahead. -->
+<p><code>HTTP</code> là 1 giao thức ở tầng ứng dụng (application) sử dụng giao thức <code>TCP</code> ở tầng vận chuyển (transport), trước đó mình cũng có viết 1 bài liên quan đến <code>TCP</code>, bạn có thể đọc trước [<a href="https://notes-ngtam.pages.dev/posts/close-tcp">TCP Close connection</a>].</p>
+<!-- ## Why do we want to reuse connection? -->
+<h2><a href="#pooling" aria-hidden="true" class="anchor" id="pooling"></a>Pooling</h2>
+<!-- We all heard about `pooling technique`, from `HTTP` to `GRPC`, database connection, it's very popular. T -->
+<p>HTTP là một giao thức <code>client-server</code> dựa trên <code>TCP</code>, để thực thi 1 yêu cầu, phía <code>client</code> sẽ cần khởi tạo <code>TCP</code> connection tới <code>server</code> bằng cơ chế bắt tay 3 bước (<code>3-way handshake</code>), <code>SYN -&gt; SYN/ACK -&gt; SYN</code>, ngoài ra, nếu sử dụng TLS thì sau quá trình trên còn diễn ra thêm quá trình trao đổi khoá để mã hoá message, chi phí để liên tục mở và đóng các connection là rất lớn và lãng phí nếu ứng dụng cần gửi một cách thường xuyên.</p>
+<p>Để giải quyết vấn đề này, một kĩ thuật đã được áp dụng rộng rãi, đó là <code>pooling</code>, thay vì tạo mới connection mỗi lần gửi yêu cầu thì chúng ta sẽ tạo ra một tập các connection và tái sử dụng nó.</p>
+<h2><a href="#http-client-trong-go" aria-hidden="true" class="anchor" id="http-client-trong-go"></a>HTTP client trong Go</h2>
+<p>Ở phần này mình sử dụng phiên bản <code>Go v1.23</code> để phân tích.</p>
+<blockquote>
+<p>If the returned error is nil, the Response will contain a non-nil Body which the user is expected to close. If the Body is not both read to EOF and closed, the Client's underlying RoundTripper (typically Transport) may not be able to re-use a persistent TCP connection to the server for a subsequent &quot;keep-alive&quot; request.</p>
+</blockquote>
+<p>Theo phần chú thích cho hàm <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/client.go;l=567">Do</a>, <code>HTTP client</code> sẽ tái sử dụng connection để gửi yêu cầu đến server nếu client đọc phần <code>body response</code> đến <code>EOF</code> trong trường hợp không có lỗi xảy ra.</p>
+<p>Để ngăn việc tái sử dụng <code>TCP connection</code>, chúng ta có thể làm bằng 2 cách:</p>
+<ol>
+<li>Gán biến <code>Close</code> của struct <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/request.go;l=112">Request</a> thành <code>true</code> khi khởi tạo 1 request mới.</li>
+<li>Gán biến <code>DisableKeepAlives</code> của struct <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/transport.go;l=96">Transport</a> thành <code>true</code> khi khởi tạo <code>HTTP client</code></li>
+</ol>
+<h2><a href="#vấn-đề" aria-hidden="true" class="anchor" id="vấn-đề"></a>Vấn đề</h2>
+<p>Khi triển khai ứng dụng trong 1 thời gian dài, mình thấy có một vài API xảy ra lỗi <code>EOF</code>, lỗi này xảy ra khi server và client đều có tác động đến connection theo 2 hướng khác nhau:</p>
+<ul>
+<li><code>server</code>: đóng connection bởi vì <code>idle timeout</code>.</li>
+<li><code>client</code>: tái sử dụng connection để gửi request.</li>
+</ul>
+<p>Trích dẫn docs từ <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/transport.go;l=96">transportReadFromServerError</a></p>
+<pre><code class="language-go">// transportReadFromServerError is used by Transport.readLoop when the
+// 1 byte peek read fails and we're actually anticipating a response.
+// Usually this is just due to the inherent keep-alive shut down race,
+// where the server closed the connection at the same time the client
+// wrote. The underlying err field is usually io.EOF or some
+// ECONNRESET sort of thing which varies by platform. But it might be
+// the user's custom net.Conn.Read error too, so we carry it along for
+// them to return from Transport.RoundTrip.
+type transportReadFromServerError struct {
+	err error
+}
+</code></pre>
+<p>Khi khởi tạo 1 connection mới tới server, hàm <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/transport.go;l=1684">dialConn</a>, Go sử dụng 2 goroutine để đọc và viết trên mỗi connection.</p>
+<pre><code class="language-go">func (t *Transport) dialConn(ctx context.Context, cm connectMethod) (pconn *persistConn, err error) {
+    // omitted for brevity
+    pconn.br = bufio.NewReaderSize(pconn, t.readBufferSize())
+    pconn.bw = bufio.NewWriterSize(persistConnWriter{pconn}, t.writeBufferSize())
+
+    go pconn.readLoop()
+    go pconn.writeLoop()
+    return pconn, nil
+}
+</code></pre>
+<p>Khi thực hiện request, hàm <code>roundTrip</code> sẽ tương tác với 2 goroutine trên thông qua channel và dùng <code>select case</code> để xử lý các trường hợp có thể xảy ra như <code>request timeout</code>, <code>read error</code>,...</p>
+<pre><code class="language-go">func (pc *persistConn) roundTrip(req *transportRequest) (resp *Response, err error) {
+    // omitted for brevity
+
+    // Write the request concurrently with waiting for a response,
+    // in case the server decides to reply before reading our full
+    // request body.
+    startBytesWritten := pc.nwrite
+    writeErrCh := make(chan error, 1)
+    pc.writech &lt;- writeRequest{req, writeErrCh, continueCh}
+
+    resc := make(chan responseAndError)
+    pc.reqch &lt;- requestAndChan{
+    	treq:       req,
+    	ch:         resc,
+    	addedGzip:  requestedGzip,
+    	continueCh: continueCh,
+    	callerGone: gone,
+    }
+
+    // omitted for brevity
+
+    for {
+        testHookWaitResLoop()
+        select {
+        case err := &lt;-writeErrCh:
+            if debugRoundTrip {
+            	req.logf(&quot;writeErrCh recv: %T/%#v&quot;, err, err)
+            }
+            if err != nil {
+            	pc.close(fmt.Errorf(&quot;write error: %w&quot;, err))
+            	return nil, pc.mapRoundTripError(req, startBytesWritten, err)
+            }
+            if d := pc.t.ResponseHeaderTimeout; d &gt; 0 {
+            	if debugRoundTrip {
+            		req.logf(&quot;starting timer for %v&quot;, d)
+            	}
+            	timer := time.NewTimer(d)
+            	defer timer.Stop() // prevent leaks
+            	respHeaderTimer = timer.C
+            }
+        case &lt;-pcClosed:
+            select {
+            case re := &lt;-resc:
+            	// The pconn closing raced with the response to the request,
+            	// probably after the server wrote a response and immediately
+            	// closed the connection. Use the response.
+            	return handleResponse(re)
+            default:
+            }
+            if debugRoundTrip {
+            	req.logf(&quot;closech recv: %T %#v&quot;, pc.closed, pc.closed)
+            }
+            return nil, pc.mapRoundTripError(req, startBytesWritten, pc.closed)
+        case &lt;-respHeaderTimer:
+            if debugRoundTrip {
+            	req.logf(&quot;timeout waiting for response headers.&quot;)
+            }
+            pc.close(errTimeout)
+            return nil, errTimeout
+        case re := &lt;-resc:
+            return handleResponse(re)
+        case &lt;-ctxDoneChan:
+            select {
+            case re := &lt;-resc:
+            	// readLoop is responsible for canceling req.ctx after
+            	// it reads the response body. Check for a response racing
+            	// the context close, and use the response if available.
+            	return handleResponse(re)
+            default:
+            }
+            pc.cancelRequest(context.Cause(req.ctx))
+        }
+    }
+}
+</code></pre>
+<p>Với cách hoạt động như trên, mình quyết định reproduce lỗi này với sự kết hợp của công cụ debug trong <code>GoLand</code>.</p>
+<p>Trước hết, cấu hình <code>idle timeout</code> ở server và client như sau:</p>
+<pre><code class="language-go">// server
+srv := &amp;http.Server{
+    Addr:        &quot;:&quot; + &quot;7888&quot;,
+    Handler:     handlers.CORS(originsOk, headersOk, methodsOk)(r),
+    IdleTimeout: 10 * time.Second,
+}
+
+// client
+func NewTransport() http.RoundTripper {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxConnsPerHost = 1
+	t.IdleConnTimeout = 30 * time.Second // lớn hơn server là được
+	t.MaxIdleConns = 1
+	t.MaxIdleConnsPerHost = 1
+	return t
+}
+</code></pre>
+<p>Mình sẽ gửi 2 request với phương thức <code>POST</code> (phương thức POST không có tính <code>idempotency</code>, tránh HTTP client retry, có thể xem thêm ở hàm <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/request.go;l=1543">isReplayable</a>) với các bước:</p>
+<ol>
+<li>đặt breakpoint sau khi lấy connection từ pool và hàm writeLoop, tạm thời tắt tất cả breakpoint này.</li>
+<li>gửi thành công request đầu tiên.</li>
+<li>bật breakpoint lên.</li>
+<li>dừng ở breakpoint sau khi lấy connection, đợi 2 giây rồi chạy tiếp, tới hàm writeLoop dừng một nhịp nữa.</li>
+</ol>
+<p>Kết quả sau vài lần thử thì mình cũng lấy được lỗi <code>EOF</code> rồi ~.
+<img src="img/EOF_error.png" alt="EOF error" /></p>
+<p>Sử dụng wireshark thì thấy được khi dừng ở bước 4, server sẽ gửi gói tin <code>FIN</code> để đóng <code>idle connection</code>.</p>
+<p><img src="img/idle-connection-fin.png" alt="FIN packet" /></p>
+<p>Cách tốt hơn là bạn có thể gửi 1 số lượng lớn request vào những lúc server đóng connection, tuy nhiên mình thử vài lần không được nên sử dụng cách này.</p>
+<h2><a href="#giải-pháp" aria-hidden="true" class="anchor" id="giải-pháp"></a>Giải pháp</h2>
+<p>Để xử lý vấn đề trên có vài cách sau:</p>
+<ul>
+<li>Cấu hình <code>idle timeout</code> ở phía <code>client</code> thấp hơn <code>server</code>.</li>
+<li>Retry request, tuy nhiên phương pháp này cần được cân nhắc cẩn thận vì tính chất <code>idempotency</code> của request.</li>
+</ul>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<p><a href="https://medium.com/@p408865/til-go-http-client-reuse-connection-5d8c48731dec">[TIL] Go HTTP client reuse connection</a></p>
+<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<p><a href="https://github.com/dangngoctam00/go-notes/tree/main/http">[Http server &amp; client]</a></p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/http.html'>http</a><a class='topic-tag' href='/tags/tcp.html'>tcp</a><a class='topic-tag' href='/tags/network.html'>network</a><a class='topic-tag' href='/tags/golang.html'>golang</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
