@@ -45,7 +45,7 @@
 <p>Trong linux, FD là khái niệm chỉ sự định danh cho tệp tin, hoặc các tài nguyên I/O khác như socket khi một process thao tác với các tài nguyên này. Kernel lưu trữ thông tin các file được mở của mỗi process và FD là giá trị index trỏ tới các bản ghi này.</p>
 <p>Mô hình I/O multiplexing hỗ trợ 1 thread có thể theo dõi vào nhiều FD cùng 1 lúc, bị block, chờ và nhận được thông báo về các FD sẵn sàng cho việc đọc dữ liệu. Ưu điểm của mô hình này so với mô hình truyền thống I/O blocking là giảm context switch giữa các threads vì chúng ta chỉ có 1 main thread để nhận request, xử lý cũng như đọc gói tin, tránh được race condition trong lập trình multithreads, có thể handle được số lượng lớn requests cùng lúc, tuy nhiên, mô hình này lại bị giới hạn bởi 1 CPU.</p>
 <p>Các system call giúp bạn gọi Linux theo dõi các FD là poll, select và epoll.</p>
-<p><strong>poll/select</strong></p>
+<h2><a href="#pollselect" aria-hidden="true" class="anchor" id="pollselect"></a>poll/select</h2>
 <pre><code class="language-go">int select(int nfds,
            fd_set *restrict readfds,
            fd_set *restrict writefds,
@@ -65,7 +65,7 @@
 <li>FD cần được theo dõi được truyền từ user space sang kernel state, đây là một chi phí CPU lớn khi có nhiều FD cần theo dõi</li>
 <li>Kernel kiểm tra các FD bằng cách lặp qua tất cả giá trị, độ phức tạp là O(n), vì vậy CPU time cần để sử lý sẽ tăng tuyến tính với số lượng FD cần kiểm tra</li>
 </ul>
-<p><strong>epoll</strong></p>
+<h2><a href="#epoll" aria-hidden="true" class="anchor" id="epoll"></a>epoll</h2>
 <p><code>epoll</code> là một phiên bản cải tiến của poll/select, giải quyết vấn đề hiệu năng và số lượng FD.</p>
 <pre><code class="language-go">int listenfd = socket(AF_INET, SOCK_STREAM, 0);   
 bind(listenfd, ...)
@@ -93,7 +93,7 @@ while(1){
 <li>Tất cả các FD được lưu trữ ở kernel space trước khi gọi hàm <code>epoll_wait</code>, tránh việc truyền dữ liệu nhiều giữa user space và kernel space.</li>
 <li>Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.</li>
 </ul>
-<p><strong>Level-Triggered vs Edge-Triggered</strong></p>
+<h2><a href="#level-triggered-vs-edge-triggered" aria-hidden="true" class="anchor" id="level-triggered-vs-edge-triggered"></a>Level-Triggered vs Edge-Triggered</h2>
 <ul>
 <li>get a list of every file descriptor you’re interested in that is readable (“level-triggered”)</li>
 <li>get notifications every time a file descriptor becomes readable (“edge-triggered”)</li>
@@ -109,7 +109,9 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 <li>Thực hiện gọi hàm <code>epoll_wait</code> 1 lần nữa.</li>
 </ol>
 <p>Nếu chúng ta đang sử dụng <code>level-triggered</code>, kết quả sẽ trả về FD đang sẵn sàng, ngược lại, đối với <code>edge-triggered</code> thì lệnh gọi hàm sẽ block vì không có dữ liệu mới đến socket. Để tránh bị block, chúng ta nên sử dụng <code>edge-triggered</code> với nonblocking FD và cờ EAGAIN để kiểm tra liệu FD có dữ liệu mới hay chưa.</p>
-<p><strong>Tổng kết</strong></p>
+<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
+<p>Repository <a href="https://github.com/smallnest/epoller">epoller</a> là một ví dụ để bạn có thể kiểm tra lại các kiến thức ở trên, khi sử dụng để kiểm tra, mình có phát hiện 1 lỗi và có tạo issue hỏi ở đây: <a href="https://github.com/smallnest/epoller/issues/11">Should we close connection when flag is EOF in Wait method</a> <i class='em em-relaxed'></i></p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Qua bài viết này, mình đã tóm gọn lại về tổng quát cách mô hình I/O multiplexing hoạt động với các cơ chế ở đằng sau như poll, select và epoll.</p>
 <p>Hiện nay, nhiều công cụ và framework nổi tiếng cũng áp dụng <code>epoll</code>:</p>
 <ul>

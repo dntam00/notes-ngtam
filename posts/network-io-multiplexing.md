@@ -23,7 +23,7 @@ Mô hình I/O multiplexing hỗ trợ 1 thread có thể theo dõi vào nhiều 
 
 Các system call giúp bạn gọi Linux theo dõi các FD là poll, select và epoll.
 
-**poll/select**
+## poll/select
 
 ```go
 int select(int nfds,
@@ -47,7 +47,7 @@ Mô hình này có nhiều nhược điểm:
 - FD cần được theo dõi được truyền từ user space sang kernel state, đây là một chi phí CPU lớn khi có nhiều FD cần theo dõi
 - Kernel kiểm tra các FD bằng cách lặp qua tất cả giá trị, độ phức tạp là O(n), vì vậy CPU time cần để sử lý sẽ tăng tuyến tính với số lượng FD cần kiểm tra
 
-**epoll**
+## epoll
 
 `epoll` là một phiên bản cải tiến của poll/select, giải quyết vấn đề hiệu năng và số lượng FD. 
 
@@ -80,7 +80,7 @@ FD được theo dõi được thêm vào epoll instant với hàm `epoll_ctl`, 
 - Tất cả các FD được lưu trữ ở kernel space trước khi gọi hàm `epoll_wait`, tránh việc truyền dữ liệu nhiều giữa user space và kernel space.
 - Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.
 
-**Level-Triggered vs Edge-Triggered**
+## Level-Triggered vs Edge-Triggered
 
 - get a list of every file descriptor you’re interested in that is readable (“level-triggered”)
 - get notifications every time a file descriptor becomes readable (“edge-triggered”)
@@ -100,7 +100,11 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 
 Nếu chúng ta đang sử dụng `level-triggered`, kết quả sẽ trả về FD đang sẵn sàng, ngược lại, đối với `edge-triggered` thì lệnh gọi hàm sẽ block vì không có dữ liệu mới đến socket. Để tránh bị block, chúng ta nên sử dụng `edge-triggered` với nonblocking FD và cờ EAGAIN để kiểm tra liệu FD có dữ liệu mới hay chưa.
 
-**Tổng kết**
+## Ví dụ
+
+Repository [epoller](https://github.com/smallnest/epoller) là một ví dụ để bạn có thể kiểm tra lại các kiến thức ở trên, khi sử dụng để kiểm tra, mình có phát hiện 1 lỗi và có tạo issue hỏi ở đây: [Should we close connection when flag is EOF in Wait method](https://github.com/smallnest/epoller/issues/11) :relaxed:
+
+## Tổng kết
 
 Qua bài viết này, mình đã tóm gọn lại về tổng quát cách mô hình I/O multiplexing hoạt động với các cơ chế ở đằng sau như poll, select và epoll. 
 
