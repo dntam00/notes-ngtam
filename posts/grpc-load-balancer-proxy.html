@@ -1,0 +1,227 @@
+<html>
+
+<head>
+  <title>gRPC Load balancing - Proxy | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <script src="../js/highlight.pack.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>gRPC Load balancing - Proxy</h1>
+      <p>Khi thị trường có xu hướng chuyển dần từ monolithic sang microservice, bài toán giao tiếp giữa các service trở nên rất quan trọng, với những service thông thường hiện nay, mình thấy có 3 cách giao tiếp chính:</p>
+<ul>
+<li>HTTP APIs</li>
+<li>gRPC</li>
+<li>Message queue</li>
+</ul>
+<p>Khi triển khai hệ thống cần xử lý một lượng tải lớn, mỗi loại service sẽ cần phải chạy rất nhiều instance, vậy bài toán đặt ra làm thế nào để chia tải giữa các instance? Độ hiệu quả cũng như chi phí cài đặt, bảo trì như thế nào? Phương pháp áp dụng cho mỗi protocol có khác nhau không?</p>
+<p>Để trả lời những câu hỏi trên, mình sẽ viết một chuỗi bài tìm hiểu về các phương pháp load balacing cho gRPC protocol.</p>
+<h2><a href="#phương-pháp" aria-hidden="true" class="anchor" id="phương-pháp"></a>Phương pháp</h2>
+<p>Hiện tại có một vài phương pháp phổ biến để xử lý grPC load balancing:</p>
+<ul>
+<li><strong>Proxy load balancing</strong>: là phương pháp truyền thống, LB sẽ đóng vai trò như một reverse proxy, HAProxy, Nginx, LB của cloud provider,... là các ví dụ.</li>
+<li><strong>Client side load balancing</strong>: phía client chủ động quản lý connection cũng như cơ chế load balancing, có thể tự custom hoàn toàn dựa trên các specification của gRPC hoặc kết hợp với ZooKeeper/Etcd/Consul,...</li>
+<li><strong>Look-aside load balancing</strong>: có một external load balancing component chịu trách nhiệm quản lý các servers (service discovery) và trả lời thông tin cho client mỗi khi được yêu cầu.</li>
+<li><strong>Service mesh</strong>: sử dụng các load balancer có sẵn trong các proxy như Istio, Envoy,...</li>
+</ul>
+<p>Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau, bài đầu tiên này mình sẽ nói về phương pháp truyền thống, dùng load balancer như một proxy.</p>
+<h2><a href="#grpc-load-balancing" aria-hidden="true" class="anchor" id="grpc-load-balancing"></a>gRPC load balancing</h2>
+<p>Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing.</p>
+<p>gRPC là giao thức sử dụng <code>HTTP/2</code>, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì vậy khác với HTTP APIs dựa trên <code>HTTP/1.1</code>, ở gRPC, chúng ta sẽ nói đến chuyện load balancing connection thay vì request. Mỗi khi tcp connection được thiết lập tới một backend server thì tất cả những request được thực hiện trên connection đó sẽ chỉ được xử lý bởi một backend server, tất cả server còn lại ngồi chơi. Vậy ý tưởng chung đó là có nhiều client và mỗi client sử dụng pool technique để tải được chia đều ra tất cả backend server.</p>
+<h2><a href="#proxy-load-balancing" aria-hidden="true" class="anchor" id="proxy-load-balancing"></a>Proxy load balancing</h2>
+<p>Đây là một phương pháp truyền thống và dễ cài đặt nhất, chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:</p>
+<ul>
+<li>HAProxy</li>
+<li>Nginx</li>
+<li>LB của các cloud provider</li>
+</ul>
+<p><img src="img/lb-proxy.png" alt="lb-proxy" /></p>
+<p>Client sẽ tạo connection tới load balancer và load balancer sẽ tạo connection tới server dựa trên cơ chế load balancing được thiết lập, với cách hoạt động này, chúng ta cần thiết lập 2 connection để có được 1 <em><strong>client-server connection</strong></em>, đó đó, client thực chất đang giao tiếp với load balancer, ở phía LB, chúng ta sẽ có thêm một vài chức năng khác việc load balancing như NAT, đó là LB có thể chọn giữ hoặc ghi đè địa chỉ IP của client,...</p>
+<p><strong>Ưu điểm</strong></p>
+<ul>
+<li>Dễ cài đặt và sử dụng</li>
+<li>Không phụ thuộc vào ngôn ngữ lập trình khi hiện thực client/server</li>
+<li>Tăng tính an toàn cho server</li>
+<li>Có thể scale bằng cách thêm nhiều instance của load balancer</li>
+</ul>
+<p><strong>Nhược điểm</strong></p>
+<ul>
+<li>Nếu không quản lý tốt, load balancer có thể là điểm gây lỗi duy nhất (single point of failure)</li>
+<li>Tăng latency của request</li>
+</ul>
+<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
+<p>Mình sẽ sử dụng HAProxy để làm ví dụ cho phương pháp này. Thông tin như sau:</p>
+<ul>
+<li>3 gRPC server chạy ở port 50051, 50052, 50053</li>
+<li>HAProxy listen ở port 8443</li>
+<li>2 gRPC client thực hiện request đến HAProxy</li>
+</ul>
+<p><strong>Cấu hình của HaProxy</strong></p>
+<pre><code class="language-bash">global
+  tune.ssl.default-dh-param 1024
+
+defaults
+  timeout connect 10000ms
+  timeout client 60000ms
+  timeout server 60000ms
+
+frontend lb_grpc
+  mode tcp
+  bind *:8443 npn spdy/2 alpn h2
+  default_backend be_grpc
+
+# gRPC servers running on port 8083-8084
+backend be_grpc
+  mode tcp
+  balance roundrobin
+  option httpchk HEAD / HTTP/2
+  server srv01 127.0.0.1:50051
+  server srv02 127.0.0.1:50052
+  server srv03 127.0.0.1:50053
+</code></pre>
+<p><strong>Server code</strong></p>
+<pre><code class="language-go">type server struct {
+	serverId string
+	pb.UnimplementedDemoServiceServer
+}
+
+func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	fmt.Printf(&quot;server %v receive message from lb\n&quot;, s.serverId)
+	return &amp;pb.HelloResponse{Message: &quot;Hello &quot; + req.Name}, nil
+}
+
+func main() {
+	go serve(&quot;50051&quot;)
+	go serve(&quot;50052&quot;)
+	go serve(&quot;50053&quot;)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	&lt;-ctx.Done()
+}
+
+func serve(port string) {
+	lis, err := net.Listen(&quot;tcp&quot;, &quot;:&quot;+port)
+	if err != nil {
+		log.Fatalf(&quot;failed to listen: %v&quot;, err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterDemoServiceServer(s, &amp;server{serverId: port})
+
+	fmt.Println(&quot;Server is running on port &quot; + port)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf(&quot;failed to serve: %v&quot;, err)
+	}
+}
+</code></pre>
+<p><strong>Client code</strong></p>
+<pre><code class="language-go">func main() {
+	for i := 0; i &lt; 3; i++ {
+		go request()
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	&lt;-ctx.Done()
+}
+
+func request() {
+	conn, err := grpc.NewClient(&quot;localhost:8443&quot;, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf(&quot;did not connect: %v&quot;, err)
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	c := pb.NewDemoServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	_, err = c.SayHello(ctx, &amp;pb.HelloRequest{Name: &quot;world&quot;})
+	if err != nil {
+		log.Fatalf(&quot;could not greet: %v&quot;, err)
+	}
+}
+</code></pre>
+<p><strong>Service proto</strong></p>
+<pre><code>syntax = &quot;proto3&quot;;
+
+package dnt;
+
+option go_package = &quot;/model&quot;;
+
+service DemoService {
+  rpc SayHello (HelloRequest) returns (HelloResponse);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string message = 1;
+}
+</code></pre>
+<p><strong>Kết quả</strong></p>
+<p>3 request được xử lý bởi 3 server khác nhau.</p>
+<p><img src="img/grpc-server-lb.png" alt="grpc-server-lb" /></p>
+<p>Nếu sử dụng tool <code>netstat</code>, chúng ta có thể thấy các tcp connection được tạo ra từ client đến HAProxy, từ HAProxy đến gRPC server, có tất cả 6 connections được tạo ra.</p>
+<p><img src="img/grpc-netstat.png" alt="grpc-netstat" /></p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
