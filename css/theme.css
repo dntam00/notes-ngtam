@@ -259,13 +259,13 @@ b {
 }
 
 code {
-  padding: 2px;
+  padding: 4px 8px;
   border-radius: 8px;
   /* font-family: 'Iosevka Mono', monospace; */
   font-feature-settings: initial;
   font-variant-ligatures: none;
   font-size: 15px;
-  background: #f6f7f6;
+  background: #e3e3e35c;
   color: #c5c8c6;
 }
 
@@ -273,7 +273,8 @@ p>code,
 li>code,
 li>div>code {
   font-weight: 500;
-  color: #777
+  /* color: #777 */
+  color: #e72222;
 }
 
 .skip code {

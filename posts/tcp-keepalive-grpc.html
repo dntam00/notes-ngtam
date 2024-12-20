@@ -14,18 +14,22 @@
   <meta name="theme-color" content="#ffffff">
   <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
     rel="stylesheet">
-  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
   <link rel="stylesheet" href="../css/highlight/tomorrow.css">
   <link rel="stylesheet" href="../css/fontello.css">
   <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
   <link rel="stylesheet" href="../emoji/css/emojione.min.css">
   <link rel="stylesheet" href="../emoji/css/messenger.min.css">
   <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
-  <script src="../js/highlight.pack.js"></script>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
   </script>
 </head>
 
@@ -39,7 +43,9 @@
       <h1>gRPC connection keep alive</h1>
       <p>Hello ~,</p>
 <p>Tuần rồi trong lúc anh QA thực hiện performance test thì ảnh thấy gRPC client có xuất hiện nhiều log error <code>connection reset by peer</code>:</p>
-<pre><code class="language-bash">09T06:50:41.340Z&quot;,&quot;caller&quot;:&quot;&lt;source_code&gt;&quot;,&quot;message&quot;:&quot;Error call to _: rpc error: code = Unavailable desc = error reading from server: read tcp &lt;src&gt;-&gt;&lt;dest&gt;: read: connection reset by peer&quot;,&quot;caller-detail&quot;:&quot;147b2e29-f3a4-43f0-8a98-20dad813da3d&quot;}
+<pre><code class="language-text">Error call to _: rpc error:
+code = Unavailable desc = error reading from server:
+read tcp &lt;src&gt;-&gt;&lt;dest&gt;: read: connection reset by peer
 </code></pre>
 <p>Mô hình triển khai hiện tại là gRPC server sẽ nằm sau một NLB để chia tải. Những lỗi kiểu này muôn thuở sẽ liên quan đến việc TCP connection bị đóng (có thể đúng hoặc không đúng cách) và tầng ứng dụng không phát hiện kịp thời nên vẫn sử dụng các connection này để gửi/nhận dữ liệu.</p>
 <p>Để xử lý những vấn đề này thì chắc hẳn mọi người đều nghĩ đến cơ chế <code>ping-pong</code> và <code>retry</code> rồi, tuy nhiên vì mình muốn tìm hiểu cụ thể vì sao connection bị đóng với mô hình hiện tại, nên có bài viết này :V.</p>

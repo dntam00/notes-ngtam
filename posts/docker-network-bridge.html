@@ -14,18 +14,22 @@
   <meta name="theme-color" content="#ffffff">
   <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
     rel="stylesheet">
-  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
   <link rel="stylesheet" href="../css/highlight/tomorrow.css">
   <link rel="stylesheet" href="../css/fontello.css">
   <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
   <link rel="stylesheet" href="../emoji/css/emojione.min.css">
   <link rel="stylesheet" href="../emoji/css/messenger.min.css">
   <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
-  <script src="../js/highlight.pack.js"></script>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
   </script>
 </head>
 
@@ -111,7 +115,7 @@ docker network inspect bridge_example
 </code></pre>
 <p>Kết quả cho thấy 2 containers đang sử dụng <code>bridge bridge_example</code>.</p>
 <p>Ở máy chủ, kiểm tra các <code>virtual network interface</code> bằng lệnh <code>ifconfig</code></p>
-<pre><code>br-8e2893b1f2cc Link encap:Ethernet  HWaddr 02:42:11:82:AD:98
+<pre><code class="language-text">br-8e2893b1f2cc Link encap:Ethernet  HWaddr 02:42:11:82:AD:98
           inet addr:192.180.1.1  Bcast:192.180.1.255  Mask:255.255.255.0
           inet6 addr: fe80::42:11ff:fe82:ad98/64 Scope:Link
           UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
@@ -165,10 +169,10 @@ veth98a7f28 Link encap:Ethernet  HWaddr 82:B2:D9:7D:4C:55
 </code></pre>
 <p>Có 3 interface liên quan đến <code>bridge driver</code> và 2 containers, đó là <code>br-8e2893b1f2cc</code>, <code>veth24d52fa</code> và <code>veth98a7f28</code>, các gói tin sẽ đi qua các interface này.</p>
 <p>Mọi thứ đã được chuẩn bị xong, mình sẽ sử dụng lệnh <code>ping</code> để kiểm tra sự giao tiếp giữa 2 container này. Nếu container không có lệnh <code>ping</code>, bạn có thể cài đặt bằng lệnh:</p>
-<pre><code>apt-get update -y &amp; apt-get install -y iputils-ping
+<pre><code class="language-bash">apt-get update -y &amp; apt-get install -y iputils-ping
 </code></pre>
 <p>Ở container <code>c-test-1</code>, chạy lệnh:</p>
-<pre><code>ping -c 2 192.180.1.3
+<pre><code class="language-bash">ping -c 2 192.180.1.3
 
 # result
 PING 192.180.1.3 (192.180.1.3) 56(84) bytes of data.
@@ -180,7 +184,7 @@ PING 192.180.1.3 (192.180.1.3) 56(84) bytes of data.
 rtt min/avg/max/mdev = 0.144/0.356/0.569/0.212 ms
 </code></pre>
 <p>Kết quả cho thấy 2 container có thể giao tiếp được với nhau, sử dụng <code>tcpdump</code> ở máy chủ để kiểm tra dòng của gói tin:</p>
-<pre><code>tcpdump -n -i any
+<pre><code class="language-bash">tcpdump -n -i any
 # result
 tcpdump: data link type LINUX_SLL2
 tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
@@ -207,12 +211,14 @@ listening on br-8e2893b1f2cc, link-type EN10MB (Ethernet), snapshot length 26214
 <p>Ở đây mình phải sử dụng câu lệnh thứ 2 để bắt gói tin trên <code>bridge</code> bởi vì lệnh <code>tcpdump -n -i any</code> sẽ không bắt được những gói tin trên các interface mà địa chỉ đích trên gói tin không phải là nó (tham khảo: <a href="https://unix.stackexchange.com/questions/784186/why-tcpdump-i-any-cant-capture-unicast-traffic-in-br0-whilst-tcpdump-i-br0">tcpdump-any</a>).</p>
 <p>Các gói tin <code>ICMP request</code> đi từ veth <code>veth98a7f28</code> đến bridge <code>br-8e2893b1f2cc</code> rồi vào veth <code>veth24d52fa</code>, các gói tin <code>ICMP reply</code> sẽ có hướng ngược lại.</p>
 <p>Tiếp theo, kiểm tra mối liên hệ giữa <code>bridge</code> và 2 <code>veth</code> bằng lệnh <code>brctl show</code> và <code>brctl showmacs br-8e2893b1f2cc</code></p>
-<pre><code class="language-bash"># brctl show
+<pre><code class="language-bash">brctl show
+# result
 bridge name         bridge id           STP enabled     interfaces
 br-8e2893b1f2cc     8000.02421182ad98   no              veth98a7f28
                                                         veth24d52fa
 
-# brctl showmacs br-8e2893b1f2cc
+brctl showmacs br-8e2893b1f2cc
+#result
 port no	mac addr		is local?	ageing timer
   1	82:b2:d9:7d:4c:55	yes		   0.00
   1	82:b2:d9:7d:4c:55	yes		   0.00

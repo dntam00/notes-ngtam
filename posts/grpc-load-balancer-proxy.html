@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>gRPC Load balancing - Proxy | Tam's Blog</title>
+  <title>gRPC Load balancing | Tam's Blog</title>
   <meta charset="utf-8">
   <meta http-equiv="content-type" content="text/html;">
   <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
@@ -14,18 +14,22 @@
   <meta name="theme-color" content="#ffffff">
   <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
     rel="stylesheet">
-  <link href="../css/theme.css?t=" rel="stylesheet" type="text/css">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
   <link rel="stylesheet" href="../css/highlight/tomorrow.css">
   <link rel="stylesheet" href="../css/fontello.css">
   <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
   <link rel="stylesheet" href="../emoji/css/emojione.min.css">
   <link rel="stylesheet" href="../emoji/css/messenger.min.css">
   <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
-  <script src="../js/highlight.pack.js"></script>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
   </script>
 </head>
 
@@ -36,7 +40,7 @@
   <div class="container">
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
-      <h1>gRPC Load balancing - Proxy</h1>
+      <h1>gRPC Load balancing</h1>
       <p>Khi thị trường có xu hướng chuyển dần từ monolithic sang microservice, bài toán giao tiếp giữa các service trở nên rất quan trọng, với những service thông thường hiện nay, mình thấy có 3 cách giao tiếp chính:</p>
 <ul>
 <li>HTTP APIs</li>
@@ -53,149 +57,34 @@
 <li><strong>Look-aside load balancing</strong>: có một external load balancing component chịu trách nhiệm quản lý các servers (service discovery) và trả lời thông tin cho client mỗi khi được yêu cầu.</li>
 <li><strong>Service mesh</strong>: sử dụng các load balancer có sẵn trong các proxy như Istio, Envoy,...</li>
 </ul>
-<p>Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau, bài đầu tiên này mình sẽ nói về phương pháp truyền thống, dùng load balancer như một proxy.</p>
+<p>Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau.</p>
 <h2><a href="#grpc-load-balancing" aria-hidden="true" class="anchor" id="grpc-load-balancing"></a>gRPC load balancing</h2>
-<p>Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing.</p>
-<p>gRPC là giao thức sử dụng <code>HTTP/2</code>, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì vậy khác với HTTP APIs dựa trên <code>HTTP/1.1</code>, ở gRPC, chúng ta sẽ nói đến chuyện load balancing connection thay vì request. Mỗi khi tcp connection được thiết lập tới một backend server thì tất cả những request được thực hiện trên connection đó sẽ chỉ được xử lý bởi một backend server, tất cả server còn lại ngồi chơi. Vậy ý tưởng chung đó là có nhiều client và mỗi client sử dụng pool technique để tải được chia đều ra tất cả backend server.</p>
-<h2><a href="#proxy-load-balancing" aria-hidden="true" class="anchor" id="proxy-load-balancing"></a>Proxy load balancing</h2>
-<p>Đây là một phương pháp truyền thống và dễ cài đặt nhất, chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:</p>
+<p>Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing. Có phải chỉ cần sử dụng load balancer trước cụm backend servers thì mọi chuyện được giải quyết?</p>
+<p>gRPC là giao thức sử dụng <code>HTTP/2</code>, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì tính chất này, tcp connection được sử dụng bởi grpc sẽ có tính chất <code>long-lived</code>, khác với HTTP APIs dựa trên <code>HTTP/1.1</code>.</p>
+<p><img src="img/grpc-connection-load-balancing.png" alt="grpc-connection-load-balancing" /></p>
+<p>Với ý nghĩ đơn giản nhất, chúng ta sẽ tạo 1 connection đến LB và sử dụng nó để gửi tất cả requests. Tuy nhiên, vấn đề xuất hiện vì tính chất <code>long-lived</code> này, khi LB tạo connection tới một backend server, tất cả những requests sau đó sẽ được gửi đến <code>server instance 1</code>, 2 servers còn lại sẽ ngồi chơi. Khi tạo mới một connection khác, tuỳ vào thuật toán <code>load balancing</code> ở LB, connection mới có thể sẽ tới <code>server instance 2</code> hoặc <code>server instance 3</code>. Vậy bạn có thể thấy, dù cho LB load balance ở <code>layer 4</code> hay <code>layer 7</code> thì kiểu load balancing này là <code>connection-based load balancing</code>.</p>
+<p>Để giải quyết vấn đề này, chúng ta sẽ sử dụng kĩ thuật <code>pooling</code> ở phía client, mục đích là tạo nhiều connections thông qua LB và sử dụng chúng để gửi request. Ở kĩ thuật này, LB sẽ thực hiện chia tải trên <code>connection level</code>, client sẽ thực hiện chia tải trên <code>request level</code>. Chi phí để hiện thực client sẽ cao hơn vì chúng ta cần quản lý pool cũng như chọn connection để gửi request.</p>
+<p><img src="img/grpc-loadbalacning-requests.png" alt="grpc-loadbalacning-requests" /></p>
+<p><em><strong>Điều gì sẽ xảy ra khi scale server?</strong></em></p>
+<p>Khi một server mới được thêm vào cụm backend, nếu pool ở client của chúng ta đã đạt đến số connection tối đa thì cách làm này gặp vấn đề lớn, sẽ không có connection mới nào được khởi tạo đến server mới và dẫn đến sự quá tải ở các server đang có, dẫn đến sập server nếu số lượng request tăng. Để giải quyết vấn đề này, chúng ta cần có cơ chế refresh pool, mỗi connection trong pool sẽ có 1 thời gian sống nhất định, client sẽ chạy 1 job để refresh pool theo cơ chế như:</p>
 <ul>
-<li>HAProxy</li>
-<li>Nginx</li>
-<li>LB của các cloud provider</li>
+<li>Đóng những connection đã hết thời gian sống.</li>
+<li>Đóng những connection bị lỗi.</li>
+<li>Khởi tạo connection mới thông qua LB.</li>
 </ul>
-<p><img src="img/lb-proxy.png" alt="lb-proxy" /></p>
-<p>Client sẽ tạo connection tới load balancer và load balancer sẽ tạo connection tới server dựa trên cơ chế load balancing được thiết lập, với cách hoạt động này, chúng ta cần thiết lập 2 connection để có được 1 <em><strong>client-server connection</strong></em>, đó đó, client thực chất đang giao tiếp với load balancer, ở phía LB, chúng ta sẽ có thêm một vài chức năng khác việc load balancing như NAT, đó là LB có thể chọn giữ hoặc ghi đè địa chỉ IP của client,...</p>
-<p><strong>Ưu điểm</strong></p>
+<p>Điều này đảm bảo connection sẽ được chia tải đều đến các server, tuy nhiên chúng ta cần tính toán kĩ những số liệu trên dựa trên đặc điểm chịu tải của từng service, việc này có thể được làm thông qua quá trình <code>benchmark</code> hệ thống.</p>
+<p><em><strong>Loại bỏ load balancer</strong></em></p>
+<p>Đối với những hệ thống yêu cầu khắt khe về hiệu năng, sử dụng load balancer có lẽ không phải là giải pháp tốt. Client có một lợi thế khi sử dụng load balancer là nó không cần phải quan tâm đến địa chỉ IP cụ thể của backend hay những thứ khác liên quan đến hạ tầng, tất cả những thứ nó cần phải biết là địa chỉ của load balancer, nếu chúng ta không sử dụng load balancer, một vấn đề mới xuất hiện, <strong>làm thế nào để client và server tìm thấy nhau?</strong></p>
+<p>Đây là câu hỏi kinh điển gắn liền với thuật ngữ <code>service discovery</code>, có một service thứ 3 đứng ra làm cầu nối giữa client và server, service này lưu thông tin của server và trả lời mỗi khi client hỏi hoặc chủ động thông báo mỗi khi có sự thay đổi. Khi client có được địa chỉ của các server thông qua service thứ 3 này, nó sẽ khởi tạo connection trực tiếp đến các server và <strong>chia tải request</strong> trên các connection này, việc load balancing đã trở thành <code>application load balacing</code> bởi vì chúng ta đang thao tác trên request.</p>
+<p><img src="img/grpc-service-discovery.png" alt="grpc-service-discovery" /></p>
+<p>Để tăng hiệu năng cũng như throughput về mặt số lượng request, chúng ta cũng có thể áp dụng kĩ thuật pooling ở phía client cho phương pháp này.</p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Ở bài viết này, mình đã phân tích ý tưởng load balancing grpc, có 2 điều cần hiểu rõ để tránh mơ hồ trong lúc hiện thực các phương pháp này:</p>
 <ul>
-<li>Dễ cài đặt và sử dụng</li>
-<li>Không phụ thuộc vào ngôn ngữ lập trình khi hiện thực client/server</li>
-<li>Tăng tính an toàn cho server</li>
-<li>Có thể scale bằng cách thêm nhiều instance của load balancer</li>
+<li><code>connection-based load balancing:</code> chia tải từng connection đến từng backend server, những connection này có tính chất <code>long-lived</code>.</li>
+<li><code>request-based load balancing:</code> chia tải từng request đến từng connection, có thể hiểu chia tải ở tầng ứng dụng.</li>
 </ul>
-<p><strong>Nhược điểm</strong></p>
-<ul>
-<li>Nếu không quản lý tốt, load balancer có thể là điểm gây lỗi duy nhất (single point of failure)</li>
-<li>Tăng latency của request</li>
-</ul>
-<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
-<p>Mình sẽ sử dụng HAProxy để làm ví dụ cho phương pháp này. Thông tin như sau:</p>
-<ul>
-<li>3 gRPC server chạy ở port 50051, 50052, 50053</li>
-<li>HAProxy listen ở port 8443</li>
-<li>2 gRPC client thực hiện request đến HAProxy</li>
-</ul>
-<p><strong>Cấu hình của HaProxy</strong></p>
-<pre><code class="language-bash">global
-  tune.ssl.default-dh-param 1024
-
-defaults
-  timeout connect 10000ms
-  timeout client 60000ms
-  timeout server 60000ms
-
-frontend lb_grpc
-  mode tcp
-  bind *:8443 npn spdy/2 alpn h2
-  default_backend be_grpc
-
-# gRPC servers running on port 8083-8084
-backend be_grpc
-  mode tcp
-  balance roundrobin
-  option httpchk HEAD / HTTP/2
-  server srv01 127.0.0.1:50051
-  server srv02 127.0.0.1:50052
-  server srv03 127.0.0.1:50053
-</code></pre>
-<p><strong>Server code</strong></p>
-<pre><code class="language-go">type server struct {
-	serverId string
-	pb.UnimplementedDemoServiceServer
-}
-
-func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
-	fmt.Printf(&quot;server %v receive message from lb\n&quot;, s.serverId)
-	return &amp;pb.HelloResponse{Message: &quot;Hello &quot; + req.Name}, nil
-}
-
-func main() {
-	go serve(&quot;50051&quot;)
-	go serve(&quot;50052&quot;)
-	go serve(&quot;50053&quot;)
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	&lt;-ctx.Done()
-}
-
-func serve(port string) {
-	lis, err := net.Listen(&quot;tcp&quot;, &quot;:&quot;+port)
-	if err != nil {
-		log.Fatalf(&quot;failed to listen: %v&quot;, err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterDemoServiceServer(s, &amp;server{serverId: port})
-
-	fmt.Println(&quot;Server is running on port &quot; + port)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf(&quot;failed to serve: %v&quot;, err)
-	}
-}
-</code></pre>
-<p><strong>Client code</strong></p>
-<pre><code class="language-go">func main() {
-	for i := 0; i &lt; 3; i++ {
-		go request()
-	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	&lt;-ctx.Done()
-}
-
-func request() {
-	conn, err := grpc.NewClient(&quot;localhost:8443&quot;, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf(&quot;did not connect: %v&quot;, err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	c := pb.NewDemoServiceClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	_, err = c.SayHello(ctx, &amp;pb.HelloRequest{Name: &quot;world&quot;})
-	if err != nil {
-		log.Fatalf(&quot;could not greet: %v&quot;, err)
-	}
-}
-</code></pre>
-<p><strong>Service proto</strong></p>
-<pre><code>syntax = &quot;proto3&quot;;
-
-package dnt;
-
-option go_package = &quot;/model&quot;;
-
-service DemoService {
-  rpc SayHello (HelloRequest) returns (HelloResponse);
-}
-
-message HelloRequest {
-  string name = 1;
-}
-
-message HelloResponse {
-  string message = 1;
-}
-</code></pre>
-<p><strong>Kết quả</strong></p>
-<p>3 request được xử lý bởi 3 server khác nhau.</p>
-<p><img src="img/grpc-server-lb.png" alt="grpc-server-lb" /></p>
-<p>Nếu sử dụng tool <code>netstat</code>, chúng ta có thể thấy các tcp connection được tạo ra từ client đến HAProxy, từ HAProxy đến gRPC server, có tất cả 6 connections được tạo ra.</p>
-<p><img src="img/grpc-netstat.png" alt="grpc-netstat" /></p>
+<p>Có nhiều phương pháp để hiện thực các ý tưởng này trong các hệ thống thực tế, ở các bài tiếp theo, mình sẽ đi vào hiện thực chúng để làm rõ hơn phần lý thuyết này.</p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
       <!-- <div class="copyright">

@@ -11,8 +11,10 @@ Hello ~,
 
 Tuần rồi trong lúc anh QA thực hiện performance test thì ảnh thấy gRPC client có xuất hiện nhiều log error `connection reset by peer`:
 
-```bash
-09T06:50:41.340Z","caller":"<source_code>","message":"Error call to _: rpc error: code = Unavailable desc = error reading from server: read tcp <src>-><dest>: read: connection reset by peer","caller-detail":"147b2e29-f3a4-43f0-8a98-20dad813da3d"}
+```text
+Error call to _: rpc error:
+code = Unavailable desc = error reading from server:
+read tcp <src>-><dest>: read: connection reset by peer
 ```
 
 Mô hình triển khai hiện tại là gRPC server sẽ nằm sau một NLB để chia tải. Những lỗi kiểu này muôn thuở sẽ liên quan đến việc TCP connection bị đóng (có thể đúng hoặc không đúng cách) và tầng ứng dụng không phát hiện kịp thời nên vẫn sử dụng các connection này để gửi/nhận dữ liệu.

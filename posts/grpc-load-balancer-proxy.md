@@ -1,5 +1,5 @@
 ---
-title: gRPC Load balancing - Proxy
+title: gRPC Load balancing
 published: true
 date: 2024-12-08 14:18:00
 tags: networking, gRPC
@@ -24,162 +24,45 @@ Hiện tại có một vài phương pháp phổ biến để xử lý grPC load
 - **Look-aside load balancing**: có một external load balancing component chịu trách nhiệm quản lý các servers (service discovery) và trả lời thông tin cho client mỗi khi được yêu cầu.
 - **Service mesh**: sử dụng các load balancer có sẵn trong các proxy như Istio, Envoy,...
 
-Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau, bài đầu tiên này mình sẽ nói về phương pháp truyền thống, dùng load balancer như một proxy.
+Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau.
 
 ## gRPC load balancing
 
-Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing. 
+Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing. Có phải chỉ cần sử dụng load balancer trước cụm backend servers thì mọi chuyện được giải quyết?
 
-gRPC là giao thức sử dụng `HTTP/2`, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì vậy khác với HTTP APIs dựa trên `HTTP/1.1`, ở gRPC, chúng ta sẽ nói đến chuyện load balancing connection thay vì request. Mỗi khi tcp connection được thiết lập tới một backend server thì tất cả những request được thực hiện trên connection đó sẽ chỉ được xử lý bởi một backend server, tất cả server còn lại ngồi chơi. Vậy ý tưởng chung đó là có nhiều client và mỗi client sử dụng pool technique để tải được chia đều ra tất cả backend server.
+gRPC là giao thức sử dụng `HTTP/2`, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì tính chất này, tcp connection được sử dụng bởi grpc sẽ có tính chất `long-lived`, khác với HTTP APIs dựa trên `HTTP/1.1`.
 
-## Proxy load balancing
+![grpc-connection-load-balancing](img/grpc-connection-load-balancing.png)
 
-Đây là một phương pháp truyền thống và dễ cài đặt nhất, chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:
-- HAProxy
-- Nginx
-- LB của các cloud provider
+Với ý nghĩ đơn giản nhất, chúng ta sẽ tạo 1 connection đến LB và sử dụng nó để gửi tất cả requests. Tuy nhiên, vấn đề xuất hiện vì tính chất `long-lived` này, khi LB tạo connection tới một backend server, tất cả những requests sau đó sẽ được gửi đến `server instance 1`, 2 servers còn lại sẽ ngồi chơi. Khi tạo mới một connection khác, tuỳ vào thuật toán `load balancing` ở LB, connection mới có thể sẽ tới `server instance 2` hoặc `server instance 3`. Vậy bạn có thể thấy, dù cho LB load balance ở `layer 4` hay `layer 7` thì kiểu load balancing này là `connection-based load balancing`.
 
-![lb-proxy](img/lb-proxy.png)
+Để giải quyết vấn đề này, chúng ta sẽ sử dụng kĩ thuật `pooling` ở phía client, mục đích là tạo nhiều connections thông qua LB và sử dụng chúng để gửi request. Ở kĩ thuật này, LB sẽ thực hiện chia tải trên `connection level`, client sẽ thực hiện chia tải trên `request level`. Chi phí để hiện thực client sẽ cao hơn vì chúng ta cần quản lý pool cũng như chọn connection để gửi request.
 
-Client sẽ tạo connection tới load balancer và load balancer sẽ tạo connection tới server dựa trên cơ chế load balancing được thiết lập, với cách hoạt động này, chúng ta cần thiết lập 2 connection để có được 1 ***client-server connection***, đó đó, client thực chất đang giao tiếp với load balancer, ở phía LB, chúng ta sẽ có thêm một vài chức năng khác việc load balancing như NAT, đó là LB có thể chọn giữ hoặc ghi đè địa chỉ IP của client,...
+![grpc-loadbalacning-requests](img/grpc-loadbalacning-requests.png)
 
-**Ưu điểm**
-- Dễ cài đặt và sử dụng
-- Không phụ thuộc vào ngôn ngữ lập trình khi hiện thực client/server
-- Tăng tính an toàn cho server
-- Có thể scale bằng cách thêm nhiều instance của load balancer
+***Điều gì sẽ xảy ra khi scale server?***
 
-**Nhược điểm**
-- Nếu không quản lý tốt, load balancer có thể là điểm gây lỗi duy nhất (single point of failure)
-- Tăng latency của request
+Khi một server mới được thêm vào cụm backend, nếu pool ở client của chúng ta đã đạt đến số connection tối đa thì cách làm này gặp vấn đề lớn, sẽ không có connection mới nào được khởi tạo đến server mới và dẫn đến sự quá tải ở các server đang có, dẫn đến sập server nếu số lượng request tăng. Để giải quyết vấn đề này, chúng ta cần có cơ chế refresh pool, mỗi connection trong pool sẽ có 1 thời gian sống nhất định, client sẽ chạy 1 job để refresh pool theo cơ chế như:
+- Đóng những connection đã hết thời gian sống.
+- Đóng những connection bị lỗi.
+- Khởi tạo connection mới thông qua LB.
 
-## Ví dụ
+Điều này đảm bảo connection sẽ được chia tải đều đến các server, tuy nhiên chúng ta cần tính toán kĩ những số liệu trên dựa trên đặc điểm chịu tải của từng service, việc này có thể được làm thông qua quá trình `benchmark` hệ thống.
 
-Mình sẽ sử dụng HAProxy để làm ví dụ cho phương pháp này. Thông tin như sau:
-- 3 gRPC server chạy ở port 50051, 50052, 50053
-- HAProxy listen ở port 8443
-- 2 gRPC client thực hiện request đến HAProxy
+***Loại bỏ load balancer***
 
-**Cấu hình của HaProxy**
-```bash
-global
-  tune.ssl.default-dh-param 1024
+Đối với những hệ thống yêu cầu khắt khe về hiệu năng, sử dụng load balancer có lẽ không phải là giải pháp tốt. Client có một lợi thế khi sử dụng load balancer là nó không cần phải quan tâm đến địa chỉ IP cụ thể của backend hay những thứ khác liên quan đến hạ tầng, tất cả những thứ nó cần phải biết là địa chỉ của load balancer, nếu chúng ta không sử dụng load balancer, một vấn đề mới xuất hiện, **làm thế nào để client và server tìm thấy nhau?**
 
-defaults
-  timeout connect 10000ms
-  timeout client 60000ms
-  timeout server 60000ms
+Đây là câu hỏi kinh điển gắn liền với thuật ngữ `service discovery`, có một service thứ 3 đứng ra làm cầu nối giữa client và server, service này lưu thông tin của server và trả lời mỗi khi client hỏi hoặc chủ động thông báo mỗi khi có sự thay đổi. Khi client có được địa chỉ của các server thông qua service thứ 3 này, nó sẽ khởi tạo connection trực tiếp đến các server và **chia tải request** trên các connection này, việc load balancing đã trở thành `application load balacing` bởi vì chúng ta đang thao tác trên request.
 
-frontend lb_grpc
-  mode tcp
-  bind *:8443 npn spdy/2 alpn h2
-  default_backend be_grpc
+![grpc-service-discovery](img/grpc-service-discovery.png)
 
-# gRPC servers running on port 8083-8084
-backend be_grpc
-  mode tcp
-  balance roundrobin
-  option httpchk HEAD / HTTP/2
-  server srv01 127.0.0.1:50051
-  server srv02 127.0.0.1:50052
-  server srv03 127.0.0.1:50053
-```
+Để tăng hiệu năng cũng như throughput về mặt số lượng request, chúng ta cũng có thể áp dụng kĩ thuật pooling ở phía client cho phương pháp này.
 
-**Server code**
-```go
-type server struct {
-	serverId string
-	pb.UnimplementedDemoServiceServer
-}
+## Tổng kết
 
-func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
-	fmt.Printf("server %v receive message from lb\n", s.serverId)
-	return &pb.HelloResponse{Message: "Hello " + req.Name}, nil
-}
+Ở bài viết này, mình đã phân tích ý tưởng load balancing grpc, có 2 điều cần hiểu rõ để tránh mơ hồ trong lúc hiện thực các phương pháp này:
+- `connection-based load balancing:` chia tải từng connection đến từng backend server, những connection này có tính chất `long-lived`.
+- `request-based load balancing:` chia tải từng request đến từng connection, có thể hiểu chia tải ở tầng ứng dụng.
 
-func main() {
-	go serve("50051")
-	go serve("50052")
-	go serve("50053")
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	<-ctx.Done()
-}
-
-func serve(port string) {
-	lis, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterDemoServiceServer(s, &server{serverId: port})
-
-	fmt.Println("Server is running on port " + port)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
-}
-```
-
-**Client code**
-```go
-func main() {
-	for i := 0; i < 3; i++ {
-		go request()
-	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	<-ctx.Done()
-}
-
-func request() {
-	conn, err := grpc.NewClient("localhost:8443", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	c := pb.NewDemoServiceClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "world"})
-	if err != nil {
-		log.Fatalf("could not greet: %v", err)
-	}
-}
-```
-
-**Service proto**
-```
-syntax = "proto3";
-
-package dnt;
-
-option go_package = "/model";
-
-service DemoService {
-  rpc SayHello (HelloRequest) returns (HelloResponse);
-}
-
-message HelloRequest {
-  string name = 1;
-}
-
-message HelloResponse {
-  string message = 1;
-}
-```
-
-**Kết quả**
-
-3 request được xử lý bởi 3 server khác nhau.
-
-![grpc-server-lb](img/grpc-server-lb.png)
-
-Nếu sử dụng tool `netstat`, chúng ta có thể thấy các tcp connection được tạo ra từ client đến HAProxy, từ HAProxy đến gRPC server, có tất cả 6 connections được tạo ra.
-
-![grpc-netstat](img/grpc-netstat.png)
+Có nhiều phương pháp để hiện thực các ý tưởng này trong các hệ thống thực tế, ở các bài tiếp theo, mình sẽ đi vào hiện thực chúng để làm rõ hơn phần lý thuyết này.

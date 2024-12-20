@@ -99,7 +99,7 @@ Kết quả cho thấy 2 containers đang sử dụng `bridge bridge_example`.
 
 Ở máy chủ, kiểm tra các `virtual network interface` bằng lệnh `ifconfig`
 
-```
+```text
 br-8e2893b1f2cc Link encap:Ethernet  HWaddr 02:42:11:82:AD:98
           inet addr:192.180.1.1  Bcast:192.180.1.255  Mask:255.255.255.0
           inet6 addr: fe80::42:11ff:fe82:ad98/64 Scope:Link
@@ -157,13 +157,13 @@ Có 3 interface liên quan đến `bridge driver` và 2 containers, đó là `br
 
 Mọi thứ đã được chuẩn bị xong, mình sẽ sử dụng lệnh `ping` để kiểm tra sự giao tiếp giữa 2 container này. Nếu container không có lệnh `ping`, bạn có thể cài đặt bằng lệnh:
 
-```
+```bash
 apt-get update -y & apt-get install -y iputils-ping
 ```
 
 Ở container `c-test-1`, chạy lệnh:
 
-```
+```bash
 ping -c 2 192.180.1.3
 
 # result
@@ -178,7 +178,7 @@ rtt min/avg/max/mdev = 0.144/0.356/0.569/0.212 ms
 
 Kết quả cho thấy 2 container có thể giao tiếp được với nhau, sử dụng `tcpdump` ở máy chủ để kiểm tra dòng của gói tin:
 
-```
+```bash
 tcpdump -n -i any
 # result
 tcpdump: data link type LINUX_SLL2
@@ -211,12 +211,14 @@ Các gói tin `ICMP request` đi từ veth `veth98a7f28` đến bridge `br-8e289
 Tiếp theo, kiểm tra mối liên hệ giữa `bridge` và 2 `veth` bằng lệnh `brctl show` và `brctl showmacs br-8e2893b1f2cc`
 
 ```bash
-# brctl show
+brctl show
+# result
 bridge name         bridge id           STP enabled     interfaces
 br-8e2893b1f2cc     8000.02421182ad98   no              veth98a7f28
                                                         veth24d52fa
 
-# brctl showmacs br-8e2893b1f2cc
+brctl showmacs br-8e2893b1f2cc
+#result
 port no	mac addr		is local?	ageing timer
   1	82:b2:d9:7d:4c:55	yes		   0.00
   1	82:b2:d9:7d:4c:55	yes		   0.00
