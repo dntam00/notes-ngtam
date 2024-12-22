@@ -32,13 +32,25 @@ Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load b
 
 gRPC là giao thức sử dụng `HTTP/2`, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì tính chất này, tcp connection được sử dụng bởi grpc sẽ có tính chất `long-lived`, khác với HTTP APIs dựa trên `HTTP/1.1`.
 
+Để phân tích, chúng ta sẽ lấy trường hợp client khởi tạo 1 connection đến LB và sử dụng nó để gửi tất cả requests, việc tiếp theo LB sẽ cân bằng tải những requests này, tuy nhiên sẽ có sự khác nhau rất lớn khi LB hoạt động ở L4 và L7.
+
+### Layer 4
+
+Cân bằng tải ở `layer 4`, LB sẽ làm việc ở tầng ứng dụng với các gói tin TCP, một khi client khởi tạo 1 TCP connection tới LB, nó sẽ tạo 1 connection tương ứng đến một backend server rồi chuyển tiếp tất cả gói tin dựa trên sự ánh xạ này.
+
 ![grpc-connection-load-balancing](img/grpc-connection-load-balancing.png)
 
-Với ý nghĩ đơn giản nhất, chúng ta sẽ tạo 1 connection đến LB và sử dụng nó để gửi tất cả requests. Tuy nhiên, vấn đề xuất hiện vì tính chất `long-lived` này, khi LB tạo connection tới một backend server, tất cả những requests sau đó sẽ được gửi đến `server instance 1`, 2 servers còn lại sẽ ngồi chơi. Khi tạo mới một connection khác, tuỳ vào thuật toán `load balancing` ở LB, connection mới có thể sẽ tới `server instance 2` hoặc `server instance 3`. Vậy bạn có thể thấy, dù cho LB load balance ở `layer 4` hay `layer 7` thì kiểu load balancing này là `connection-based load balancing`.
+Do tính chất này, LB sẽ cân bằng tải cho quá trình thiết lập connection, một khi connection đã được tạo, tất cả request sẽ được gửi trên đó, mình gọi nó là `connection-based load balancing`. Ở ví dụ như hình trên, nếu client chỉ tạo 1 connection thì sẽ gây ra hiện tượng `server instance 2` hoặc `server instance 3` ở trạng thái `"thư giãn"`.
 
-Để giải quyết vấn đề này, chúng ta sẽ sử dụng kĩ thuật `pooling` ở phía client, mục đích là tạo nhiều connections thông qua LB và sử dụng chúng để gửi request. Ở kĩ thuật này, LB sẽ thực hiện chia tải trên `connection level`, client sẽ thực hiện chia tải trên `request level`. Chi phí để hiện thực client sẽ cao hơn vì chúng ta cần quản lý pool cũng như chọn connection để gửi request.
+<!-- Tuy nhiên, vấn đề xuất hiện vì tính chất `long-lived` này, khi LB tạo connection tới một backend server, tất cả những requests sau đó sẽ được gửi đến `server instance 1`, 2 servers còn lại sẽ ngồi chơi. Khi tạo mới một connection khác, tuỳ vào thuật toán `load balancing` ở LB, connection mới có thể sẽ tới `server instance 2` hoặc `server instance 3`. Vậy bạn có thể thấy, dù cho LB load balance ở `layer 4` hay `layer 7` thì kiểu load balancing này là `connection-based load balancing`. -->
 
-![grpc-loadbalacning-requests](img/grpc-loadbalacning-requests.png)
+Để giải quyết vấn đề này, chúng ta sẽ sử dụng kĩ thuật `pooling` ở phía client, mục đích là tạo nhiều connections thông qua LB và sử dụng chúng để gửi request. Khi pool được tạo:
+- Tất cả connections sẽ được LB phân tải dựa trên thuật toán đã được cấu hình.
+- Client sẽ thực hiện chia tải **từng request** trên **từng connection** ở trong pool
+ 
+Tuy nhiên, chi phí để hiện thực client sẽ cao hơn vì chúng ta cần quản lý pool cũng như chọn connection để gửi request.
+
+![grpc-loadbalacning-lb-proxy](img/grpc-loadbalacning-lb-proxy.png)
 
 ***Điều gì sẽ xảy ra khi scale server?***
 
@@ -49,11 +61,18 @@ Khi một server mới được thêm vào cụm backend, nếu pool ở client 
 
 Điều này đảm bảo connection sẽ được chia tải đều đến các server, tuy nhiên chúng ta cần tính toán kĩ những số liệu trên dựa trên đặc điểm chịu tải của từng service, việc này có thể được làm thông qua quá trình `benchmark` hệ thống.
 
-***Loại bỏ load balancer***
+### Layer 7
+
+Khi LB hoạt động ở `layer 7`, tầng ứng dụng, nó sẽ sử dụng các thông tin về request để cân bằng tải, cũng với ví dụ client tạo 1 connection tới LB như ở trên rồi gửi requests, lúc này LB sẽ cân bằng tải từng request một tới các backend server dựa trên các thuật toán được cấu hình.
+
+![/grpc-loadbalacning-L7](img/grpc-loadbalacning-L7.png)
+
+
+***Loại bỏ load balancer?***
 
 Đối với những hệ thống yêu cầu khắt khe về hiệu năng, sử dụng load balancer có lẽ không phải là giải pháp tốt. Client có một lợi thế khi sử dụng load balancer là nó không cần phải quan tâm đến địa chỉ IP cụ thể của backend hay những thứ khác liên quan đến hạ tầng, tất cả những thứ nó cần phải biết là địa chỉ của load balancer, nếu chúng ta không sử dụng load balancer, một vấn đề mới xuất hiện, **làm thế nào để client và server tìm thấy nhau?**
 
-Đây là câu hỏi kinh điển gắn liền với thuật ngữ `service discovery`, có một service thứ 3 đứng ra làm cầu nối giữa client và server, service này lưu thông tin của server và trả lời mỗi khi client hỏi hoặc chủ động thông báo mỗi khi có sự thay đổi. Khi client có được địa chỉ của các server thông qua service thứ 3 này, nó sẽ khởi tạo connection trực tiếp đến các server và **chia tải request** trên các connection này, việc load balancing đã trở thành `application load balacing` bởi vì chúng ta đang thao tác trên request.
+Đây là câu hỏi kinh điển gắn liền với thuật ngữ `service discovery`, có một service thứ 3 đứng ra làm cầu nối giữa client và server, service này lưu thông tin của server và trả lời mỗi khi client hỏi hoặc chủ động thông báo mỗi khi có sự thay đổi. Khi client có được địa chỉ của các server thông qua service thứ 3 này, nó sẽ khởi tạo connection trực tiếp đến các server và **chia tải request** trên các connection này, việc load balancing đã trở thành `client-side load balacing`, `gRPC client` đang đảm nhiệm việc cân bằng tải, khi mình nói đến `gRPC client`, tức là việc xử lý này sẽ được xử lý bởi `gRPC`, lập trình viên không cần hiện thực thêm gì.
 
 ![grpc-service-discovery](img/grpc-service-discovery.png)
 

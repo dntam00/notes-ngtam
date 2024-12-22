@@ -7,16 +7,25 @@ description: Analyze gRPC load balancing technique
 image: 
 ---
 
-## Proxy load balancing
+[Ở bài viết trước](https://abcxyz), mình đã tìm hiểu về các ý tưởng cân bằng tải, dựa trên phần lý thuyết đó, hôm nay mình sẽ hiện thực cân bằng tải sử dụng `load balancer`. Ở mô hình này, `load balancer` đóng vai trò như một `reverse proxy` cho cụm backend server.
+
+## Load balancer / Reverse proxy
 
 Đây là một phương pháp truyền thống và dễ cài đặt nhất, chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:
 - HAProxy
 - Nginx
 - LB của các cloud provider
 
-![lb-proxy](img/lb-proxy.png)
+![lb-proxy](img/grpc-loadbalacning-lb-proxy.png)
 
 Client sẽ tạo connection tới load balancer và load balancer sẽ tạo connection tới server dựa trên cơ chế load balancing được thiết lập, với cách hoạt động này, chúng ta cần thiết lập 2 connection để có được 1 ***client-server connection***, đó đó, client thực chất đang giao tiếp với load balancer, ở phía LB, chúng ta sẽ có thêm một vài chức năng khác việc load balancing như NAT, đó là LB có thể chọn giữ hoặc ghi đè địa chỉ IP của client,...
+
+***Cân bằng tải Layer 4/Layer 7***
+
+Load balancer có thể thực hiện việc cân bằng tải ở tầng vận chuyển (`L4, transport layer`) và tầng ứng dụng (`L7, application layer`). Cụ thể hơn, các thông tin được sử dụng để cân bằng tải ở mỗi tầng sẽ khác nhau:
+- `L4`: source address `[IP, Port]`, destination address `[IP, Port]`, protocol.
+- `L7`: nội dung request như `method`, `path` hoặc các trường `header`.
+
 
 **Ưu điểm**
 - Dễ cài đặt và sử dụng
