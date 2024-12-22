@@ -1,0 +1,282 @@
+<html>
+
+<head>
+  <title>gRPC Load balancing - LB as Proxy | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>gRPC Load balancing - LB as Proxy</h1>
+      <p><a href="https://notes-ngtam.pages.dev/posts/grpc-load-balancer">Ở bài viết đầu tiên về cân bằng tải gRPC</a>, mình đã tìm hiểu về các ý tưởng cân bằng tải cho <code>gRPC</code> protocol, dựa trên phần lý thuyết đó, hôm nay mình sẽ làm một ví dụ sử dụng <code>load balancer</code>. Ở mô hình này, <code>load balancer</code> đóng vai trò như một <code>reverse proxy</code> cho cụm backend server.</p>
+<h2><a href="#load-balancer--reverse-proxy" aria-hidden="true" class="anchor" id="load-balancer--reverse-proxy"></a>Load balancer / Reverse proxy</h2>
+<p>Chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:</p>
+<ul>
+<li>HAProxy</li>
+<li>Nginx</li>
+<li>LB của các cloud provider</li>
+</ul>
+<p><strong>Ưu điểm</strong></p>
+<ul>
+<li>Dễ cài đặt và sử dụng.</li>
+<li>Không phụ thuộc vào ngôn ngữ lập trình khi hiện thực client/server.</li>
+<li>Tăng tính an toàn cho server.</li>
+<li>Có thể scale bằng cách thêm nhiều instance của load balancer.</li>
+</ul>
+<p><strong>Nhược điểm</strong></p>
+<ul>
+<li>Nếu không quản lý tốt, load balancer có thể là điểm gây lỗi duy nhất (single point of failure).</li>
+<li>Tăng latency của request.</li>
+</ul>
+<h2><a href="#hiện-thực-và-kiểm-tra" aria-hidden="true" class="anchor" id="hiện-thực-và-kiểm-tra"></a>Hiện thực và kiểm tra</h2>
+<p>Ví dụ này của mình sử dụng <code>HAProxy</code> làm load balancer và server/client được hiện thực bằng <code>Go</code>.</p>
+<p><em><strong>gRPC proto</strong></em></p>
+<pre><code>syntax = &quot;proto3&quot;;
+
+package dnt;
+
+option go_package = &quot;/model&quot;;
+
+service DemoService {
+  rpc SayHello (HelloRequest) returns (HelloResponse);
+  rpc SayHelloStream(stream HelloRequest) returns (stream HelloResponse);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string serverId = 1;
+}
+</code></pre>
+<h3><a href="#layer-4" aria-hidden="true" class="anchor" id="layer-4"></a>Layer 4</h3>
+<p>Khi cân bằng tải ở L4, chúng ta sẽ nói đến <code>connection-based loadbalancing</code>, mô hình như sau:</p>
+<p><img src="img/grpc-loadbalacning-lb-proxy.png" alt="lb-proxy" /></p>
+<p>Việc cân bằng tải được thực hiện <strong>ở giai đoạn thiết lập connection</strong>, sau đó, LB sẽ như một proxy để chuyển tiếp các requests từ các connection đến server tương ứng.</p>
+<p><em><strong>HAProxy</strong></em></p>
+<p>Cấu hình file <code>haproxy.cfg</code> có một vài điểm cần chú ý như sau:</p>
+<ul>
+<li><code>frontend lb_grpc</code>: chỉ dẫn <code>HAProxy</code> lắng nghe kết nối ở port <code>8443</code>.</li>
+<li><code>backend be_grpc</code>: khai báo các backend servers.</li>
+<li><code>mode tcp</code> cấu hình HAProxy hoạt động ở L4 (TCP)</li>
+<li><code>balance roundrobin</code>: sử dụng thuật toán <code>roundrobin</code> để cân bằng tải connection.</li>
+</ul>
+<pre><code># HAProxy version: 3.1.0-f2b9791
+global
+  tune.ssl.default-dh-param 1024
+
+defaults
+  timeout connect 10000ms
+  timeout client 60000ms
+  timeout server 60000ms
+
+frontend lb_grpc
+  mode tcp
+  bind *:8443 proto h2
+  default_backend be_grpc
+
+# gRPC servers running on port 50051-50052-50053
+backend be_grpc
+  mode tcp
+  balance roundrobin
+  option httpchk HEAD / HTTP/2
+  server srv01 127.0.0.1:50051
+  server srv02 127.0.0.1:50052
+  server srv03 127.0.0.1:50053
+</code></pre>
+<p>Chạy HAProxy ở môi trường local bằng lệnh <code>haproxy -f /opt/homebrew/etc/haproxy.cfg</code>, kết quả của lệnh <code>netstat</code> cho thấy <code>HAProxy</code> đang lắng nghe ở port <code>8443</code>.</p>
+<p><img src="img/haproxy-listen.png" alt="haproxy-listen" /></p>
+<p><em><strong>Server</strong></em></p>
+<p>Mình sẽ chạy 3 <code>gRPC server</code> lắng nghe trên 3 port, có method sẽ trả về <code>server ID</code> mỗi khi nhận request từ phía client, mục đích thống kê cho kết quả test.</p>
+<pre><code class="language-go">func main() {
+	go serve(&quot;50051&quot;)
+	go serve(&quot;50052&quot;)
+	go serve(&quot;50053&quot;)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	&lt;-ctx.Done()
+}
+
+func serve(port string) {
+	lis, err := net.Listen(&quot;tcp&quot;, &quot;:&quot;+port)
+	if err != nil {
+		log.Fatalf(&quot;failed to listen: %v&quot;, err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterDemoServiceServer(s, &amp;server{serverId: port})
+
+	fmt.Println(&quot;server is running on port &quot; + port)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf(&quot;failed to serve: %v&quot;, err)
+	}
+}
+</code></pre>
+<p><em><strong>Client</strong></em></p>
+<p>Để kiểm tra cân bằng tải L4, mình sử dụng <code>unuary method</code> của gRPC, ý tưởng là tạo 3 clients <code>gRPC</code> và bắt đầu gửi requests mỗi <code>20ms</code>. Theo như những phân tích ở trước, L4 thực hiện cân bằng tải lúc thiết lập connection, do đó kết quả kiểm tra này phải chứng minh được tất cả requests được gửi trên mỗi connection sẽ chỉ được xử lý bởi 1 server duy nhất, mình sử dụng thông tin <code>server ID</code> cho mục đích này.</p>
+<pre><code class="language-go">func unaryTest(index int, requests *int, c pb.DemoServiceClient, responses map[string]bool, responseLock *sync.Mutex, stopCh chan struct{}) {
+	ticker := time.NewTicker(requestInterval)
+	defer ticker.Stop()
+
+stop:
+	for {
+		select {
+		case &lt;-stopCh:
+			break stop
+		case &lt;-ticker.C:
+			go doSendUnaryRequest(index, requests, c, responses, responseLock)
+		}
+	}
+	fmt.Printf(&quot;client %v make %v requests, received all response from %v server(s), detail: %+v\n&quot;, index, requests, len(responses), responses)
+}
+</code></pre>
+<p><em><strong>Kết quả</strong></em></p>
+<p>Sử dụng netstat để kiểm tra số lượng connection từ client tới HAProxy và từ HAProxy tới server.</p>
+<p><img src="img/haproxy-connections-L4.png" alt="haproxy-connections-L4" /></p>
+<p>Chạy chương trình một thời gian, dựa vào kết quả ở hình dưới, mình thấy <strong>tất cả requests trên một client được sử lý bởi duy nhất một server</strong>, điều này đúng với những điều mình đã phân tích.</p>
+<p><img src="img/haproxy-test-result-L4.png" alt="haproxy-test-result-L4" /></p>
+<h3><a href="#layer-7" aria-hidden="true" class="anchor" id="layer-7"></a>Layer 7</h3>
+<p><em><strong>HAProxy</strong></em></p>
+<p>Lần này, <code>HAProxy</code> sẽ sử dụng <code>mode http</code> để hoạt động ở <code>L7</code>.</p>
+<pre><code># HAProxy version: 3.1.0-f2b9791
+global
+  tune.ssl.default-dh-param 1024
+
+defaults
+  timeout connect 10000ms
+  timeout client 60000ms
+  timeout server 60000ms
+
+frontend lb_grpc
+  mode http
+  bind *:8443 proto h2
+  default_backend be_grpc
+
+# gRPC servers running on port 50051-50052-50053
+backend be_grpc
+  mode http
+  balance roundrobin
+
+  server srv01 127.0.0.1:50051 check proto h2
+  server srv02 127.0.0.1:50052 check proto h2
+  server srv03 127.0.0.1:50053 check proto h2
+</code></pre>
+<p>Mô hình hoạt động như hình sau:</p>
+<p><img src="img/grpc-loadbalacning-L7.png" alt="grpc-loadbalacning-L7" /></p>
+<p><em><strong>Client</strong></em></p>
+<p>Ở phía client, bên cạnh <code>unary method</code>, lần này mình sẽ sử dụng thêm <code>stream method</code> để kiểm tra.</p>
+<p><strong>Unary method</strong></p>
+<p>Lần này việc cân bằng tải ở HAProxy sẽ dựa vào request, nên mình kì vọng requests ở mỗi client sẽ được xử lý bởi cả 3 servers.</p>
+<p><em><strong>Kết quả</strong></em></p>
+<p>Đúng như kì vọng, requests từ mỗi client được <code>HAProxy</code> gửi tới cả 3 servers.</p>
+<p><img src="img/haproxy-test-result-L7-unary.png" alt="haproxy-test-result-L7-unary" /></p>
+<p><strong>Bidirectaional stream method</strong></p>
+<p>Đối với <code>bidirectaional stream method</code> của gRPC, một khi method được gọi, client và server có thể gửi message cho nhau liên tục, vậy những message này phải được xử lý bởi cùng 1 backend server để method có thể hoạt đúng chức năng. Hãy kiểm tra với HAProxy về việc cân bằng tải này với thiết lập như sau:</p>
+<ul>
+<li>Gọi <code>bidirectaional stream method</code> trên mỗi client.</li>
+<li>Trên mỗi stream, client gửi <code>5000 messages</code> đến server.</li>
+</ul>
+<pre><code class="language-go">func streamTest(index int, requests *int, client pb.DemoServiceClient, responses map[string]bool, responseLock *sync.Mutex) {
+	*requests = *requests + 1
+	stream, err := client.SayHelloStream(context.Background())
+	if err != nil {
+		log.Fatalf(&quot;could not call SayHello: %v&quot;, err)
+	}
+
+	for i := 0; i &lt; requestOnStream; i++ {
+		req := &amp;pb.HelloRequest{
+			Name: fmt.Sprintf(&quot;client %d&quot;, i),
+		}
+		if err := stream.Send(req); err != nil {
+			log.Fatalf(&quot;failed to send request: %v&quot;, err)
+		}
+		response, err := stream.Recv()
+		if err != nil {
+			log.Fatalf(&quot;failed to receive response: %v&quot;, err)
+		}
+		responseLock.Lock()
+		responses[response.ServerId] = true
+		responseLock.Unlock()
+	}
+	if err := stream.CloseSend(); err != nil {
+		log.Fatalf(&quot;failed to close stream: %v&quot;, err)
+	}
+	fmt.Printf(&quot;client %v make %v requests, received all response from %v server(s), detail: %+v\n&quot;, index, *requests, len(responses), responses)
+}
+</code></pre>
+<p><em><strong>Kết quả</strong></em></p>
+<p>Tất cả messages trên mỗi stream được xử lý bởi 1 server và ta cũng có thể thấy, HAProxy cân bằng tải 3 stream đến 3 servers.</p>
+<p><img src="img/haproxy-test-result-L7-stream.png" alt="haproxy-test-result-L7-stream" /></p>
+<p><em><strong>Nhận xét</strong></em></p>
+<p>Về mặt gửi nhận message, <code>bidirectional stream</code> của gRPC cũng tựa tựa <code>web socket</code>, protocol có tính <a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/load-balancer-stickiness/options.html">stickiness</a>, do đó bạn sẽ thấy, khi mình cấu hình <code>HAProxy</code> ở L7, mình không cần phải quan tâm đến tính năng <code>stick table</code>. Về cơ bản, <code>HAProxy</code> đã hiện thực những tính chất này khi cân bằng tải <code>gRPC</code>, mà thực chất là <code>HTTP/2</code>.</p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Ở bài viết này, mình đã phân tích sâu hơn cách load balancer cân bằng tải gRPC protol với những chương trình kiểm tra trên <code>HAProxy</code>, qua đó hiểu thêm về cách connection, requests được xử lý.</p>
+<ul>
+<li>LB hoạt động ở L4 sẽ thực hiện cân bằng tải ngay khi connection được thiết lập.</li>
+<li>LB hạot động ở L7 sẽ thực hiện cân bằng tải requests.</li>
+<li>Đặc tính <code>stickiness</code> tự nhiên của <code>stream method</code> giống với <code>web socket</code>, vì vậy nếu chỉ để cân bằng tải, chúng ta không cần sử dụng tính năng này trên các LB.</li>
+</ul>
+<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<p>Bạn có thể tham khảo mã nguồn ở repository <a href="https://github.com/dangngoctam00/grpc-loadblancing">grpc-loadblancing</a>.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
