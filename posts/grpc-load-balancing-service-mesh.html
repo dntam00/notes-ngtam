@@ -1,0 +1,351 @@
+<html>
+
+<head>
+  <title>gRPC Load balancing - service mesh | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>gRPC Load balancing - service mesh</h1>
+      <p>Tiếp theo với chuỗi bài tìm hiểu <code>gRPC load balancing</code>, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong K8s. Chủ đề chính vẫn là <code>gRPC load balancing</code> nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.</p>
+<h2><a href="#service-mesh" aria-hidden="true" class="anchor" id="service-mesh"></a>Service mesh</h2>
+<p><strong>Service mesh là gì?</strong></p>
+<p>Service mesh là công cụ tạo ra một lớp hạ tầng xử lý việc giao tiếp giữa các service trong ứng dụng, có một số tính năng nổi bật như:</p>
+<ul>
+<li>Service discovery</li>
+<li>Load balancing</li>
+<li>mTLS</li>
+<li>Observability</li>
+<li>Traceability</li>
+</ul>
+<p>Kiến trúc của 1 service mesh:</p>
+<p><img src="img/service-mesh.png" alt="service-mesh" /></p>
+<p>Như bạn có thể thấy, có 2 thành phần chính trong service mesh:</p>
+<ul>
+<li><code>Control plane</code>: chịu trách nhiệm điều khiển, cấu hình các rule để quản lý mesh.</li>
+<li><code>Data plane</code>: hiện thực các rule từ <code>control plane</code>, xử lý quá trình giao tiếp giữa các service trong mesh bằng <code>sidecar proxy</code>.</li>
+</ul>
+<h2><a href="#service-mesh-trong-k8s" aria-hidden="true" class="anchor" id="service-mesh-trong-k8s"></a>Service mesh trong K8s</h2>
+<p>Mình sử dụng <code>Isito - Envoy proxy</code> để hiện thực trong bài viết này.</p>
+<p><em><strong><a href="https://istio.io/latest/docs/ops/deployment/architecture/">Isito - Envoy</a></strong></em></p>
+<p>Isito là một công cụ triển khai service mesh, chúng ta có thể triển khai trên K8s hoặc cụm máy ảo.</p>
+<ul>
+<li><code>Control plane</code>: Istiod.</li>
+<li><code>Data plane</code>: <code>Envoy proxy</code> được triển khai cùng với service trong cùng một pod.</li>
+</ul>
+<p><em>Mô hình hoạt động cân bằng tải gRPC như sau:</em></p>
+<p><img src="img/grpc-loadbalacning.istio-envoy.png" alt="img" /></p>
+<ul>
+<li><code>Istiod</code> sẽ đóng vai trò <code>service discovery</code> và cập nhật cho <code>envoy proxy</code> khi có sự thay đổi ở backend server như scale-out, scale-in.</li>
+<li><code>Envoy proxy</code> sẽ cân bằng tải <code>gRPC</code> ở <code>layer 7</code> sau khi tạo connection trực tiếp tới các backend servers.</li>
+</ul>
+<p><em><strong>kube-proxy</strong></em></p>
+<p>Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài K8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của K8s.</p>
+<p><code>Service</code> trong K8s sử dụng <code>kube-proxy</code> để thực hiện việc giao tiếp network, <code>kube-proxy</code> sử dụng <code>iptables</code> để forward các gói tin từ client đến pod đang chạy các server, hoạt động chủ yếu ở <code>layer 4</code>, ở vai trò này nó giống như một load balancing hoạt động ở <code>layer 4</code>. Nếu sử dụng <code>kube-proxy</code>, chúng ta phải sử dụng <code>connection pool</code> để đảm bảo việc cân bằng tải hoạt động đúng như mong muốn.</p>
+<h2><a href="#hiện-thực" aria-hidden="true" class="anchor" id="hiện-thực"></a>Hiện thực</h2>
+<ul>
+<li>Mình sử dụng <a href="https://k3d.io">k3d</a> để chạy k8s ở máy local và <a href="https://taskfile.dev/#/">task</a> để làm alias cho các công việc như build hay triển khai.</li>
+<li>Cài istio vào cluster K8s.</li>
+</ul>
+<p><em><strong>Server</strong></em></p>
+<p>Phần code của server đơn giản chỉ có 2 method <code>unary</code> và <code>stream</code>, trả về <code>pod name</code> mỗi khi xử lý request nhằm mục đích thống kê ở phía client.</p>
+<pre><code class="language-go">func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
+	fmt.Printf(&quot;server %v receive message\n&quot;, s.serverId)
+	return &amp;pb.HelloResponse{ServerId: s.serverId}, nil
+}
+
+func (s *server) SayHelloStream(stream pb.DemoService_SayHelloStreamServer) error {
+	for {
+		_, err := stream.Recv()
+		if err != nil {
+			return fmt.Errorf(&quot;failed to receive a request: %v&quot;, err)
+		}
+		fmt.Printf(&quot;server %v receive message\n&quot;, s.serverId)
+
+		// Send a response back to the client
+		res := &amp;pb.HelloResponse{
+			ServerId: s.serverId,
+		}
+
+		// Send the response to the client
+		if err := stream.Send(res); err != nil {
+			return fmt.Errorf(&quot;failed to send response: %v&quot;, err)
+		}
+	}
+}
+</code></pre>
+<p>Triển khai với tên <code>hello-sidecar-server</code> và dựng một <code>service</code> cho cụm backend.</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-sidecar-server
+  labels:
+    app: hello-sidecar-server
+    sidecar.istio.io/inject: &quot;true&quot;
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-sidecar-server
+  template:
+    metadata:
+      labels:
+        app: hello-sidecar-server
+    spec:
+      serviceAccountName: server-user
+      containers:
+      - name: hello-sidecar-server
+        ports:
+          - protocol: TCP
+            containerPort: 50051
+        image: localhost:5001/hello-sidecar-server:latest
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            value: &quot;default&quot;
+        resources:
+          limits:
+            cpu: &quot;200m&quot;
+            memory: &quot;250Mi&quot;
+          requests:
+            cpu: &quot;100m&quot;
+            memory: &quot;100Mi&quot;
+        readinessProbe:
+          exec:
+            command: [ &quot;/bin/grpc_health_probe&quot;, &quot;-addr=:50051&quot;, &quot;-rpc-timeout=4s&quot; ]
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: [ &quot;/bin/grpc_health_probe&quot;, &quot;-addr=:50051&quot;, &quot;-rpc-timeout=4s&quot; ]
+          timeoutSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-sidecar-server
+spec:
+  selector:
+    app: hello-sidecar-server
+  ports:
+    - port: 5005
+      name: hello-sidecar-server
+      protocol: TCP
+      targetPort: 50051
+</code></pre>
+<p><em><strong>Client</strong></em></p>
+<p>Ở client lần này mình cũng sử dụng 2 method <code>unary</code> và <code>stream</code> để kiểm tra cách cân bằng tải bằng <code>envoy proxy</code> và <code>kube-proxy</code>.</p>
+<p><strong>unary test</strong></p>
+<pre><code class="language-go">func unaryTest(index int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	target := getTarget()
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf(&quot;connect to server %v fail: %v&quot;, target, err)
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	client := pb.NewDemoServiceClient(conn)
+
+	responses := make(map[string]int)
+
+	fmt.Printf(&quot;start gRPC client %v\n&quot;, index)
+
+	for i := 0; i &lt; numberOfRequests; i++ {
+		res, err := client.SayHello(context.Background(), &amp;pb.HelloRequest{Name: &quot;client&quot;})
+		if err != nil {
+			log.Printf(&quot;client %v failed to call SayHello: %v&quot;, index, err)
+			continue
+		}
+		responses[res.ServerId] = responses[res.ServerId] + 1
+		time.Sleep(requestInterval)
+	}
+	fmt.Printf(&quot;client %v make %v requests, received all response from %v server(s), detail: %+v\n&quot;, index, numberOfRequests, len(responses), responses)
+}
+</code></pre>
+<p><strong>stream test</strong></p>
+<pre><code class="language-go">func streamTest(index int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	target := getTarget()
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf(&quot;connect to server %v fail: %v&quot;, target, err)
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	client := pb.NewDemoServiceClient(conn)
+
+	responses := make(map[string]int)
+
+	fmt.Printf(&quot;start gRPC client %v\n&quot;, index)
+	stream, err := client.SayHelloStream(context.Background())
+	if err != nil {
+		log.Fatalf(&quot;could not call SayHello: %v&quot;, err)
+	}
+
+	for i := 0; i &lt; numberOfRequests; i++ {
+		req := &amp;pb.HelloRequest{
+			Name: fmt.Sprintf(&quot;client %d&quot;, i),
+		}
+		if err := stream.Send(req); err != nil {
+			log.Fatalf(&quot;failed to send request: %v&quot;, err)
+		}
+		response, err := stream.Recv()
+		if err != nil {
+			log.Fatalf(&quot;failed to receive response: %v&quot;, err)
+		}
+		responses[response.ServerId] = responses[response.ServerId] + 1
+	}
+	if err := stream.CloseSend(); err != nil {
+		log.Fatalf(&quot;failed to close stream: %v&quot;, err)
+	}
+	fmt.Printf(&quot;client %v make %v requests, received all response from %v server(s), detail: %+v\n&quot;, index, numberOfRequests, len(responses), responses)
+}
+</code></pre>
+<p>Triển khai 2 client, có sử dụng <code>envoy proxy</code> và không sử dụng <code>envoy proxy</code>.</p>
+<ul>
+<li><code>sidecar.istio.io/inject: &quot;false&quot;</code>: ngăn chặn <code>istiod</code> inject sidecar proxy vào pod của client.</li>
+<li><code>hello-sidecar-server.default.svc.cluster.local</code>: endpoint của service backend.</li>
+</ul>
+<p>File <code>yaml</code> triển khai client có <code>envoy proxy</code>.</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-sidecar-client
+  labels:
+    app: hello-sidecar-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-sidecar-client
+  template:
+    metadata:
+      labels:
+        app: hello-sidecar-client
+    spec:
+      containers:
+      - name: hello-sidecar-client
+        image: localhost:5001/hello-sidecar-client:latest
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            value: &quot;default&quot;
+          - name: GRPC_SERVER_ADDR
+            value: &quot;hello-sidecar-server.default.svc.cluster.local:5005&quot;
+        resources:
+          limits:
+            cpu: &quot;200m&quot;
+            memory: &quot;250Mi&quot;
+          requests:
+            cpu: &quot;100m&quot;
+            memory: &quot;100Mi&quot;
+</code></pre>
+<p>File <code>yaml</code> triển khai client không có <code>envoy proxy</code> chỉ khác phần <code>annotations</code>.</p>
+<pre><code class="language-yaml">spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-client
+  template:
+    metadata:
+      labels:
+        app: hello-client
+      annotations:
+        sidecar.istio.io/inject: &quot;false&quot;
+</code></pre>
+<h2><a href="#kiểm-tra" aria-hidden="true" class="anchor" id="kiểm-tra"></a>Kiểm tra</h2>
+<p>Triển khai server và client bằng lệnh <code>task server:deploy</code> và <code>task client:deploy</code>.</p>
+<p><img src="img/grpc-loadbalancing-deployment-sidecar.png" alt="grpc-loadbalancing-deployment-sidecar" /></p>
+<p><em><strong>kube-proxy</strong></em></p>
+<p><code>kube-proxy</code> cân bằng tải ở <code>layer 4</code> nên tất cả request từ 1 client sẽ được xử lý bởi 1 backend server duy nhất.</p>
+<p><img src="img/grpc-loadbalancing-no-sidecar-test-result.png" alt="grpc-loadbalancing-no-sidecar-test-result" /></p>
+<p><em><strong>envoy-proxy</strong></em></p>
+<ul>
+<li><code>Envoy proxy</code> cân bằng tải ở <code>layer 7</code> nên khi kiểm tra với <code>unary method</code>, requests từ 1 client có thể được xử lý bởi cả 3 backend servers.</li>
+<li>Đối với <code>stream method</code>, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.</li>
+</ul>
+<p><img src="img/grpc-loadbalancing-sidecar-test-result.png" alt="grpc-loadbalancing-sidecar-test-result" /></p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Qua bài viết này, mình đã hiện thực service mesh trong K8s để cân bằng tải gRPC cũng như kiểm tra lại các lý thuyết đã được phân tích ở các bài viết trước. Một số kiến thức quan trọng cần lưu ý:</p>
+<ul>
+<li>Servie mesh và mô hình hoạt động.</li>
+<li><code>Kube-proxy</code> hoạt động cân bằng tải ở <code>L4</code>.</li>
+<li><code>Envoy proxy</code> hoạt động cân bằng tải ở <code>L7</code>.</li>
+</ul>
+<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<p>Bạn có thể tham khảo mã nguồn ở repository <a href="https://github.com/dangngoctam00/grpc-loadbalancing/tree/main/sidecar-envoy">grpc-loadblancing</a>.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dangngoctam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
