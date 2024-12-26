@@ -266,4 +266,4 @@ Về mặt gửi nhận message, `bidirectional stream` của gRPC cũng tựa t
 
 ## Mã nguồn
 
-Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https://github.com/dangngoctam00/grpc-loadblancing).
+Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https://github.com/dntam00/grpc-loadblancing).

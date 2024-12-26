@@ -200,4 +200,4 @@ Cách tốt hơn là bạn có thể gửi 1 số lượng lớn request vào nh
 
 ## Mã nguồn
 
-[[Http server & client]](https://github.com/dangngoctam00/go-notes/tree/main/http)
+[[Http server & client]](https://github.com/dntam00/go-notes/tree/main/http)

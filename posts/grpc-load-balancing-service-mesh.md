@@ -323,4 +323,4 @@ Qua bài viết này, mình đã hiện thực service mesh trong K8s để cân
 
 ## Mã nguồn
 
-Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https://github.com/dangngoctam00/grpc-loadbalancing/tree/main/sidecar-envoy).
+Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https://github.com/dntam00/grpc-loadbalancing/tree/main/sidecar-envoy).

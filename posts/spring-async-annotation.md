@@ -258,6 +258,6 @@ Qua bài viết này mình đã phân tích cách Spring khởi tạo cũng như
 để có thể hiểu rõ và ứng dụng tương tự vào các annotation khác của Spring,
 bạn có thể sẽ phải nghiên cứu kĩ hơn các phần mình đề cập ở đầu bài viết.
 
-Bạn có thể tham khảo source code ở đây: https://github.com/dangngoctam00/learning-spring/tree/master/asycn-annotation
+Bạn có thể tham khảo source code ở đây: https://github.com/dntam00/learning-spring/tree/master/asycn-annotation
 
 Cảm ơn bạn đã đọc đến đây, hẹn gặp lại vào bài viết tiếp theo.
