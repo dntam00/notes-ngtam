@@ -52,12 +52,13 @@
 <li>Observability</li>
 <li>Traceability</li>
 </ul>
+<p>giúp tách rời những chức năng không liên quan đến xử lý business ra khỏi phần code của ứng dụng.</p>
 <p>Kiến trúc của 1 service mesh:</p>
 <p><img src="img/service-mesh.png" alt="service-mesh" /></p>
 <p>Như bạn có thể thấy, có 2 thành phần chính trong service mesh:</p>
 <ul>
 <li><code>Control plane</code>: chịu trách nhiệm điều khiển, cấu hình các rule để quản lý mesh.</li>
-<li><code>Data plane</code>: hiện thực các rule từ <code>control plane</code>, xử lý quá trình giao tiếp giữa các service trong mesh bằng <code>sidecar proxy</code>.</li>
+<li><code>Data plane</code>: hiện thực các rule từ <code>control plane</code>, xử lý quá trình giao tiếp giữa các service trong mesh bằng <code>sidecar proxy</code>, thành phần được triển khi cùng với service.</li>
 </ul>
 <h2><a href="#service-mesh-trong-k8s" aria-hidden="true" class="anchor" id="service-mesh-trong-k8s"></a>Service mesh trong K8s</h2>
 <p>Mình sử dụng <code>Isito - Envoy proxy</code> để hiện thực trong bài viết này.</p>
@@ -65,7 +66,7 @@
 <p>Isito là một công cụ triển khai service mesh, chúng ta có thể triển khai trên K8s hoặc cụm máy ảo.</p>
 <ul>
 <li><code>Control plane</code>: Istiod.</li>
-<li><code>Data plane</code>: <code>Envoy proxy</code> được triển khai cùng với service trong cùng một pod.</li>
+<li><code>Data plane</code>: <code>Envoy proxy</code> được triển khai cùng với service trong cùng một pod, <code>proxy</code> như một lớp bọc ở ngoài service, chặn và xử lý tất cả in-bound, out-bound traffic của service để hiện thực các chức năng liên quan đến giao tiếp.</li>
 </ul>
 <p><em>Mô hình hoạt động cân bằng tải gRPC như sau:</em></p>
 <p><img src="img/grpc-loadbalacning.istio-envoy.png" alt="img" /></p>
@@ -311,6 +312,18 @@ spec:
 <li>Đối với <code>stream method</code>, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.</li>
 </ul>
 <p><img src="img/grpc-loadbalancing-sidecar-test-result.png" alt="grpc-loadbalancing-sidecar-test-result" /></p>
+<h2><a href="#đánh-giá" aria-hidden="true" class="anchor" id="đánh-giá"></a>Đánh giá</h2>
+<p><em><strong>Ưu điểm</strong></em></p>
+<ul>
+<li>Service mesh cung cấp một giải pháp giao tiếp giữa các service trong hệ thống, tách biệt phần ứng dụng xử lý business và phần proxy.</li>
+<li>Hỗ trợ nhiều cơ chế routing nâng cao và thiết kệ hệ thống có tính đàn hồi: retry, circuit breaker, timeout,...</li>
+<li>Sidecar proxy cho developer sử dụng để triển khai với nhiều loại ngôn ngữ, đây là một điểm rất mạnh trong kiến trúc microservice.</li>
+</ul>
+<p><em><strong>Nhược điểm</strong></em></p>
+<ul>
+<li>Tăng độ phức tạp trong các mô hình triển khai.</li>
+<li>Thêm 1 lớp vào việc giao tiếp giữa các service, tăng latency của request cũng như khó debug khi có lỗi xảy ra.</li>
+</ul>
 <h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Qua bài viết này, mình đã hiện thực service mesh trong K8s để cân bằng tải gRPC cũng như kiểm tra lại các lý thuyết đã được phân tích ở các bài viết trước. Một số kiến thức quan trọng cần lưu ý:</p>
 <ul>

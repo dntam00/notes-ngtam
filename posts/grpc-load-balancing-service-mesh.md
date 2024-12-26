@@ -21,13 +21,15 @@ Service mesh là công cụ tạo ra một lớp hạ tầng xử lý việc gia
 - Observability
 - Traceability
 
+giúp tách rời những chức năng không liên quan đến xử lý business ra khỏi phần code của ứng dụng.
+
 Kiến trúc của 1 service mesh:
 
 ![service-mesh](img/service-mesh.png)
 
 Như bạn có thể thấy, có 2 thành phần chính trong service mesh:
 - `Control plane`: chịu trách nhiệm điều khiển, cấu hình các rule để quản lý mesh.
-- `Data plane`: hiện thực các rule từ `control plane`, xử lý quá trình giao tiếp giữa các service trong mesh bằng `sidecar proxy`.
+- `Data plane`: hiện thực các rule từ `control plane`, xử lý quá trình giao tiếp giữa các service trong mesh bằng `sidecar proxy`, thành phần được triển khi cùng với service.
 
 ## Service mesh trong K8s
 
@@ -37,7 +39,7 @@ Mình sử dụng `Isito - Envoy proxy` để hiện thực trong bài viết n�
 
 Isito là một công cụ triển khai service mesh, chúng ta có thể triển khai trên K8s hoặc cụm máy ảo.
 - `Control plane`: Istiod.
-- `Data plane`: `Envoy proxy` được triển khai cùng với service trong cùng một pod.
+- `Data plane`: `Envoy proxy` được triển khai cùng với service trong cùng một pod, `proxy` như một lớp bọc ở ngoài service, chặn và xử lý tất cả in-bound, out-bound traffic của service để hiện thực các chức năng liên quan đến giao tiếp.
 
 *Mô hình hoạt động cân bằng tải gRPC như sau:*
 
@@ -312,6 +314,19 @@ Triển khai server và client bằng lệnh `task server:deploy` và `task clie
 - Đối với `stream method`, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.
 
 ![grpc-loadbalancing-sidecar-test-result](img/grpc-loadbalancing-sidecar-test-result.png)
+
+## Đánh giá
+
+***Ưu điểm***
+
+- Service mesh cung cấp một giải pháp giao tiếp giữa các service trong hệ thống, tách biệt phần ứng dụng xử lý business và phần proxy.
+- Hỗ trợ nhiều cơ chế routing nâng cao và thiết kệ hệ thống có tính đàn hồi: retry, circuit breaker, timeout,...
+- Sidecar proxy cho developer sử dụng để triển khai với nhiều loại ngôn ngữ, đây là một điểm rất mạnh trong kiến trúc microservice.
+
+***Nhược điểm***
+
+- Tăng độ phức tạp trong các mô hình triển khai.
+- Thêm 1 lớp vào việc giao tiếp giữa các service, tăng latency của request cũng như khó debug khi có lỗi xảy ra.
 
 ## Tổng kết
 
