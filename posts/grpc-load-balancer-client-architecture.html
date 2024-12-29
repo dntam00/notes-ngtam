@@ -1,0 +1,192 @@
+<html>
+
+<head>
+  <title>gRPC Load balancing (2) - Client architecture | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>gRPC Load balancing (2) - Client architecture</h1>
+      <p>Tiếp nối chuỗi bài viết về cân bằng tải <code>gRPC</code>, hôm nay mình sẽ tìm hiểu về các thành phần ở <code>gRPC client</code>, đặc biệt là những thành phần liên quan đến cân bằng tải.</p>
+<h2><a href="#core-component" aria-hidden="true" class="anchor" id="core-component"></a>Core component</h2>
+<ul>
+<li><code>Stub</code>: client-facing interface, giúp chúng ta có cảm giác gọi một hàm ở remote như ở local.</li>
+<li><code>Client connection</code>: &quot;virtual connection&quot; đến một endpoint, quản lý một hoặc nhiều connection thật đến các gRPC servers (cho phép hiện thực client-side load balancing) và cung cấp các tính năng như phân giản domain name, TLS handshake, reconnect,.. thông qua các module khác.</li>
+<li><code>Resolver</code>: phân giản domain name, ngoài việc cung cấp các cơ chế có sẵn như <code>passthrough</code> (connect thẳng tới server), <code>dns</code> (phân giải domain name để lấy danh sách server) hay <code>xDS</code> thì <code>resolver</code> còn cho phép người dùng sử dụng các logic khác như kết hợp với external service discovery.</li>
+<li><code>Load balancer</code>: hiện thực cân bằng tải ở phía client, các cơ chế có sẵn đã được hiện thực ở <code>Go</code> như: <code>pick first</code>, <code>round robin</code>, <code>weighted round robin</code>, <code>least request</code>,... Giống với <code>resolver</code>, gRPC cũng hỗ trợ người dùng custom logic để hiện thực các thuật toán cân bằng tải phức tạp.</li>
+<li><code>Interceptor</code>: cung cấp khả năng can thiệp vào request trước khi gửi đi.</li>
+</ul>
+<h2><a href="#resolver" aria-hidden="true" class="anchor" id="resolver"></a>Resolver</h2>
+<p><code>Resolver</code> về cơ bản là một service discovery, khi client muốn gửi request, nó phải biết được địa chỉ của server. Hiện tại gRPC cung cấp một số cơ chế có sẵn để sử dụng:</p>
+<ul>
+<li><code>pass through</code>: sử dụng địa chỉ server được cung cấp, được sử dụng khi kết trực tiếp đến load balancer hoặc 1 server.</li>
+<li><code>dns</code>: phân giải địa chỉ được cung cấp để lấy được danh sách tất cả servers, ví dụ: client có thể sử dụng resolver này khi cụm server đứng sau <code>headless service</code> của K8s.</li>
+<li><code>unix</code>: sử dụng cho unix file system.</li>
+</ul>
+<p>Bên cạnh những cơ chế <code>resolver</code> mặc định, gRPC còn cung cấp API để người dùng có thể tự hiện thực, quá trình đăng kí và sử dụng như sau:</p>
+<p><img src="img/grpc-resolver.png" alt="grpc-resolver" /></p>
+<ul>
+<li>Đăng kí custom resolver với gRPC, mỗi resolver sẽ được định danh bởi một <code>scheme</code>.</li>
+<li>Tạo gRPC client với target có chứa scheme ở trên.</li>
+<li>gRPC sẽ parse target rồi lấy ra resolver tương ứng với scheme.</li>
+<li>Phân tải địa chỉ của servers dựa vào logic được định nghĩa.</li>
+<li>Theo dõi và cập nhật địa chỉ của servers khi có sự thay đổi.</li>
+</ul>
+<h2><a href="#balancer" aria-hidden="true" class="anchor" id="balancer"></a>Balancer</h2>
+<p><code>Balancer</code> hiện thực client-side load balancing cho gRPC client, ở phần trước, mình có mô tả về <code>Client connection</code>, gRPC sử dụng <code>virtual connection</code> này để quản lý các connection thực sự đến servers, thông qua đó để quản lý việc phân giải địa chỉ, khởi tạo kết nối, cập nhật trạng thái và <strong>cân bằng tải</strong>.</p>
+<p>Giống như <code>resolver</code>, bên cạnh cung cấp các thuật toán cân bằng tải phổ biến, gRPC cũng cho phép người đăng kí các thuật toán tuỳ chỉnh, quá trình đăng kí và sử dụng giống với <code>resolver</code>.</p>
+<p><img src="img/grpc-balancer.png" alt="grpc-resolver" /></p>
+<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
+<p>Mình sẽ hiện thực một custom resovler bằng <code>Go</code> để làm rõ hơn phần lý thuyết ở phần trước.</p>
+<ul>
+<li>có 3 gRPC servers chạy ở local.</li>
+<li>scheme của resolver là <code>static</code>, nó chỉ đơn giản parse địa chỉ của các server từ chuỗi string.</li>
+</ul>
+<p>Phần code định nghĩa <code>builder</code> và đăng kí tới <code>gRPC</code>.</p>
+<pre><code class="language-go">func init() {
+	resolver.Register(&amp;StaticBuilder{})
+}
+
+type StaticBuilder struct{}
+
+func (sb *StaticBuilder) Build(target resolver.Target, cc resolver.ClientConn,
+	opts resolver.BuildOptions) (resolver.Resolver, error) {
+	endpoints := strings.Split(target.Endpoint(), &quot;,&quot;)
+
+	r := &amp;StaticResolver{
+		endpoints: endpoints,
+		cc:        cc,
+	}
+	r.ResolveNow(resolver.ResolveNowOptions{})
+	return r, nil
+}
+
+func (sb *StaticBuilder) Scheme() string {
+	return &quot;static&quot;
+}
+</code></pre>
+<p>Phần code định nghĩa <code>static resolver</code>.</p>
+<pre><code class="language-go">type StaticResolver struct {
+	endpoints []string
+	cc        resolver.ClientConn
+	sync.Mutex
+}
+
+func (r *StaticResolver) ResolveNow(opts resolver.ResolveNowOptions) {
+	r.Lock()
+	r.doResolve()
+	r.Unlock()
+}
+
+func (r *StaticResolver) Close() {
+}
+
+func (r *StaticResolver) doResolve() {
+	var addrs []resolver.Address
+	for i, addr := range r.endpoints {
+		addrs = append(addrs, resolver.Address{
+			Addr:       addr,
+			ServerName: fmt.Sprintf(&quot;instance-%d&quot;, i+1),
+		})
+	}
+
+	newState := resolver.State{
+		Addresses: addrs,
+	}
+
+	_ = r.cc.UpdateState(newState)
+}
+</code></pre>
+<p>Khởi tạo client sử dụng <code>static scheme</code>.</p>
+<pre><code class="language-go">
+const (
+	target = &quot;static:///127.0.0.1:50051,127.0.0.1:50052,127.0.0.1:50053&quot;
+)
+
+func main() {
+    conn, err := grpc.NewClient(target, 
+                    grpc.WithTransportCredentials(insecure.NewCredentials()),
+                    grpc.WithDefaultServiceConfig(`{&quot;loadBalancingConfig&quot;: [{&quot;round_robin&quot;:{}}]}`))
+}
+</code></pre>
+<p>Kết quả chạy chương trình:</p>
+<p><img src="img/grpc-static-resolver-result.png" alt="grpc-static-resolver-result.png" /></p>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<p>Thông qua bài viết này, chúng ta đã tìm hiểu về kiến trúc của <code>gRPC client</code>, biết được những thành phần và cách chúng hoạt động và tương tác với nhau:</p>
+<ul>
+<li><code>Resolver</code>: phân giải targer để lấy được địa chỉ các <code>gRPC servers</code>.</li>
+<li><code>Blanacer</code>: cân bằng tải ở phía client.</li>
+</ul>
+<p>điều này sẽ giúp chúng ta sử dụng gRPC dễ dàng hơn, đặt nền tảng để có thể triển khai các mô hình phức tạp hơn ở các bài sau.</p>
+<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<p>Bạn có thể tham khảo và tuỳ chỉnh mã nguồn ở repository <a href="https://github.com/dntam00/grpc-loadbalancing/tree/main/static-resolver">grpc-loadbalancing</a></p>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ul>
+<li><a href="https://github.com/grpc/grpc/blob/master/doc/load-balancing.md">Load Balancing in gRPC</a></li>
+<li><a href="https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md">A27: xDS-Based Global Load Balancing</a></li>
+<li><a href="https://grpc.io/docs/guides/custom-name-resolution/">Custom Name Resolution</a></li>
+<li><a href="https://www.sobyte.net/post/2022-03/golang-grpc/">gRPC client</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>

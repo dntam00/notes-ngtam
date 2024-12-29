@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>gRPC Load balancing - LB as Proxy | Tam's Blog</title>
+  <title>gRPC Load balancing (3) - LB as Proxy | Tam's Blog</title>
   <meta charset="utf-8">
   <meta http-equiv="content-type" content="text/html;">
   <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
@@ -40,7 +40,7 @@
   <div class="container">
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
-      <h1>gRPC Load balancing - LB as Proxy</h1>
+      <h1>gRPC Load balancing (3) - LB as Proxy</h1>
       <p><a href="https://notes-ngtam.pages.dev/posts/grpc-load-balancer">Ở bài viết đầu tiên về cân bằng tải gRPC</a>, mình đã tìm hiểu về các ý tưởng cân bằng tải cho <code>gRPC</code> protocol, dựa trên phần lý thuyết đó, hôm nay mình sẽ làm một ví dụ sử dụng <code>load balancer</code>. Ở mô hình này, <code>load balancer</code> đóng vai trò như một <code>reverse proxy</code> cho cụm backend server.</p>
 <h2><a href="#load-balancer--reverse-proxy" aria-hidden="true" class="anchor" id="load-balancer--reverse-proxy"></a>Load balancer / Reverse proxy</h2>
 <p>Chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:</p>
@@ -146,7 +146,12 @@ func serve(port string) {
 }
 </code></pre>
 <p><em><strong>Client</strong></em></p>
-<p>Để kiểm tra cân bằng tải L4, mình sử dụng <code>unuary method</code> của gRPC, ý tưởng là tạo 3 clients <code>gRPC</code> và bắt đầu gửi requests mỗi <code>20ms</code>. Theo như những phân tích ở trước, L4 thực hiện cân bằng tải lúc thiết lập connection, do đó kết quả kiểm tra này phải chứng minh được tất cả requests được gửi trên mỗi connection sẽ chỉ được xử lý bởi 1 server duy nhất, mình sử dụng thông tin <code>server ID</code> cho mục đích này.</p>
+<p>Để kiểm tra cân bằng tải L4, mình sử dụng <code>unuary method</code> của gRPC, ý tưởng để xây dựng chương trình kiểm tra:</p>
+<ul>
+<li>Tạo 3 clients <code>gRPC</code>, gRPC mặc định sử dụng <code>passthrough resolver</code> nên 3 clients tương ứng với 3 connections.</li>
+<li>Bắt đầu gửi requests trên mỗi client mỗi <code>20ms</code>.</li>
+</ul>
+<p>Theo như những phân tích ở trước, L4 thực hiện cân bằng tải lúc thiết lập connection, do đó kết quả kiểm tra này phải chứng minh được tất cả requests được gửi trên mỗi connection sẽ chỉ được xử lý bởi 1 server duy nhất, mình sử dụng thông tin <code>server ID</code> cho mục đích này.</p>
 <pre><code class="language-go">func unaryTest(index int, requests *int, c pb.DemoServiceClient, responses map[string]bool, responseLock *sync.Mutex, stopCh chan struct{}) {
 	ticker := time.NewTicker(requestInterval)
 	defer ticker.Stop()
@@ -164,7 +169,7 @@ stop:
 }
 </code></pre>
 <p><em><strong>Kết quả</strong></em></p>
-<p>Sử dụng netstat để kiểm tra số lượng connection từ client tới HAProxy và từ HAProxy tới server.</p>
+<p>Sử dụng <code>netstat</code> để kiểm tra số lượng connection từ client tới HAProxy và từ HAProxy tới server.</p>
 <p><img src="img/haproxy-connections-L4.png" alt="haproxy-connections-L4" /></p>
 <p>Chạy chương trình một thời gian, dựa vào kết quả ở hình dưới, mình thấy <strong>tất cả requests trên một client được sử lý bởi duy nhất một server</strong>, điều này đúng với những điều mình đã phân tích.</p>
 <p><img src="img/haproxy-test-result-L4.png" alt="haproxy-test-result-L4" /></p>
@@ -251,6 +256,11 @@ backend be_grpc
 </ul>
 <h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
 <p>Bạn có thể tham khảo mã nguồn ở repository <a href="https://github.com/dntam00/grpc-loadblancing">grpc-loadblancing</a>.</p>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ul>
+<li><a href="https://grpc.io/blog/grpc-load-balancing/">gRPC Load Balancing</a></li>
+<li><a href="https://www.haproxy.com/documentation/haproxy-configuration-tutorials/load-balancing/grpc/">gRPC - HaProxy</a></li>
+</ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
       <!-- <div class="copyright">

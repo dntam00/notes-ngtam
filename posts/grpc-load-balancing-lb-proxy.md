@@ -1,5 +1,5 @@
 ---
-title: gRPC Load balancing - LB as Proxy
+title: gRPC Load balancing (3) - LB as Proxy
 published: true
 date: 2024-12-22 20:28:00
 tags: networking, gRPC
@@ -130,7 +130,13 @@ func serve(port string) {
 
 ***Client***
 
-Để kiểm tra cân bằng tải L4, mình sử dụng `unuary method` của gRPC, ý tưởng là tạo 3 clients `gRPC` và bắt đầu gửi requests mỗi `20ms`. Theo như những phân tích ở trước, L4 thực hiện cân bằng tải lúc thiết lập connection, do đó kết quả kiểm tra này phải chứng minh được tất cả requests được gửi trên mỗi connection sẽ chỉ được xử lý bởi 1 server duy nhất, mình sử dụng thông tin `server ID` cho mục đích này.
+Để kiểm tra cân bằng tải L4, mình sử dụng `unuary method` của gRPC, ý tưởng để xây dựng chương trình kiểm tra:
+
+- Tạo 3 clients `gRPC`, gRPC mặc định sử dụng `passthrough resolver` nên 3 clients tương ứng với 3 connections.
+- Bắt đầu gửi requests trên mỗi client mỗi `20ms`. 
+
+
+Theo như những phân tích ở trước, L4 thực hiện cân bằng tải lúc thiết lập connection, do đó kết quả kiểm tra này phải chứng minh được tất cả requests được gửi trên mỗi connection sẽ chỉ được xử lý bởi 1 server duy nhất, mình sử dụng thông tin `server ID` cho mục đích này.
 
 ```go
 func unaryTest(index int, requests *int, c pb.DemoServiceClient, responses map[string]bool, responseLock *sync.Mutex, stopCh chan struct{}) {
@@ -152,7 +158,7 @@ stop:
 
 ***Kết quả***
 
-Sử dụng netstat để kiểm tra số lượng connection từ client tới HAProxy và từ HAProxy tới server.
+Sử dụng `netstat` để kiểm tra số lượng connection từ client tới HAProxy và từ HAProxy tới server.
 
 ![haproxy-connections-L4](img/haproxy-connections-L4.png)
 
@@ -267,3 +273,8 @@ Về mặt gửi nhận message, `bidirectional stream` của gRPC cũng tựa t
 ## Mã nguồn
 
 Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https://github.com/dntam00/grpc-loadblancing).
+
+## Tham khảo
+
+- [gRPC Load Balancing](https://grpc.io/blog/grpc-load-balancing/)
+- [gRPC - HaProxy](https://www.haproxy.com/documentation/haproxy-configuration-tutorials/load-balancing/grpc/)

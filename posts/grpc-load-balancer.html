@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>gRPC Load balancing | Tam's Blog</title>
+  <title>gRPC Load balancing (1) | Tam's Blog</title>
   <meta charset="utf-8">
   <meta http-equiv="content-type" content="text/html;">
   <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
@@ -40,39 +40,53 @@
   <div class="container">
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
-      <h1>gRPC Load balancing</h1>
-      <p>Khi thị trường có xu hướng chuyển dần từ monolithic sang microservice, bài toán giao tiếp giữa các service trở nên rất quan trọng, với những service thông thường hiện nay, mình thấy có 3 cách giao tiếp chính:</p>
+      <h1>gRPC Load balancing (1)</h1>
+      <p>Khi thị trường có xu hướng chuyển dần từ monolithic sang microservice, bài toán giao tiếp giữa các service trở nên rất quan trọng, với những service thông thường hiện nay, mình thấy có 3 cách giao tiếp phổ biến:</p>
 <ul>
-<li>HTTP APIs</li>
-<li>gRPC</li>
-<li>Message queue</li>
+<li><code>REST APIs</code></li>
+<li><code>gRPC</code></li>
+<li><code>Message queue</code></li>
 </ul>
 <p>Khi triển khai hệ thống cần xử lý một lượng tải lớn, mỗi loại service sẽ cần phải chạy rất nhiều instance, vậy bài toán đặt ra làm thế nào để chia tải giữa các instance? Độ hiệu quả cũng như chi phí cài đặt, bảo trì như thế nào? Phương pháp áp dụng cho mỗi protocol có khác nhau không?</p>
-<p>Để trả lời những câu hỏi trên, mình sẽ viết một chuỗi bài tìm hiểu về các phương pháp load balacing cho gRPC protocol.</p>
+<p>Để trả lời những câu hỏi trên, mình sẽ viết một chuỗi bài tìm hiểu về cân bằng tải gRPC và các phương pháp hiện thực trong thực tế. Thông qua chuỗi bài viết này, mục tiêu được đặt ra là mình và bạn đọc sẽ hiểu rõ và vận dụng được những kiến thức cân bằng tải gRPC dự án thực tế, cụ thể:</p>
+<ul>
+<li>Hiểu lý thuyết cân bằng tải.</li>
+<li>Hiểu phương pháp cân bằng tải ở <code>transport layer</code> và <code>application layer</code>.</li>
+<li>Thiết lập và kiểm thử các phương pháp cân bằng tải gRPC.</li>
+</ul>
 <h2><a href="#phương-pháp" aria-hidden="true" class="anchor" id="phương-pháp"></a>Phương pháp</h2>
-<p>Hiện tại có một vài phương pháp phổ biến để xử lý grPC load balancing:</p>
+<p>Hiện tại có một vài phương pháp phổ biến để xử lý cân bằng tải cho grPC:</p>
 <ul>
 <li><strong>Proxy load balancing</strong>: là phương pháp truyền thống, LB sẽ đóng vai trò như một reverse proxy, HAProxy, Nginx, LB của cloud provider,... là các ví dụ.</li>
 <li><strong>Client side load balancing</strong>: phía client chủ động quản lý connection cũng như cơ chế load balancing, có thể tự custom hoàn toàn dựa trên các specification của gRPC hoặc kết hợp với ZooKeeper/Etcd/Consul,...</li>
 <li><strong>Look-aside load balancing</strong>: có một external load balancing component chịu trách nhiệm quản lý các servers (service discovery) và trả lời thông tin cho client mỗi khi được yêu cầu.</li>
-<li><strong>Service mesh</strong>: sử dụng các load balancer có sẵn trong các proxy như Istio, Envoy,...</li>
+<li><strong>Service mesh</strong>: chịu trách nhiệm hiện thực service discovery và cân bằng tải: <code>Istio + Envoy proxy</code>,...</li>
 </ul>
 <p>Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau.</p>
+<p>Tuy nhiên, trước hết hãy cùng mình tìm hiểu một số kiến thức cơ bản cần nắm rõ như <code>HTTP/2</code>, <code>long-lived TCP connection</code>,...</p>
+<h3><a href="#http2" aria-hidden="true" class="anchor" id="http2"></a>HTTP/2</h3>
+<p><code>HTTP/2</code> cho phép client và server gửi/nhận cùng lúc nhiều request/response trên cùng 1 TCP connection (<code>multiplexing</code>), phân biệt với nhau dựa trên <code>logical stream</code>.</p>
+<p><img src="img/http2.png" alt="http/2" /></p>
+<p><code>HTTP/2</code> ra đời giản quyết vấn đề <a href="https://en.wikipedia.org/wiki/Head-of-line_blocking">head-of-line_blocking</a> của <code>HTTP/1.1</code>, ở phiên bản cũ, mặc dù chúng ta có thể tái sử dụng connection, nhưng những requests được xử lý tuần tự, có thể gây hiện tượng thắt cổ chai nếu có nhiều request trên cùng 1 connection.</p>
+<p>Với tính chất này, nếu không có yêu cầu gì đặc biệt, chúng ta sẽ có nhu cầu tái sử dụng connection của <code>HTTP/2</code> để giảm thiểu chi phí khởi tạo connection, do đó, <code>TCP connection</code> trong <code>HTTP/2</code> sẽ là <code>long-lived connection</code>.</p>
 <h2><a href="#grpc-load-balancing" aria-hidden="true" class="anchor" id="grpc-load-balancing"></a>gRPC load balancing</h2>
-<p>Trước tiên, hãy cùng mình phân tích một vài lưu ý về gRPC load balancing. Có phải chỉ cần sử dụng load balancer trước cụm backend servers thì mọi chuyện được giải quyết?</p>
-<p>gRPC là giao thức sử dụng <code>HTTP/2</code>, có cơ chế multiplex nhiều request/response dựa trên cùng 1 connection, vì tính chất này, tcp connection được sử dụng bởi grpc sẽ có tính chất <code>long-lived</code>, khác với HTTP APIs dựa trên <code>HTTP/1.1</code>.</p>
-<p>Để phân tích, chúng ta sẽ lấy trường hợp client khởi tạo 1 connection đến LB và sử dụng nó để gửi tất cả requests, việc tiếp theo LB sẽ cân bằng tải những requests này, tuy nhiên sẽ có sự khác nhau rất lớn khi LB hoạt động ở L4 và L7.</p>
-<h3><a href="#layer-4" aria-hidden="true" class="anchor" id="layer-4"></a>Layer 4</h3>
-<p>Cân bằng tải ở <code>layer 4</code>, LB sẽ làm việc ở tầng ứng dụng với các gói tin TCP, một khi client khởi tạo 1 TCP connection tới LB, nó sẽ tạo 1 connection tương ứng đến một backend server rồi chuyển tiếp tất cả gói tin dựa trên sự ánh xạ này.</p>
+<h3><a href="#load-balancer-as-proxy" aria-hidden="true" class="anchor" id="load-balancer-as-proxy"></a>Load balancer as proxy</h3>
+<p><em><strong>Transport layer (layer 4)</strong></em></p>
+<p>Khi cân bằng tải ở tầng <code>transport</code>, LB sẽ làm việc với các gói tin TCP, một khi client khởi tạo connection tới LB, nó sẽ tạo 1 connection tương ứng đến một backend server rồi chuyển tiếp tất cả gói tin dựa trên sự ánh xạ này, sự ánh xạ này sẽ được giữ cho đến khi connection bị đóng, từ tổng thể, 2 connection được tạo ra có thể được xem là 1 <code>persistent connection</code>.</p>
 <p><img src="img/grpc-connection-load-balancing.png" alt="grpc-connection-load-balancing" /></p>
-<p>Do tính chất này, LB sẽ cân bằng tải cho quá trình thiết lập connection, một khi connection đã được tạo, tất cả request sẽ được gửi trên đó, mình gọi nó là <code>connection-based load balancing</code>. Ở ví dụ như hình trên, nếu client chỉ tạo 1 connection thì sẽ gây ra hiện tượng <code>server instance 2</code> hoặc <code>server instance 3</code> ở trạng thái <code>&quot;thư giãn&quot;</code>.</p>
+<p>Do tính chất <code>persistent connection</code>, LB sẽ cân bằng tải cho quá trình thiết lập connection, một khi connection đã được tạo, tất cả request sẽ được gửi thông nó, mình gọi nó là <code>connection-based load balancing</code>. Ở ví dụ như hình trên, nếu client chỉ tạo 1 connection thì sẽ gây ra hiện tượng <code>server instance 2</code> hoặc <code>server instance 3</code> ở trạng thái <code>&quot;thư giãn&quot;</code>.</p>
 <!-- Tuy nhiên, vấn đề xuất hiện vì tính chất `long-lived` này, khi LB tạo connection tới một backend server, tất cả những requests sau đó sẽ được gửi đến `server instance 1`, 2 servers còn lại sẽ ngồi chơi. Khi tạo mới một connection khác, tuỳ vào thuật toán `load balancing` ở LB, connection mới có thể sẽ tới `server instance 2` hoặc `server instance 3`. Vậy bạn có thể thấy, dù cho LB load balance ở `layer 4` hay `layer 7` thì kiểu load balancing này là `connection-based load balancing`. -->
 <p>Để giải quyết vấn đề này, chúng ta sẽ sử dụng kĩ thuật <code>pooling</code> ở phía client, mục đích là tạo nhiều connections thông qua LB và sử dụng chúng để gửi request. Khi pool được tạo:</p>
 <ul>
 <li>Tất cả connections sẽ được LB phân tải dựa trên thuật toán đã được cấu hình.</li>
-<li>Client sẽ thực hiện chia tải <strong>từng request</strong> trên <strong>từng connection</strong> ở trong pool</li>
+<li>Client sẽ thực hiện chia tải <strong>từng request</strong> trên <strong>từng connection</strong> ở trong pool.</li>
 </ul>
-<p>Tuy nhiên, chi phí để hiện thực client sẽ cao hơn vì chúng ta cần quản lý pool cũng như chọn connection để gửi request.</p>
+<p>Tuy nhiên, chi phí để hiện thực ở phía client sẽ cao hơn vì các lý do:</p>
+<ul>
+<li>Quản lý pool</li>
+<li>Cân bằng tải requests dựa vào connection ở trong pool.</li>
+<li>Phụ thuộc vào ngôn ngữ lập trình được sử dụng.</li>
+</ul>
 <p><img src="img/grpc-loadbalacning-lb-proxy.png" alt="grpc-loadbalacning-lb-proxy" /></p>
 <p><em><strong>Điều gì sẽ xảy ra khi scale server?</strong></em></p>
 <p>Khi một server mới được thêm vào cụm backend, nếu pool ở client của chúng ta đã đạt đến số connection tối đa thì cách làm này gặp vấn đề lớn, sẽ không có connection mới nào được khởi tạo đến server mới và dẫn đến sự quá tải ở các server đang có, dẫn đến sập server nếu số lượng request tăng. Để giải quyết vấn đề này, chúng ta cần có cơ chế refresh pool, mỗi connection trong pool sẽ có 1 thời gian sống nhất định, client sẽ chạy 1 job để refresh pool theo cơ chế như:</p>
@@ -82,13 +96,25 @@
 <li>Khởi tạo connection mới thông qua LB.</li>
 </ul>
 <p>Điều này đảm bảo connection sẽ được chia tải đều đến các server, tuy nhiên chúng ta cần tính toán kĩ những số liệu trên dựa trên đặc điểm chịu tải của từng service, việc này có thể được làm thông qua quá trình <code>benchmark</code> hệ thống.</p>
-<h3><a href="#layer-7" aria-hidden="true" class="anchor" id="layer-7"></a>Layer 7</h3>
-<p>Khi LB hoạt động ở <code>layer 7</code>, tầng ứng dụng, nó sẽ sử dụng các thông tin về request để cân bằng tải, cũng với ví dụ client tạo 1 connection tới LB như ở trên rồi gửi requests, lúc này LB sẽ cân bằng tải từng request một tới các backend server dựa trên các thuật toán được cấu hình.</p>
+<!-- ### Layer 7 -->
+<p><em><strong>Application layer (layer 7)</strong></em></p>
+<p>Khi LB hoạt động ở tầng <code>application</code>, nó sẽ sử dụng các thông tin về request để cân bằng tải, cũng với ví dụ client tạo 1 connection tới LB như ở trên rồi gửi requests, lúc này LB sẽ cân bằng tải từng request một tới các backend server dựa trên các thuật toán được cấu hình.</p>
 <p><img src="img/grpc-loadbalacning-L7.png" alt="/grpc-loadbalacning-L7" /></p>
-<p><em><strong>Loại bỏ load balancer?</strong></em></p>
-<p>Đối với những hệ thống yêu cầu khắt khe về hiệu năng, sử dụng load balancer có lẽ không phải là giải pháp tốt. Client có một lợi thế khi sử dụng load balancer là nó không cần phải quan tâm đến địa chỉ IP cụ thể của backend hay những thứ khác liên quan đến hạ tầng, tất cả những thứ nó cần phải biết là địa chỉ của load balancer, nếu chúng ta không sử dụng load balancer, một vấn đề mới xuất hiện, <strong>làm thế nào để client và server tìm thấy nhau?</strong></p>
+<p>Ở tầng <code>application</code>, LB sử dụng được nhiều thông tin hơn để cân bằng tải, do đó có thể hỗ trợ các thuật toán cân bằng tải phức tạp. Tuy nhiên, vì cần phải xem nội dung của request, hiệu năng lúc này sẽ giảm xuống so với trường hợp LB hoạt động ở tầng <code>transport</code>.</p>
+<p><em><strong>Không sử dụng load balancer?</strong></em></p>
+<p>Đối với những hệ thống yêu cầu khắt khe về hiệu năng, sử dụng load balancer có lẽ không phải là giải pháp tốt. Client có một lợi thế khi sử dụng <code>load balancer</code> là nó không cần phải quan tâm đến địa chỉ IP cụ thể của backend hay những thứ khác liên quan đến hạ tầng, tất cả những thứ nó cần phải biết là địa chỉ của load balancer, nếu chúng ta không sử dụng load balancer, một vấn đề mới xuất hiện, <strong>làm thế nào để client và server tìm thấy nhau?</strong></p>
 <p>Đây là câu hỏi kinh điển gắn liền với thuật ngữ <code>service discovery</code>, có một service thứ 3 đứng ra làm cầu nối giữa client và server, service này lưu thông tin của server và trả lời mỗi khi client hỏi hoặc chủ động thông báo mỗi khi có sự thay đổi. Khi client có được địa chỉ của các server thông qua service thứ 3 này, nó sẽ khởi tạo connection trực tiếp đến các server và <strong>chia tải request</strong> trên các connection này, việc load balancing đã trở thành <code>client-side load balacing</code>, <code>gRPC client</code> đang đảm nhiệm việc cân bằng tải, khi mình nói đến <code>gRPC client</code>, tức là việc xử lý này sẽ được xử lý bởi <code>gRPC</code>, lập trình viên không cần hiện thực thêm gì.</p>
 <p><img src="img/grpc-service-discovery.png" alt="grpc-service-discovery" /></p>
+<p>Ý tưởng này có thể được hiện thực thông qua nhiều mô hình:</p>
+<ul>
+<li>Service mesh by <code>Istio + Envoy proxy</code>:
+<ul>
+<li>control plane: <code>service discovery</code>, cấu hình load balancing policy.</li>
+<li>data plance: Envoy proxy cân bằng tải dựa trên các thông tin được cấu hình ở <code>control plance</code>.</li>
+</ul>
+</li>
+<li><a href="https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md">xDS API</a>: <code>look-aside</code> load balancing, <code>gRPC client</code> hỗ trợ việc sử dụng xDS API của Envoy thông qua <code>resolver</code> và <code>LB plugin</code>, <code>resolver</code> và <code>LB plugin</code> sẽ cần tương tác với một <code>xDS server</code>.</li>
+</ul>
 <p>Để tăng hiệu năng cũng như throughput về mặt số lượng request, chúng ta cũng có thể áp dụng kĩ thuật pooling ở phía client cho phương pháp này.</p>
 <h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Ở bài viết này, mình đã phân tích ý tưởng load balancing grpc, có 2 điều cần hiểu rõ để tránh mơ hồ trong lúc hiện thực các phương pháp này:</p>
@@ -96,7 +122,13 @@
 <li><code>connection-based load balancing:</code> chia tải từng connection đến từng backend server, những connection này có tính chất <code>long-lived</code>.</li>
 <li><code>request-based load balancing:</code> chia tải từng request đến từng connection, có thể hiểu chia tải ở tầng ứng dụng.</li>
 </ul>
-<p>Có nhiều phương pháp để hiện thực các ý tưởng này trong các hệ thống thực tế, ở các bài tiếp theo, mình sẽ đi vào hiện thực chúng để làm rõ hơn phần lý thuyết này.</p>
+<p>Ở các bài tiếp theo, mình sẽ đi vào hiện thực và kiểm thử các phương pháp cân bằng tải gRPC để làm rõ hơn phần lý thuyết này.</p>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ul>
+<li><a href="https://grpc.io/blog/grpc-load-balancing/">gRPC Load Balancing</a></li>
+<li><a href="https://phuc-ch.medium.com/exploring-grpc-load-balancing-gateway-service-mesh-and-xds-with-go-a527ab0e7ce8">Exploring gRPC Load Balancing: Gateway, Service Mesh, and xDS with Go</a></li>
+<li><a href="https://arpittech.medium.com/grpc-and-connection-pooling-49a4137095e7">GRPC and Connection Pooling</a></li>
+</ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
       <!-- <div class="copyright">

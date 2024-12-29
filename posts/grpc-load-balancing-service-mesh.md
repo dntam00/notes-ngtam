@@ -1,5 +1,5 @@
 ---
-title: gRPC Load balancing - service mesh
+title: gRPC Load balancing (4) - Service mesh
 published: true
 date: 2024-12-26 00:17:00
 tags: networking, gRPC
