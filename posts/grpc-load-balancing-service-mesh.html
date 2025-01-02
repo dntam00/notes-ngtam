@@ -77,13 +77,21 @@
 <p><em><strong>kube-proxy</strong></em></p>
 <p>Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài K8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của K8s.</p>
 <p><code>Service</code> trong K8s sử dụng <code>kube-proxy</code> để thực hiện việc giao tiếp network, <code>kube-proxy</code> sử dụng <code>iptables</code> để forward các gói tin từ client đến pod đang chạy các server, hoạt động chủ yếu ở <code>layer 4</code>, ở vai trò này nó giống như một load balancing hoạt động ở <code>layer 4</code>. Nếu sử dụng <code>kube-proxy</code>, chúng ta phải sử dụng <code>connection pool</code> để đảm bảo việc cân bằng tải hoạt động đúng như mong muốn.</p>
-<h2><a href="#hiện-thực" aria-hidden="true" class="anchor" id="hiện-thực"></a>Hiện thực</h2>
+<h2><a href="#hiện-thực--kiểm-tra" aria-hidden="true" class="anchor" id="hiện-thực--kiểm-tra"></a>Hiện thực / Kiểm tra</h2>
+<p>Để hiện thực mô hình này, mình sử dụng những thứ sau:</p>
 <ul>
-<li>Mình sử dụng <a href="https://k3d.io">k3d</a> để chạy k8s ở máy local và <a href="https://taskfile.dev/#/">task</a> để làm alias cho các công việc như build hay triển khai.</li>
-<li>Cài istio vào cluster K8s.</li>
+<li><a href="https://k3d.io">k3d</a>: chạy k8s ở máy cá nhân.</li>
+<li><a href="https://kubernetes.io/docs/reference/kubectl/">kubectl</a>: tương tác với cụm k8s.</li>
+<li><a href="https://istio.io/latest/">istio</a> &amp; <a href="https://www.envoyproxy.io/">envoy-proxy</a>: triển khai service mesh trong k8s.</li>
+<li><a href="https://taskfile.dev/#/">task</a>: làm alias cho các công việc như build hay triển khai, giúp tiết kiện thời gian gõ lệnh trên terminal.</li>
 </ul>
 <p><em><strong>Server</strong></em></p>
 <p>Phần code của server đơn giản chỉ có 2 method <code>unary</code> và <code>stream</code>, trả về <code>pod name</code> mỗi khi xử lý request nhằm mục đích thống kê ở phía client.</p>
+<p>Mình trích dẫn 2 method gRPC ở đây:</p>
+<ul>
+<li><code>SayHello</code>: unary method của gRPC.</li>
+<li><code>SayHelloStream</code>: stream method của gRPC.</li>
+</ul>
 <pre><code class="language-go">func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloResponse, error) {
 	fmt.Printf(&quot;server %v receive message\n&quot;, s.serverId)
 	return &amp;pb.HelloResponse{ServerId: s.serverId}, nil
@@ -109,71 +117,20 @@ func (s *server) SayHelloStream(stream pb.DemoService_SayHelloStreamServer) erro
 	}
 }
 </code></pre>
-<p>Triển khai với tên <code>hello-sidecar-server</code> và dựng một <code>service</code> cho cụm backend.</p>
-<pre><code class="language-yaml">apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello-sidecar-server
-  labels:
-    app: hello-sidecar-server
-    sidecar.istio.io/inject: &quot;true&quot;
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: hello-sidecar-server
-  template:
-    metadata:
-      labels:
-        app: hello-sidecar-server
-    spec:
-      serviceAccountName: server-user
-      containers:
-      - name: hello-sidecar-server
-        ports:
-          - protocol: TCP
-            containerPort: 50051
-        image: localhost:5001/hello-sidecar-server:latest
-        env:
-          - name: POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: NAMESPACE
-            value: &quot;default&quot;
-        resources:
-          limits:
-            cpu: &quot;200m&quot;
-            memory: &quot;250Mi&quot;
-          requests:
-            cpu: &quot;100m&quot;
-            memory: &quot;100Mi&quot;
-        readinessProbe:
-          exec:
-            command: [ &quot;/bin/grpc_health_probe&quot;, &quot;-addr=:50051&quot;, &quot;-rpc-timeout=4s&quot; ]
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-        livenessProbe:
-          exec:
-            command: [ &quot;/bin/grpc_health_probe&quot;, &quot;-addr=:50051&quot;, &quot;-rpc-timeout=4s&quot; ]
-          timeoutSeconds: 5
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hello-sidecar-server
-spec:
-  selector:
-    app: hello-sidecar-server
-  ports:
-    - port: 5005
-      name: hello-sidecar-server
-      protocol: TCP
-      targetPort: 50051
-</code></pre>
+<p>Để triển khai server trong k8s, chúng ta cần:</p>
+<ul>
+<li>Build code thành docker image: <code>localhost:5001/hello-sidecar-server:latest</code>.</li>
+<li>Viết file triển khai <code>Deployment</code> và một <code>Service</code> cho các pod của servers.</li>
+</ul>
+<p>Ở đây mình chuẩn bị 2 file <code>Deployment</code>, mục đích là triển khai server với 2 version khác nhau.</p>
+<p><img src="img/grpc-deployment-version.png" alt="grpc-deployment-version" /></p>
 <p><em><strong>Client</strong></em></p>
 <p>Ở client lần này mình cũng sử dụng 2 method <code>unary</code> và <code>stream</code> để kiểm tra cách cân bằng tải bằng <code>envoy proxy</code> và <code>kube-proxy</code>.</p>
+<p>Về ý tưởng kiểm tra:</p>
+<ul>
+<li>Tạo nhiều client, mỗi client gửi nhiều request đối với <code>unary method</code> và nhiều stream đối với <code>stream method</code>.</li>
+<li>Thống kê số lượng request được xử lý bởi mỗi server.</li>
+</ul>
 <p><strong>unary test</strong></p>
 <pre><code class="language-go">func unaryTest(index int, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -245,12 +202,13 @@ spec:
 	fmt.Printf(&quot;client %v make %v requests, received all response from %v server(s), detail: %+v\n&quot;, index, numberOfRequests, len(responses), responses)
 }
 </code></pre>
-<p>Triển khai 2 client, có sử dụng <code>envoy proxy</code> và không sử dụng <code>envoy proxy</code>.</p>
+<p>Triển khai 2 phiên bản client bằng k8s có sử dụng <code>envoy proxy</code> và không sử dụng <code>envoy proxy</code>, có một số điểm lưu ý sau:</p>
 <ul>
 <li><code>sidecar.istio.io/inject: &quot;false&quot;</code>: ngăn chặn <code>istiod</code> inject sidecar proxy vào pod của client.</li>
-<li><code>hello-sidecar-server.default.svc.cluster.local</code>: endpoint của service backend.</li>
+<li><code>hello-sidecar-backend.default.svc.cluster.local</code>: endpoint của service backend.</li>
+<li>các thông số về số lượng gRPC client, số request hay số stream mỗi gRPC client có thể được thay đổi ở file <code>Deployment</code>.</li>
 </ul>
-<p>File <code>yaml</code> triển khai client có <code>envoy proxy</code>.</p>
+<p>Ví dụ file <code>Deployment yaml</code> triển khai client có <code>envoy proxy</code>.</p>
 <pre><code class="language-yaml">apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -278,7 +236,15 @@ spec:
           - name: NAMESPACE
             value: &quot;default&quot;
           - name: GRPC_SERVER_ADDR
-            value: &quot;hello-sidecar-server.default.svc.cluster.local:5005&quot;
+            value: &quot;hello-sidecar-backend.default.svc.cluster.local&quot;
+          - name: GRPC_SERVER_PORT
+            value: &quot;5005&quot;
+          - name: CLIENT_CONNECTION
+            value: &quot;3&quot;
+          - name: STREAMER_PER_CONNECTION
+            value: &quot;10&quot;
+          - name: REQUEST_PER_CLIENT
+            value: &quot;5000&quot;
         resources:
           limits:
             cpu: &quot;200m&quot;
@@ -312,12 +278,30 @@ spec:
 <li>Đối với <code>stream method</code>, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.</li>
 </ul>
 <p><img src="img/grpc-loadbalancing-sidecar-test-result.png" alt="grpc-loadbalancing-sidecar-test-result" /></p>
+<h2><a href="#traffic-management" aria-hidden="true" class="anchor" id="traffic-management"></a><a href="https://istio.io/latest/docs/concepts/traffic-management/#introducing-istio-traffic-management">Traffic management</a></h2>
+<p>Trong lúc giới thiệu về service mesh, mình có đề cập đến 1 vai trò hàng đầu của nó hỗ trợ, quản lý giao tiếp giữa services. Phần này mình sẽ phát triển thêm ví dụ ở phần trước để minh hoạ thêm yếu tố quản lý traffic giữa các service.</p>
+<p>Khi ứng dụng của bạn triển khai một tính năng mới, hay cập nhật tính năng cũ và bạn chỉ muốn triển khai đến một nhóm nhỏ người dùng, bạn có thể sử dụng các cấu hình routing để thực hiện việc này bằng cách:</p>
+<ul>
+<li>Sử dụng label để phân biệt các phiên bản mới của server.</li>
+<li>Cấu hình routing để thay đổi tỉ lệ traffic đến phiên bản cũ và mới.</li>
+</ul>
+<p>Để minh hoạ ví dụ này, mình sử dụng thêm 2 thành phần của Istio là <code>VirtualService</code> và <code>DestinationRule</code>:</p>
+<ul>
+<li><code>VirtualService</code>: định nghĩa cách request được gửi tới một địa chỉ.</li>
+<li><code>DestinationRule</code>: định nghĩa cách request được gửi đến các pod sau khi được áp dụng chính sách routing từ <code>VirtualService</code>, bạn có thể hiểu có 2 bậc routing ở đây.</li>
+</ul>
+<p><img src="img/istio-envoy-mesh-traffic.png" alt="istio-envoy-mesh-traffic" /></p>
+<p>Tỉ lệ giữa 2 phiên bản của server là 3:1.</p>
+<p>Để chạy chương trình, chúng ta chỉ cần chạy <code>task server:deploy</code> và <code>task client:deploy</code> sau khi đã cập nhật các file yaml.</p>
+<p><strong>Kết quả cho thấy đúng với chúng ta kì vọng</strong>, tỉ lệ request được xử lý bởi 2 phiên bản của server gần bằng 3:1.</p>
+<p><img src="img/grpc-weight-routing-service-mesh-result.png" alt="grpc-weight-routing-service-mesh-result" /></p>
 <h2><a href="#đánh-giá" aria-hidden="true" class="anchor" id="đánh-giá"></a>Đánh giá</h2>
+<p>Mình chỉ tập trung đánh giá ưu/nhược điểm liên quan đến tính năng cân bằng tải.</p>
 <p><em><strong>Ưu điểm</strong></em></p>
 <ul>
-<li>Service mesh cung cấp một giải pháp giao tiếp giữa các service trong hệ thống, tách biệt phần ứng dụng xử lý business và phần proxy.</li>
-<li>Hỗ trợ nhiều cơ chế routing nâng cao và thiết kệ hệ thống có tính đàn hồi: retry, circuit breaker, timeout,...</li>
-<li>Sidecar proxy cho developer sử dụng để triển khai với nhiều loại ngôn ngữ, đây là một điểm rất mạnh trong kiến trúc microservice.</li>
+<li>Service mesh cung cấp cơ chế cân bằng tải ở tầng ứng dụng, giải quyết được vấn đề cân bằng tải connection của <code>kube-proxy</code>.</li>
+<li>Cung cấp cơ chế <code>service discovery</code>.</li>
+<li>Hỗ trợ đa dạng các chế độ cân bằng tải, phù hợp với các ứng dụng triển khai phức tạp.</li>
 </ul>
 <p><em><strong>Nhược điểm</strong></em></p>
 <ul>
@@ -327,12 +311,18 @@ spec:
 <h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Qua bài viết này, mình đã hiện thực service mesh trong K8s để cân bằng tải gRPC cũng như kiểm tra lại các lý thuyết đã được phân tích ở các bài viết trước. Một số kiến thức quan trọng cần lưu ý:</p>
 <ul>
-<li>Servie mesh và mô hình hoạt động.</li>
+<li>Mô hình hoạt động của service mesh, side-car pattern.</li>
 <li><code>Kube-proxy</code> hoạt động cân bằng tải ở <code>L4</code>.</li>
 <li><code>Envoy proxy</code> hoạt động cân bằng tải ở <code>L7</code>.</li>
+<li><code>Istio và Envoy proxy</code> hỗ trợ đa dạng các cấu hình quản lý traffic.</li>
 </ul>
 <h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
 <p>Bạn có thể tham khảo mã nguồn ở repository <a href="https://github.com/dntam00/grpc-loadbalancing/tree/main/sidecar-envoy">grpc-loadblancing</a>.</p>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ul>
+<li><a href="https://istio.io/">Istio</a></li>
+<li><a href="https://www.manning.com/books/istio-in-action">Istio in Action</a> by Christian E. Posta and Rinor Maloku.</li>
+</ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/gRPC.html'>gRPC</a></div>
       <!-- <div class="copyright">

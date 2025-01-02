@@ -225,7 +225,7 @@ port no	mac addr		is local?	ageing timer
   2	c2:9a:a8:9e:3b:2d	yes		   0.00
   2	c2:9a:a8:9e:3b:2d	yes		   0.00
 </code></pre>
-<p>Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh <code>ifconfig</code>, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 <code>veth</code>, như vậy lúc này <code>bridge</code> sẽ có vai trò như 1 <code>switch</code> và điều chuyển gọi tin <code>ethernet</code> dựa trên địa chỉ MAC.</p>
+<p>Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh <code>ifconfig</code>, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 <code>veth</code>, như vậy lúc này <code>bridge</code> sẽ có vai trò như 1 <code>switch</code> và điều chuyển gói tin <code>ethernet</code> dựa trên địa chỉ MAC.</p>
 <h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Thông qua bài viết này, mình đã phân tích cách docker sử dụng <code>driver bridge</code> và kiểm chứng bằng các công cụ network như <code>tcpdump</code>, <code>ifconfig</code>, <code>ping</code>,...
 Trong xu hướng công nghệ hiện nay, <code>docker</code> có thể được xem là 1 phần không thể thiếu trong công việc hàng ngày của mỗi lập trình viên, việc hiểu sâu hơn cách <code>docker</code> hoạt động cũng giúp mình nâng cao chất lượng công việc, giảm thời gian debug khi có lỗi xảy ra.</p>

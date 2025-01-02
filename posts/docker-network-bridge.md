@@ -226,7 +226,7 @@ port no	mac addr		is local?	ageing timer
   2	c2:9a:a8:9e:3b:2d	yes		   0.00
 ```
 
-Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh `ifconfig`, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 `veth`, như vậy lúc này `bridge` sẽ có vai trò như 1 `switch` và điều chuyển gọi tin `ethernet` dựa trên địa chỉ MAC.
+Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh `ifconfig`, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 `veth`, như vậy lúc này `bridge` sẽ có vai trò như 1 `switch` và điều chuyển gói tin `ethernet` dựa trên địa chỉ MAC.
 
 
 ## Tổng kết

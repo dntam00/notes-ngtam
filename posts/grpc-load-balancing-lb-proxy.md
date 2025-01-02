@@ -278,3 +278,4 @@ Bạn có thể tham khảo mã nguồn ở repository [grpc-loadblancing](https
 
 - [gRPC Load Balancing](https://grpc.io/blog/grpc-load-balancing/)
 - [gRPC - HaProxy](https://www.haproxy.com/documentation/haproxy-configuration-tutorials/load-balancing/grpc/)
+- [haproxy and HTTP/2](https://andreaskaris.github.io/blog/networking/haproxy-and-h2c/)
