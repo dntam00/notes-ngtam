@@ -280,7 +280,7 @@ Triển khai server và client bằng lệnh `task server:deploy` và `task clie
 
 ## [Traffic management](https://istio.io/latest/docs/concepts/traffic-management/#introducing-istio-traffic-management)
 
-Trong lúc giới thiệu về service mesh, mình có đề cập đến 1 vai trò hàng đầu của nó hỗ trợ, quản lý giao tiếp giữa services. Phần này mình sẽ phát triển thêm ví dụ ở phần trước để minh hoạ thêm yếu tố quản lý traffic giữa các service.
+Trong lúc giới thiệu về service mesh, mình có đề cập đến 1 vai trò hàng đầu của nó là hỗ trợ, quản lý giao tiếp giữa services. Phần này mình sẽ phát triển thêm ví dụ ở phần trước để minh hoạ thêm yếu tố quản lý traffic giữa các service.
 
 Khi ứng dụng của bạn triển khai một tính năng mới, hay cập nhật tính năng cũ và bạn chỉ muốn triển khai đến một nhóm nhỏ người dùng, bạn có thể sử dụng các cấu hình routing để thực hiện việc này bằng cách:
 - Sử dụng label để phân biệt các phiên bản mới của server.
