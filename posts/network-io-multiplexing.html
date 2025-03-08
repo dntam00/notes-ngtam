@@ -41,7 +41,12 @@
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Networking (1) I/O multiplexing</h1>
-      <p>Trong 2 tháng gần đây, mỗi ngày mình đều loay hoay với việc benchmark 1 opensource có liên quan tới chủ đề webRTC. Với 1 opensource cũng đã hơn chục năm, rất nhiều sao trên github nhưng kết quả test lại không đạt được như kì vọng về số connections, bitrate lẫn các metrics của server. Vì mình chưa có kinh nghiệm nhiều về mảng này nên chọn cách vào đọc source để hiểu được mô hình test cũng như đảm bảo mình đang viết đúng script test, và sau khi mày mò một thời gian dài, cuối cùng mình cũng thấy được việc mình có vấn đề trong cách tiếp cận một mảng kiến thức mới, sau khi đọc source và tìm hiểu thêm về webRTC, mình mới thực sự hiểu document của các tác giả :”).</p>
+      <p><em><strong>Thông tin cập nhật:</strong></em></p>
+<ul>
+<li><code>08/03/2025:</code> Bổ sung ví dụ epoll hoạt động ở level-triggered mode.</li>
+</ul>
+<hr />
+<p>Trong 2 tháng gần đây, mỗi ngày mình đều loay hoay với việc benchmark 1 opensource có liên quan tới chủ đề webRTC. Với 1 opensource cũng đã hơn chục năm, rất nhiều sao trên github nhưng kết quả test lại không đạt được như kì vọng về số connections, bitrate lẫn các metrics của server. Vì mình chưa có kinh nghiệm nhiều về mảng này nên chọn cách vào đọc source để hiểu được mô hình test cũng như đảm bảo mình đang viết đúng script test, và sau khi mày mò một thời gian dài, cuối cùng mình cũng thấy được việc mình có vấn đề trong cách tiếp cận một mảng kiến thức mới, sau khi đọc source và tìm hiểu thêm về webRTC, mình mới thực sự hiểu document của các tác giả :”).</p>
 <p>Mục tiêu đặt ra là test trên môi trường nội bộ của công ty và và sau đó là trên Oracle với server riêng lẻ và cluster. Tưởng chừng như sau khi có số liệu trên môi trường nội bộ của công ty rồi việc test trên Oracle server cũng suông sẻ nhưng không, nó còn đau khổ hơn xD, lại mất 2 3 tuần, đến lúc tuyệt vọng, anh senior team mình bảo mình yêu cầu team infrastructure cùng tham gia để tìm hiểu vấn đề, và cuối cùng thì thật là abcxyz khi họ nhờ Oracle team và biết vấn đề nằm ở network giữa 2 region của server.</p>
 <p>Anyway trước khi tới được kết quả, mình cũng đã có cơ hội tìm hiểu về một vài vấn đề liên quan đến network (chủ yếu là ở linux OS), những thứ mà hồi xưa học môn mạng máy tính ở trường không hiểu gì :))))),  nên vì thế, mình dự định viết một vài bài về những thứ mình đã biết trong 2 tháng vừa qua.</p>
 <p>Bài đầu tiên trong chuỗi này (và cũng không biết sẽ có bao nhiêu bài), về mô hình I/O multiplexing.</p>

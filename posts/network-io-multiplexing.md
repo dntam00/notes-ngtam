@@ -7,6 +7,10 @@ description: Something about I/O multiplexing model
 image: 
 ---
 
+***Thông tin cập nhật:***
+- `08/03/2025:` Bổ sung ví dụ epoll hoạt động ở level-triggered mode.
+----
+
 Trong 2 tháng gần đây, mỗi ngày mình đều loay hoay với việc benchmark 1 opensource có liên quan tới chủ đề webRTC. Với 1 opensource cũng đã hơn chục năm, rất nhiều sao trên github nhưng kết quả test lại không đạt được như kì vọng về số connections, bitrate lẫn các metrics của server. Vì mình chưa có kinh nghiệm nhiều về mảng này nên chọn cách vào đọc source để hiểu được mô hình test cũng như đảm bảo mình đang viết đúng script test, và sau khi mày mò một thời gian dài, cuối cùng mình cũng thấy được việc mình có vấn đề trong cách tiếp cận một mảng kiến thức mới, sau khi đọc source và tìm hiểu thêm về webRTC, mình mới thực sự hiểu document của các tác giả :”).
 
 Mục tiêu đặt ra là test trên môi trường nội bộ của công ty và và sau đó là trên Oracle với server riêng lẻ và cluster. Tưởng chừng như sau khi có số liệu trên môi trường nội bộ của công ty rồi việc test trên Oracle server cũng suông sẻ nhưng không, nó còn đau khổ hơn xD, lại mất 2 3 tuần, đến lúc tuyệt vọng, anh senior team mình bảo mình yêu cầu team infrastructure cùng tham gia để tìm hiểu vấn đề, và cuối cùng thì thật là abcxyz khi họ nhờ Oracle team và biết vấn đề nằm ở network giữa 2 region của server.
