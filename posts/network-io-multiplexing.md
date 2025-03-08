@@ -81,6 +81,11 @@ FD được theo dõi được thêm vào epoll instant với hàm `epoll_ctl`, 
 - Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.
 
 ## Level-Triggered vs Edge-Triggered
+<!-- Đây là 2 khái niệm nói về cách làm việc với tín hiệu, có thể hiểu là cách hệ thống phản hồi với sự thay đổi về tín hiệu.
+
+- `Level-Triggered`: kernel sẽ trả về những fd thoả mãn các sự kiện được đăng kí, ví dụ dữ liệu sẵn sàng để đọc ở `fd`.
+    - Nếu ứng dụng không làm thay đổi trạng thái của fd, những fd này vẫn sẽ luôn được trả về mỗi khi được yêu cầu. Ví dụ ở trường hợp ứng dụng cần đọc dữ liệu ở fd mà không thể đọc hết dữ liệu 1 lần, có thể sử dụng `level-triggered`.
+- `Edge-Triggered`: kernel sẽ thông báo đến ứng dụng mỗi khi có trạng thái thay đổi so với lần thông báo trước, ví dụ có dữ liệu mới ở `fd`. -->
 
 - get a list of every file descriptor you’re interested in that is readable (“level-triggered”)
 - get notifications every time a file descriptor becomes readable (“edge-triggered”)
@@ -102,7 +107,9 @@ Nếu chúng ta đang sử dụng `level-triggered`, kết quả sẽ trả về
 
 ## Ví dụ
 
-Repository [epoller](https://github.com/smallnest/epoller) là một ví dụ để bạn có thể kiểm tra lại các kiến thức ở trên, khi sử dụng để kiểm tra, mình có phát hiện 1 lỗi và có tạo issue hỏi ở đây: [Should we close connection when flag is EOF in Wait method](https://github.com/smallnest/epoller/issues/11) :relaxed:
+- Repository [epoller](https://github.com/smallnest/epoller) là một ví dụ để bạn có thể kiểm tra lại các kiến thức ở trên, khi sử dụng để kiểm tra, mình có phát hiện 1 lỗi và có tạo issue hỏi ở đây: [Should we close connection when flag is EOF in Wait method](https://github.com/smallnest/epoller/issues/11) :relaxed:
+
+- Ngoài ra, mình có tạo 1 ví dụ để cách hoạt động của `level-triggered` ở đây nữa, bạn có thể chạy sử dụng để chạy trên hệ điều hành Linux. [epoll - level-triggered](https://github.com/dntam00/go-notes/blob/main/linux_io/epoll/main.go)
 
 ## Tổng kết
 

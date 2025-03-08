@@ -29,7 +29,7 @@ Kiến trúc của 1 service mesh:
 
 Như bạn có thể thấy, có 2 thành phần chính trong service mesh:
 - `Control plane`: chịu trách nhiệm điều khiển, cấu hình các rule để quản lý mesh.
-- `Data plane`: hiện thực các rule từ `control plane`, xử lý quá trình giao tiếp giữa các service trong mesh bằng `sidecar proxy`, thành phần được triển khi cùng với service.
+- `Data plane`: hiện thực các rule từ `control plane`, xử lý quá trình giao tiếp giữa các service trong mesh bằng `sidecar proxy`, thành phần được triển khai cùng với service.
 
 ## Service mesh trong K8s
 
