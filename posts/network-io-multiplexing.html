@@ -92,15 +92,23 @@ while(1){
 </code></pre>
 <p>Đầu tiên tạo một epoll object với hàm <code>epoll_create</code>, cấu trúc của 1 epoll instance:</p>
 <ul>
-<li>danh sách các FD để theo dõi với cấu trúc red-black tree</li>
-<li>danh sách các FD sẵn sàng với cấu trúc linked list</li>
+<li>danh sách các FD để theo dõi với cấu trúc red-black tree, được cập nhật mỗi khi application gọi syscall <code>epoll_ctl</code>.</li>
+<li>danh sách các FD sẵn sàng với cấu trúc linked list:
+<ul>
+<li>được hiện thực bằng cơ chế gọi callback, mỗi fd sẽ gọi callback để thêm nó vào danh sách kết quả khi sẵn sàng.</li>
 </ul>
-<p>FD được theo dõi được thêm vào epoll instant với hàm <code>epoll_ctl</code>, cuối cùng, gọi hàm <code>epoll_wait</code> để block và lắng nghe I/O events ở những FD đã được thêm vào. Khi một hoặc nhiều FD sẵn sàng, hàm <code>epoll_wait</code> return ngay lập tức.</p>
+</li>
+</ul>
+<p><img src="./img/epoll_principle.png" alt="epoll-mechanism" /></p>
 <p>Ưu điểm của epoll:</p>
 <ul>
-<li>FD được lưu trong read black tree, vì vậy có thể được sử dụng kết hợp với hàm callback của hàm <code>epoll_ctl</code> để lấy được tất cả các FD sẵn sàng.</li>
-<li>Tất cả các FD được lưu trữ ở kernel space trước khi gọi hàm <code>epoll_wait</code>, tránh việc truyền dữ liệu nhiều giữa user space và kernel space.</li>
-<li>Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.</li>
+<li>Các FD cần được theo dõi được lưu trong read black tree ở <code>kernel space</code>:
+<ul>
+<li>Các thao tác thêm, sửa, xoá được tối ưu, độ phức tạp <code>O(log(n))</code>.</li>
+<li>Giảm việc copy một lượng lớn FD từ <code>user space</code> xuống <code>kernel space</code> khi cần gọi syscall.</li>
+</ul>
+</li>
+<li>Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra.</li>
 </ul>
 <h2><a href="#level-triggered-vs-edge-triggered" aria-hidden="true" class="anchor" id="level-triggered-vs-edge-triggered"></a>Level-Triggered vs Edge-Triggered</h2>
 <!-- Đây là 2 khái niệm nói về cách làm việc với tín hiệu, có thể hiểu là cách hệ thống phản hồi với sự thay đổi về tín hiệu.

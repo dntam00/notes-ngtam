@@ -73,16 +73,18 @@ while(1){
 
 Đầu tiên tạo một epoll object với hàm `epoll_create`, cấu trúc của 1 epoll instance:
 
-- danh sách các FD để theo dõi với cấu trúc red-black tree
-- danh sách các FD sẵn sàng với cấu trúc linked list
+- danh sách các FD để theo dõi với cấu trúc red-black tree, được cập nhật mỗi khi application gọi syscall `epoll_ctl`.
+- danh sách các FD sẵn sàng với cấu trúc linked list:
+    - được hiện thực bằng cơ chế gọi callback, mỗi fd sẽ gọi callback để thêm nó vào danh sách kết quả khi sẵn sàng.
 
-FD được theo dõi được thêm vào epoll instant với hàm `epoll_ctl`, cuối cùng, gọi hàm `epoll_wait` để block và lắng nghe I/O events ở những FD đã được thêm vào. Khi một hoặc nhiều FD sẵn sàng, hàm `epoll_wait` return ngay lập tức.
+![epoll-mechanism](./img/epoll_principle.png)
 
 Ưu điểm của epoll:
 
-- FD được lưu trong read black tree, vì vậy có thể được sử dụng kết hợp với hàm callback của hàm `epoll_ctl` để lấy được tất cả các FD sẵn sàng.
-- Tất cả các FD được lưu trữ ở kernel space trước khi gọi hàm `epoll_wait`, tránh việc truyền dữ liệu nhiều giữa user space và kernel space.
-- Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra tính sắn sàng.
+- Các FD cần được theo dõi được lưu trong read black tree ở `kernel space`:
+    - Các thao tác thêm, sửa, xoá được tối ưu, độ phức tạp `O(log(n))`.
+    - Giảm việc copy một lượng lớn FD từ `user space` xuống `kernel space` khi cần gọi syscall.
+- Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra.
 
 ## Level-Triggered vs Edge-Triggered
 <!-- Đây là 2 khái niệm nói về cách làm việc với tín hiệu, có thể hiểu là cách hệ thống phản hồi với sự thay đổi về tín hiệu.
@@ -94,7 +96,7 @@ FD được theo dõi được thêm vào epoll instant với hàm `epoll_ctl`, 
 - get a list of every file descriptor you’re interested in that is readable (“level-triggered”)
 - get notifications every time a file descriptor becomes readable (“edge-triggered”)
 
-Mặc định, `epoll` sẽ hoạt động với `level-triggered`, điều này làm nó gần như giống với `poll/select` nhưng tối ưu hơn về hiệu năng. 
+Mặc định, `epoll` sẽ hoạt động với `level-triggered`, điều này làm nó gần như giống với `poll/select` nhưng tối ưu hơn về hiệu năng.
 
 Ngoài ra, `epoll` còn có thể hoạt động với `edge-triggered`, `epoll_wait` trả về cho chúng ta có sự thay đổi nào trên FD kể từ lần gọi trước hay không.
 
