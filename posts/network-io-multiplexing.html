@@ -130,7 +130,16 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 <li>Thực hiện gọi hàm <code>epoll_wait</code>, kết quả trả về của hàm này là FD đã sẵn sàng cho dù chúng ta đang sử dụng <code>level-triggered</code> hay <code>edged-triggered</code>.</li>
 <li>Thực hiện gọi hàm <code>epoll_wait</code> 1 lần nữa.</li>
 </ol>
-<p>Nếu chúng ta đang sử dụng <code>level-triggered</code>, kết quả sẽ trả về FD đang sẵn sàng, ngược lại, đối với <code>edge-triggered</code> thì lệnh gọi hàm sẽ block vì không có dữ liệu mới đến socket. Để tránh bị block, chúng ta nên sử dụng <code>edge-triggered</code> với nonblocking FD và cờ EAGAIN để kiểm tra liệu FD có dữ liệu mới hay chưa.</p>
+<p>Kết quả của bước thứ 3 như sau:</p>
+<ul>
+<li><code>level-triggered</code>: trả về FD đang sẵn sàng, nếu không đọc dữ liệu từ socket, cho dù gọi 1000 lần thì kết quả vẫn vậy.</li>
+<li><code>edge-triggered</code>: thread hiện tại bị block vì không có dữ liệu mới đến socket. Để tránh bị block:
+<ul>
+<li>chúng ta nên sử dụng <code>edge-triggered</code> với <code>nonblocking FD</code> và cờ <code>EAGAIN</code> để kiểm tra liệu FD có dữ liệu mới hay chưa.</li>
+<li>xử lý nghiệp vụ để đọc hết dữ liệu ở socket.</li>
+</ul>
+</li>
+</ul>
 <h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
 <ul>
 <li>

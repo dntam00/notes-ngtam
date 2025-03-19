@@ -109,7 +109,11 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 2. Thực hiện gọi hàm `epoll_wait`, kết quả trả về của hàm này là FD đã sẵn sàng cho dù chúng ta đang sử dụng `level-triggered` hay `edged-triggered`.
 3. Thực hiện gọi hàm `epoll_wait` 1 lần nữa.
 
-Nếu chúng ta đang sử dụng `level-triggered`, kết quả sẽ trả về FD đang sẵn sàng, ngược lại, đối với `edge-triggered` thì lệnh gọi hàm sẽ block vì không có dữ liệu mới đến socket. Để tránh bị block, chúng ta nên sử dụng `edge-triggered` với nonblocking FD và cờ EAGAIN để kiểm tra liệu FD có dữ liệu mới hay chưa.
+Kết quả của bước thứ 3 như sau:
+- `level-triggered`: trả về FD đang sẵn sàng, nếu không đọc dữ liệu từ socket, cho dù gọi 1000 lần thì kết quả vẫn vậy.
+- `edge-triggered`: thread hiện tại bị block vì không có dữ liệu mới đến socket. Để tránh bị block: 
+    - chúng ta nên sử dụng `edge-triggered` với `nonblocking FD` và cờ `EAGAIN` để kiểm tra liệu FD có dữ liệu mới hay chưa.
+    - xử lý nghiệp vụ để đọc hết dữ liệu ở socket.
 
 ## Ví dụ
 
