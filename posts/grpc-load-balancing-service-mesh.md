@@ -7,7 +7,7 @@ description: Analyze gRPC load balancing technique
 image: 
 ---
 
-Tiếp theo với chuỗi bài tìm hiểu `gRPC load balancing`, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong K8s. Chủ đề chính vẫn là `gRPC load balancing` nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.
+Tiếp theo với chuỗi bài tìm hiểu `gRPC load balancing`, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong k8s. Chủ đề chính vẫn là `gRPC load balancing` nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.
 
 ## Service mesh
 
@@ -50,15 +50,17 @@ Isito là một công cụ triển khai service mesh, chúng ta có thể triể
 
 ***kube-proxy***
 
-Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài K8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của K8s.
+Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài k8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của k8s.
 
-`Service` trong K8s sử dụng `kube-proxy` để thực hiện việc giao tiếp network, `kube-proxy` sử dụng `iptables` để forward các gói tin từ client đến pod đang chạy các server, hoạt động chủ yếu ở `layer 4`, ở vai trò này nó giống như một load balancing hoạt động ở `layer 4`. Nếu sử dụng `kube-proxy`, chúng ta phải sử dụng `connection pool` để đảm bảo việc cân bằng tải hoạt động đúng như mong muốn.
+`Pod` (đơn vị triển khai của k8s, luận lý, bao gồm 1 hoặc nhiều container chia sẻ cùng network namespace) sinh ra là để chết đi :v, bản chất nó chỉ là tạm thời, mỗi lần được tạo mới, pod lại được k8s gán một địa chỉ IP khác, nếu sử dụng trực tiếp địa chỉ IP trong giao tiếp giữa các pod hay các dịch vụ bên ngoài, việc địa chỉ IP thay đổi liên tục có thể là 1 vấn đề (tạm gọi chung là các vấn đề về `service discovery`). Để giải quyết, k8s cung cấp khái niệm `service`, tạo ra một điểm đi vào duy nhất cho các request từ phía client.
+
+Service trong K8s sử dụng `kube-proxy` để thực hiện việc giao tiếp network, `kube-proxy` sử dụng `iptables` để điều chuyển các gói tin từ client đến pod đang chạy server, hoạt động ở `layer 4`, ở vai trò này nó giống như một load balancing proxy hoạt động ở `layer 4`, và các vấn đề của proxy layer 4 thì mình đã phân tích ở các bài trước.
 
 ## Hiện thực / Kiểm tra
 
 Để hiện thực mô hình này, mình sử dụng những thứ sau:
 
-- [k3d](https://k3d.io): chạy k8s ở máy cá nhân.
+- [k3d](https://k3d.io): chạy k8s ở máy tính cá nhân.
 - [kubectl](https://kubernetes.io/docs/reference/kubectl/): tương tác với cụm k8s.
 - [istio](https://istio.io/latest/) & [envoy-proxy](https://www.envoyproxy.io/): triển khai service mesh trong k8s.
 - [task](https://taskfile.dev/#/): làm alias cho các công việc như build hay triển khai, giúp tiết kiện thời gian gõ lệnh trên terminal.
@@ -274,7 +276,7 @@ Triển khai server và client bằng lệnh `task server:deploy` và `task clie
 ***envoy-proxy***
 
 - `Envoy proxy` cân bằng tải ở `layer 7` nên khi kiểm tra với `unary method`, requests từ 1 client có thể được xử lý bởi cả 3 backend servers.
-- Đối với `stream method`, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.
+- Đối với `stream method`, tất cả RPCs trên 1 stream đều được xử lý bởi 1 backend server duy nhất, chứng minh rằng envoy hiểu được gRPC protocol.
 
 ![grpc-loadbalancing-sidecar-test-result](img/grpc-loadbalancing-sidecar-test-result.png)
 

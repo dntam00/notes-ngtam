@@ -41,7 +41,7 @@
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>gRPC Load balancing (4) - Service mesh</h1>
-      <p>Tiếp theo với chuỗi bài tìm hiểu <code>gRPC load balancing</code>, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong K8s. Chủ đề chính vẫn là <code>gRPC load balancing</code> nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.</p>
+      <p>Tiếp theo với chuỗi bài tìm hiểu <code>gRPC load balancing</code>, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong k8s. Chủ đề chính vẫn là <code>gRPC load balancing</code> nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.</p>
 <h2><a href="#service-mesh" aria-hidden="true" class="anchor" id="service-mesh"></a>Service mesh</h2>
 <p><strong>Service mesh là gì?</strong></p>
 <p>Service mesh là công cụ tạo ra một lớp hạ tầng xử lý việc giao tiếp giữa các service trong ứng dụng, có một số tính năng nổi bật như:</p>
@@ -75,12 +75,13 @@
 <li><code>Envoy proxy</code> sẽ cân bằng tải <code>gRPC</code> ở <code>layer 7</code> sau khi tạo connection trực tiếp tới các backend servers.</li>
 </ul>
 <p><em><strong>kube-proxy</strong></em></p>
-<p>Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài K8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của K8s.</p>
-<p><code>Service</code> trong K8s sử dụng <code>kube-proxy</code> để thực hiện việc giao tiếp network, <code>kube-proxy</code> sử dụng <code>iptables</code> để forward các gói tin từ client đến pod đang chạy các server, hoạt động chủ yếu ở <code>layer 4</code>, ở vai trò này nó giống như một load balancing hoạt động ở <code>layer 4</code>. Nếu sử dụng <code>kube-proxy</code>, chúng ta phải sử dụng <code>connection pool</code> để đảm bảo việc cân bằng tải hoạt động đúng như mong muốn.</p>
+<p>Để có sự so sánh tại sao chúng ta cần dùng một công cụ ngoài k8s để cân bằng tải, hãy cùng phân tích qua những thành phần sẵn có của k8s.</p>
+<p><code>Pod</code> (đơn vị triển khai của k8s, luận lý, bao gồm 1 hoặc nhiều container chia sẻ cùng network namespace) sinh ra là để chết đi :v, bản chất nó chỉ là tạm thời, mỗi lần được tạo mới, pod lại được k8s gán một địa chỉ IP khác, nếu sử dụng trực tiếp địa chỉ IP trong giao tiếp giữa các pod hay các dịch vụ bên ngoài, việc địa chỉ IP thay đổi liên tục có thể là 1 vấn đề (tạm gọi chung là các vấn đề về <code>service discovery</code>). Để giải quyết, k8s cung cấp khái niệm <code>service</code>, tạo ra một điểm đi vào duy nhất cho các request từ phía client.</p>
+<p>Service trong K8s sử dụng <code>kube-proxy</code> để thực hiện việc giao tiếp network, <code>kube-proxy</code> sử dụng <code>iptables</code> để điều chuyển các gói tin từ client đến pod đang chạy server, hoạt động ở <code>layer 4</code>, ở vai trò này nó giống như một load balancing proxy hoạt động ở <code>layer 4</code>, và các vấn đề của proxy layer 4 thì mình đã phân tích ở các bài trước.</p>
 <h2><a href="#hiện-thực--kiểm-tra" aria-hidden="true" class="anchor" id="hiện-thực--kiểm-tra"></a>Hiện thực / Kiểm tra</h2>
 <p>Để hiện thực mô hình này, mình sử dụng những thứ sau:</p>
 <ul>
-<li><a href="https://k3d.io">k3d</a>: chạy k8s ở máy cá nhân.</li>
+<li><a href="https://k3d.io">k3d</a>: chạy k8s ở máy tính cá nhân.</li>
 <li><a href="https://kubernetes.io/docs/reference/kubectl/">kubectl</a>: tương tác với cụm k8s.</li>
 <li><a href="https://istio.io/latest/">istio</a> &amp; <a href="https://www.envoyproxy.io/">envoy-proxy</a>: triển khai service mesh trong k8s.</li>
 <li><a href="https://taskfile.dev/#/">task</a>: làm alias cho các công việc như build hay triển khai, giúp tiết kiện thời gian gõ lệnh trên terminal.</li>
@@ -275,7 +276,7 @@ spec:
 <p><em><strong>envoy-proxy</strong></em></p>
 <ul>
 <li><code>Envoy proxy</code> cân bằng tải ở <code>layer 7</code> nên khi kiểm tra với <code>unary method</code>, requests từ 1 client có thể được xử lý bởi cả 3 backend servers.</li>
-<li>Đối với <code>stream method</code>, tất cả messages trên 1 stream đều được xử lý bởi 1 backend server duy nhất, đảm bảo tính đúng đắn về chức năng của protocol.</li>
+<li>Đối với <code>stream method</code>, tất cả RPCs trên 1 stream đều được xử lý bởi 1 backend server duy nhất, chứng minh rằng envoy hiểu được gRPC protocol.</li>
 </ul>
 <p><img src="img/grpc-loadbalancing-sidecar-test-result.png" alt="grpc-loadbalancing-sidecar-test-result" /></p>
 <h2><a href="#traffic-management" aria-hidden="true" class="anchor" id="traffic-management"></a><a href="https://istio.io/latest/docs/concepts/traffic-management/#introducing-istio-traffic-management">Traffic management</a></h2>
