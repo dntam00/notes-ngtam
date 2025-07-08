@@ -1,0 +1,204 @@
+<html>
+
+<head>
+  <title>Trình biên dịch | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Trình biên dịch</h1>
+      <p>Sử dụng Java nhiều năm rồi nhưng mình chưa có cơ hội tìm hiểu nhiều về <code>JVM</code>, nó như một chiếc hộp kín đầy bí ẩn và đáng sợ, như ai đó đã từng nói một trong những lý do mình sợ cái một cái gì đó là do mình chưa hiểu rõ về nó, nên để bớt sợ hơn thì mình bắt đầu công cuộc xoá mù JVM.</p>
+<p>Để tìm kiếm những mảnh chìa khoá đầu tiên trong hành trình mở khoá chiếc hộp này (hy vọng mở được :v), mình bắt đầu <em>lại</em> với cách một trình biên dịch hoạt động. Nói tìm hiểu lại là vì hồi đại học trường mình có dạy môn <code>Nguyên lý ngôn ngữ lập trình</code> nói về cách một ngôn ngữ lập trình (NNLT) hoạt động (môn này giờ nghĩ lại vẫn thấy sợ :3). May mắn là sau nhiều năm mình vẫn còn lưu lại mã nguồn của bài tập lớn nên có gì lấy làm ví dụ trong bài này luôn. :D</p>
+<!-- Có bao giờ bạn thắc mắc làm thế nào mà máy tính thực thi một chương trình viết bằng các ngôn ngữ bậc cao như Java, Golang,...? Nếu là lập trình viên, chắc chắn ai cũng biết đại ý là chúng ta sẽ cần các công cụ như trình biên dịch (`compiler`) hay thông dịch (`interpreter`) tuỳ vào ngôn ngữ. -->
+<p>Để một chương trình được viết bằng ngôn ngữ bậc cao như Java, Go,... chạy được trên máy tính, nó phải được chuyển sang một dạng mà bộ xử lý có thể hiểu và thực thi. Có nhiều kĩ thuật để làm điều này:</p>
+<ul>
+<li><code>Biên dịch (compilation)</code>: chuyển đổi toàn bộ mã nguồn từ một ngôn ngữ này sang một ngôn ngữ khác. Mã của ngôn ngữ đích không nhất thiết phải là mã máy (<code>machine code</code>), tức là nó có thể trở thành đầu vào cho một trình biên dịch hay thông dịch khác. Quá trình này chỉ xảy ra 1 lần, biên dịch xong là ta có mã nguồn của ngôn ngữ đích có thể được sử dụng nhiều lần. Lấy ví dụ một người dịch giả có thể dịch sách 1 lần, sau đó người đọc có thể đọc bản dịch nhiều lần mà không cần làm phiền với dịch giả nữa :v.</li>
+</ul>
+<p><img src="img/compiler-model.png" alt="compilers-model" /></p>
+<ul>
+<li><code>Thuần thông dịch (pure interpretation)</code>: đọc và thực thi trực tiếp từng dòng của mã nguồn. Với cách làm này trình thông dịch sẽ cần lặp lại công việc nếu một đoạn code được gọi nhiều lần. Điều thú vị ở cách mà trình thông dịch thực thi từng dòng mã nguồn, trình thông dịch giống như một trình giả lập máy (<code>machine emulator</code>), chứa một tập hợp các quy trình/chỉ dẫn được chuẩn bị sẵn để thực thi mã nguồn, nhìn một cách tổng quát hơn thì nó giống như bộ xử lý ảo cho phần mềm vậy. Lấy ví dụ với một người phiên dịch viên trong một cuộc họp, họ phải dịch từng câu của mỗi bên tham gia, và cho dùng các câu này có bị lặp lại thì họ vẫn phải dịch.</li>
+</ul>
+<p><img src="img/pure-interpreter-model.png" alt="pure-interpreter-model" /></p>
+<ul>
+<li><code>Kết hợp biên dịch và phiên dịch (hybrid)</code>: kết hợp cả 2 trình thông dịch và biên dịch, trình biên dịch làm giai đoạn đầu tiên, biên dịch ra ngôn ngữ trung gian, sau đó trình thông dịch thực thi ngôn ngữ trung gian này. Có nhiều lý do để làm điều này, ngôn ngữ trung gian giúp tách biệt sự phụ thuộc vào cấu trúc bộ xử lý, hỗ trợ thiết kế thêm các thành phần đi kèm để tối ưu việc thự thi ngôn ngữ trung gian, quản lý bộ nhớ,...</li>
+</ul>
+<p><img src="img/hybrid-model.png" alt="hybrid-model" /></p>
+<ul>
+<li><code>Biên dịch đúng lúc (just-in-time compiler)</code>: ở phần trình thông dịch mình có đề cập đến một điểm yếu đó là có nhiều đoạn code sẽ được thực thi lại khi được gọi nhiều lần, <code>JIT</code> tối ưu phần này bằng cách tìm những đoạn code được thực thi nhiều lần, thuật ngữ gọi là <code>hot code</code> và biên dịch ra mã máy.</li>
+</ul>
+<p><img src="img/just-in-time-model.png" alt="just-in-time-model" /></p>
+<p>Giới thiệu qua các kĩ thuật biên/thông dịch vậy đủ rồi, vào chủ đề chính thôi, bài này mình sẽ đi tìm hiểu <em>lại</em> tổng quan các bước mà một <em><strong>trình biên dịch</strong></em> cần làm khi xử lý mã nguồn, nói tìm hiểu lại là vì hồi đại học trường mình có dạy môn <code>Nguyên lý ngôn ngữ lập trình</code> trình bày về cách một ngôn ngữ lập trình (<code>NNLT</code>) hoạt động (môn này giờ nghĩ lại vẫn thấy sợ :3). May mắn là sau nhiều năm mình vẫn còn lưu lại mã nguồn của bài tập lớn nên có gì lấy làm ví dụ trong bài này luôn. :D</p>
+<h2><a href="#trình-biên-dịch" aria-hidden="true" class="anchor" id="trình-biên-dịch"></a>Trình biên dịch</h2>
+<p>Để thực thi được các câu lệnh trên cpu, bằng cách này hay cách khác, tất cả những gì lập trình viên viết ra phải được chuyển thành thứ mà cpu có thể hiểu và xử lý được. Quá trình này khi sử dụng trình biên dịch thì được biểu diễn như hình sau:</p>
+<p><img src="img/overview-of-compilation.png" alt="overview-of-compilation" /></p>
+<h3><a href="#phân-tích-từ-vựng-lexical-analysis)" aria-hidden="true" class="anchor" id="phân-tích-từ-vựng-lexical-analysis)"></a>Phân tích từ vựng (Lexical analysis)</h3>
+<p>Lấy ví dụ về việc giao tiếp giữa con người, những gì chúng ta nói ra cần có ý nghĩa thì người đối diện mới hiểu được, chúng được cấu thành từ các bộ từ vựng đã được tạo ra, duy trì và phát triển. Đối với NNLT cũng vậy, đội ngũ phát triển ngôn ngữ phải định nghĩa được các từ nào có ý nghĩa đối với NNTL của họ, từ nào không, ví dụ cùng một ý nghĩa <code>rỗng</code> nhưng Golang và Java sử dụng các từ khoá khác nhau, lần lượt là <code>nil</code> và <code>null</code>.</p>
+<p>Quá trình tìm ra các từ khoá có ý nghĩa từ mã nguồn để xử lý được gọi là phân tích từ vựng. Công cụ phân tích từ vựng sẽ đọc mã nguồn và lấy ra các từ khoá cần thiết dựa trên bộ quy tắc được thiết lập sẵn. Quá trình này có thể cho ra output như:</p>
+<ul>
+<li>Tên hàm, tên biến,...</li>
+<li>Từ khoá của ngôn ngữ.</li>
+<li>Toán tử.</li>
+</ul>
+<p>được gọi chung là <code>tokens</code>.</p>
+<p>Một công cụ mình đã sử dụng trong lúc làm bài tập lớn ở đại học là <a href="https://github.com/antlr/antlr4">ANTLR</a>, mọi người có thể tham khảo thêm.</p>
+<p><img src="img/lexical-analysis.png" alt="lexical-analysis" /></p>
+<h3><a href="#phân-tích-ngữ-pháp-syntax-analysis)" aria-hidden="true" class="anchor" id="phân-tích-ngữ-pháp-syntax-analysis)"></a>Phân tích ngữ pháp (Syntax analysis)</h3>
+<p>Bước tiếp theo trong việc xử lý mã nguồn là phân tích ngữ pháp.</p>
+<p>Từ kết quả của bước phân tích từ vựng, bộ phân tích ngữ pháp sẽ kiểm tra xem lập trình viên có sử dụng các từ khoá đúng với ngữ pháp đã được quy định hay không. Ví dụ ngữ pháp tiếng Việt có cấu trúc chủ ngữ pháp chủ ngữ rồi đến động từ, thì các NNLT cũng có các quy định của nó, về bản chất đó là sự thống nhất để 2 bên có thể hiểu được nhau.</p>
+<p>Ví dụ với Java, khi viết câu điều kiện, chúng ta cần một cặp dấu ngoặc tròn <code>()</code> để chứa điều kiện, nếu bạn quên chúng, trình biên dịch sẽ báo lỗi cú pháp.</p>
+<p>Hình dưới một ví dụ về <a href="https://github.com/dntam00/principles-programming-language/blob/master/assignment-1/src/main/bkit/parser/BKIT.g4">bài tập lớn của mình</a> để mọi người có thể hình dung được các quy tắc này được định nghĩa ra sao, ở ngôn ngữ này thì sau <code>if</code> không cần dấu ngoặc :v.</p>
+<p><img src="img/antlr4-rules.png" alt="antlr4-if-statement" /></p>
+<p>Bộ phân tích ngữ pháp áp dụng quy tắc sản xuất (<code>production rule</code> trong <code>Context-Free Grammar</code>) để bắt đầu xây dựng cây cú pháp với quy tắc tổng quát:</p>
+<pre><code class="language-bash">A → α
+</code></pre>
+<ol>
+<li>A là ký hiệu không kết thúc (<code>non-terminal</code>).</li>
+<li>α là một chuỗi gồm ký hiệu kết thúc (<code>terminal</code>) và không kết thúc.</li>
+</ol>
+<p>Tất nhiên gọi là không kết thúc vì ta có thể phân giải ký hiệu này thành một tập các ký hiệu khác. Lấy ví dụ mình đưa ở trên, nếu bạn nhìn vào quy tắc cho câu lệnh <code>if</code>, sau từ khoá <code>THEN</code> là <code>list_sta</code>, áp dụng quy tắc sản xuất, nó có thể được thay thế bằng <code>varaible_dec* statement*</code>, hiểu là các khai báo biến, các câu lệch, và vì chúng là ký hiệu không kết thúc, ta sẽ cần phân giải tiếp,...</p>
+<p>Sử dụng quy tắc mình vừa giới thiệu và tập tokens từ bước phân tích từ vựng, bộ phân tích ngữ pháp sẽ thực hiện kiểm tra ngữ pháp, kết quả của quá trình này là một cây ngữ pháp được sử dụng cho các bước tiếp theo. Nếu có lỗi trong quá trình tạo cây, lỗi sẽ được trả về, lập trình viên có thể dựa vào lỗi để sửa mã nguồn của mình.</p>
+<p>Hình sau minh hoạ parse-tree cho biểu thức <code>3 + 5 ∗ 2</code>.</p>
+<p><img src="img/parser-tree-output.png" alt="parser-tree-output" /></p>
+<h3><a href="#tạo-cây-cú-pháp-trừu-tượng-abstract-syntax-tree-generation)" aria-hidden="true" class="anchor" id="tạo-cây-cú-pháp-trừu-tượng-abstract-syntax-tree-generation)"></a>Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</h3>
+<p>Cây cú pháp trừu tượng (<code>Abstract syntax tree - AST</code>) về cơ bản cũng biểu diễn cấu trúc cú pháp của mã nguồn, nhưng ở mức trừu tượng hơn cây cú pháp chi tiết.</p>
+<ol>
+<li>Cây phân cấp: có node gốc và các node con, mỗi node biển diễn một cấu trúc cụ thể của mã nguồn, ví dụ khai báo biến, câu lệnh lặp, điều kiện, biểu thức toán học,...</li>
+<li>Mức độ trừu trượng: loại bỏ đi các chi tiết ngữ pháp như dấu chấm phẩy, dấu ngoặc,... tập trung vào biểu diễn cấu trúc cơ bản và ngữ nghĩa của chương trình. Ví dụ như thay vì dùng cặp dấu ngoặc đơn để thể hiện sự ưu tiên trong các biểu thức toán học, AST sử dụng mối quan hệ giữa các node để biểu diễn.</li>
+</ol>
+<p><img src="img/ast-abstract.png" alt="ast-abstract" /></p>
+<p>Trong thực tế, để tạo AST, chúng ta cần định nghĩa các <a href="https://github.com/dntam00/principles-programming-language/blob/master/assignment-3/src/main/bkit/utils/AST.py">cấu trúc dữ liệu</a> để biểu diễn các cấu trúc của 1 NNLT, đoạn code sau biểu diễn 1 class để lưu trữ thông tin cho một biểu thức 2 ngôi.</p>
+<ol>
+<li>Toán tử.</li>
+<li>Toán hạng trái.</li>
+<li>Toán hạng phải.</li>
+</ol>
+<pre><code class="language-python">@dataclass
+class BinaryOp(Expr):
+    op:str
+    left:Expr
+    right:Expr
+
+    def __str__(self):
+        return &quot;BinaryOp(&quot; + self.op + &quot;,&quot; + str(self.left) + &quot;,&quot; + str(self.right) + &quot;)&quot;
+
+    def accept(self, v, param):
+        return v.visitBinaryOp(self, param)
+</code></pre>
+<p>Để tạo AST, các công cụ hiện tại thường sử dụng <a href="https://en.wikipedia.org/wiki/Visitor_pattern">visitor pattern</a> để duyệt qua các node của cây cú pháp, tại mỗi node sẽ có nghiệp vụ cụ thể để xử lý và trả về cấu trúc biểu diễn trong AST.</p>
+<p>Đoạn code sau minh hoạ logic khi duyệt qua một node biểu diễn biểu thức (bạn có thể xem chi tiết định nghĩa ngôn ngữ lập trình của bài tập lớn mình của mình ở <a href="https://github.com/dntam00/principles-programming-language/blob/master/BKIT2009%20Specification-2.2.pdf">BKIT</a>)</p>
+<pre><code class="language-python">    def visitExp(self, ctx: BKITParser.ExpContext):
+        if ctx.EQUAL_OP_INT():
+            return BinaryOp(ctx.EQUAL_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.NOT_EQUAL_OP_INT():
+            return BinaryOp(ctx.NOT_EQUAL_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.LESS_OP_INT():
+            return BinaryOp(ctx.LESS_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.GREATER_OP_INT():
+            return BinaryOp(ctx.GREATER_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.LESS_EQUAL_OP_INT():
+            return BinaryOp(ctx.LESS_EQUAL_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.GREATER_EQUAL_OP_INT():
+            return BinaryOp(ctx.GREATER_EQUAL_OP_INT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.NOT_EQUAL_OP_FLOAT():
+            return BinaryOp(ctx.NOT_EQUAL_OP_FLOAT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.LESS_OP_FLOAT():
+            return BinaryOp(ctx.LESS_OP_FLOAT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.GREATER_OP_FLOAT():
+            return BinaryOp(ctx.GREATER_OP_FLOAT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.LESS_EQUAL_OP_FLOAT():
+            return BinaryOp(ctx.LESS_EQUAL_OP_FLOAT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        elif ctx.GREATER_EQUAL_OP_FLOAT():
+            return BinaryOp(ctx.GREATER_EQUAL_OP_FLOAT().getText(), ctx.exp1(0).accept(self), ctx.exp1(1).accept(self))
+        else:
+            return ctx.exp1(0).accept(self)
+</code></pre>
+<p>Cây AST đóng một vai trò quan trọng trong lập trình, với đặc điểm biểu diễn cấu trúc ngữ nghĩa của mã nguồn, chúng ta có thể sử dụng AST trong các việc sau:</p>
+<ol>
+<li>Phân tích ngữ nghĩa của ngôn ngữ (<code>semantic analysis</code>): ví dụ khai báo sai kiểu dữ liệu, tái khai báo lại biến trong 1 phạm vi,... đây là những kiểm tra phức tạp hơn kiểm tra ngữ pháp.</li>
+<li>Sinh code (<code>code generation</code>): AST được sử dụng để sinh ra mã nguồn đích, ví dụ bytecode.</li>
+<li>Tái cấu trúc code: gợi ý các cách code tốt hơn, được sử dụng bởi các IDE.</li>
+</ol>
+<h3><a href="#intermediate-code-generation" aria-hidden="true" class="anchor" id="intermediate-code-generation"></a>Intermediate code generation</h3>
+<p>Đây là một bước có thể có hoặc không, tuỳ vào thiết kế của ngôn ngữ.</p>
+<p>Dựa vào cây AST, trình biên dịch sinh ra mã trung gian, đây là một loại mã nguồn có level thấp hơn các ngôn ngữ bậc cao như Java, Go.</p>
+<p>Mã trung gian như một chiếc cầu nối giữa mã nguồn của ngôn ngữ bậc cao và mã máy, loại mã không phụ thuộc vào cấu trúc vật lý của bộ xử lý (<code>machine-independent</code>). Thông thường với kiểu thiết kế này thì sẽ mang lại lợi ích là tách biệt sự phụ thuộc của ngôn ngữ bậc cao và máy tính vật lý, mọi người chắc hẳn cũng nghe đến câu marketing nổi tiếng của Java: <code>write once run anywhere</code>.</p>
+<p>Lấy Java làm ví dụ để phân tích thêm, trình biên dịch tạo ra bytecode từ các file mã nguồn Java thông thường, JVM sẽ như một trình thông dịch (có cả <code>JIT</code>), thực thi từng dòng bytecode này xuống bộ xử lý, vậy chúng ta cũng có thể coi JVM như một bộ <strong>xử lý ảo</strong> cho bytecode.</p>
+<p>JVM cung cấp một tập các chỉ dẫn để có thể thực thi bytecode, nó là một <code>stack machine</code>, tức là để thực thi các câu lệnh, nó thực hiện các thao tác push, pop với stack. Mình sẽ tìm hiểu kĩ hơn ở các bài sau về phần này.</p>
+<h3><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h3>
+<p>Trong bài này, mình bắt đầu với những thứ cở bản nhất của lập trình, biên dịch, thông dịch và làm rõ một số giai đoạn mà một trình biên dịch xử lý mã nguồn.</p>
+<p>Kiến thức nền tảng là thứ cần thiết để đi được con đường dài, mình nghĩ vậy.</p>
+<p>Lúc tìm hiểu lại những kiến thức này đối với bản thân vẫn còn nhiều chỗ mơ hồ, hy vọng đi tiếp chuỗi bài viết nãy sẽ có thêm cơ sở để củng cố kiến thức cũng như giải thích các thuật ngữ, khái niệm một cách rõ ràng, rành mạch hơn.</p>
+<p>Viết cho người mà thực ra là viết cho mình.</p>
+<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<ol>
+<li>Slides môn học Nguyên lý ngôn ngữ lập trình ở trường Đại học Bách khoa Tp.Hồ Chí Minh.</li>
+<li><a href="https://medium.com/@saikadali/building-your-own-jvm-interpreter-from-scratch-86a085e225b1">https://medium.com/@saikadali/building-your-own-jvm-interpreter-from-scratch-86a085e225b1</a></li>
+<li><a href="https://medium.com/@davewritescode/lets-have-fun-with-interpreters-and-bytecode-vms-chapter-3-f2392de2e269">https://medium.com/@davewritescode/lets-have-fun-with-interpreters-and-bytecode-vms-chapter-3-f2392de2e269</a></li>
+<li><a href="https://www.quora.com/What-is-the-difference-between-a-compiler-and-an-interpreter/answers/7670223">https://www.quora.com/What-is-the-difference-between-a-compiler-and-an-interpreter/answers/7670223</a></li>
+<li><a href="https://www.cse.iitm.ac.in/%7Emanas/docs/cs6843-hotspot.pdf">https://www.cse.iitm.ac.in/~manas/docs/cs6843-hotspot.pdf</a></li>
+<li><a href="https://albertnetymk.github.io/2021/08/03/template_interpreter">https://albertnetymk.github.io/2021/08/03/template_interpreter</a></li>
+<li><a href="https://github.com/cloudsec/ajvm">https://github.com/cloudsec/ajvm</a></li>
+</ol>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/compiler.html'>compiler</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
