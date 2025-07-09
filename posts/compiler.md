@@ -160,7 +160,35 @@ Mã trung gian như một chiếc cầu nối giữa mã nguồn của ngôn ng�
 
 Lấy Java làm ví dụ để phân tích thêm, trình biên dịch tạo ra bytecode từ các file mã nguồn Java thông thường, JVM sẽ như một trình thông dịch (có cả `JIT`), thực thi từng dòng bytecode này xuống bộ xử lý, vậy chúng ta cũng có thể coi JVM như một bộ **xử lý ảo** cho bytecode.
 
-JVM cung cấp một tập các chỉ dẫn để có thể thực thi bytecode, nó là một `stack machine`, tức là để thực thi các câu lệnh, nó thực hiện các thao tác push, pop với stack. Mình sẽ tìm hiểu kĩ hơn ở các bài sau về phần này.
+Minh hoạ bytecode cho một hàm đơn giản trong Java: 
+
+```java
+public void load() {
+    int x = 5;
+}
+```
+
+Sau khi biên dịch hàm này bằng lệnh `javac`, được một file `.class`, mình cần decode file này bằng lệnh `javap`.
+
+```
+public void load();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=2, args_size=1
+         0: iconst_5
+         1: istore_1
+         2: return
+      LineNumberTable:
+        line 16: 0
+        line 17: 2
+```
+
+JVM cung cấp một tập các chỉ dẫn để có thể thực thi bytecode, nó là một `stack machine`, tức là để thực thi các câu lệnh, nó thực hiện các thao tác push, pop với stack, nhắc lại stack là cấu trúc dữ liệu với cơ chế LIFO, vào trước ra sau, nên mặc định các thao tác push hay pop sẽ làm việc với phần tử ở đỉnh của stack.
+
+Minh hoạ với đoạn bytecode ở trên, để gán số 5 cho biến x, các bước cần làm là:
+1. `iconst_5` -> push 5 vào stack.
+2. `istore_1` -> pop phần tử từ stack ra, lưu vào biến x (index của biến x trong hàm này là 1, `this` sẽ có index là 0).
 
 ### Tổng kết
 
