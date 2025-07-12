@@ -208,3 +208,4 @@ Viết cho người mà thực ra là viết cho mình.
 5. https://www.cse.iitm.ac.in/~manas/docs/cs6843-hotspot.pdf
 6. https://albertnetymk.github.io/2021/08/03/template_interpreter
 7. https://github.com/cloudsec/ajvm
+8. http://progdoc.de/papers/Joker2014/joker2014.html#

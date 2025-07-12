@@ -1,0 +1,277 @@
+<html>
+
+<head>
+  <title>JVM (ghi chú) | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>JVM (ghi chú)</h1>
+      <p>Java virtual machine - JVM  - Máy ảo Java, là máy ảo giúp máy tính thực thi các chương trình viết bằng Java hoặc các ngôn ngữ khác có trình biên dịch tạo ra bytecode. Việc tạo ra JVM giúp ngôn ngữ Java có tính linh động, viết một lần thực thi ở nhiều nơi (<code>Write Once, Run Anywhere</code>), cũng như ẩn giấu rất nhiều phần thiết kế, hiện thực phức tạp liên quan đến việc lập trình như quản lý bộ nhớ, sự phụ thuộc, tối ưu thực thi,... để lập trình viên có thể tập trung nhiều hơn vào việc phát triển ứng dụng.</p>
+<h2><a href="#tổng-quan" aria-hidden="true" class="anchor" id="tổng-quan"></a>Tổng quan</h2>
+<p>Những gì ngôn ngữ Java cung cấp cho lập trình viên có thể gói gọn ở high-level như hình sau:</p>
+<ul>
+<li><code>JVM</code>: trình thực thi bytecode, load class, quản lý vùng nhớ,</li>
+<li><code>JRE</code>: bao gồm <code>JVM</code>, các module thư viện cốt lõi của Java (Object, String, Thread, ClassLoader,...), các thư viện tiện ích khác như log, sql, desktop và các thư viện native được viết bằng C/C++.
+<ul>
+<li>Kể từ Java 8, <code>JRE</code> được xem như là thành phần luận lý vì kể từ Java 9, Java ra mắt khái niệm module.</li>
+</ul>
+</li>
+<li><code>JDK</code>: bao gồm <code>JRE</code> và các công cụ hỗ trợ phát triển (javac để biên dịch, java để chạy, jar để đóng gói,...).</li>
+</ul>
+<p><img src="img/jvm-jre-jdk.png" alt="jvm-jre-jdk" /></p>
+<p>Vậy từ thông tin trên, nếu cần thực thi bytecode, chỉ cần tạo môi trường runtime là đủ.</p>
+<h2><a href="#jvm" aria-hidden="true" class="anchor" id="jvm"></a>JVM</h2>
+<p>Thành phần quan trọng bậc nhất trong Java. Những việc như quản lý bộ nhớ, thu dọn rác (garbage collector), tối ưu thực thi bytecode được JVM hiện thực thay cho lập trình viên.</p>
+<p><em><strong>Có thể thấy JVM được không?</strong></em></p>
+<p>JVM là trình thực thi chương trình viết bằng Java hoặc các ngôn ngữ khác có thể biên dịch ra bytecode, vậy trước tiên nó phải chạy được trong máy tính, vậy nó là 1 process, có thể xem các process jvm trong máy bằng lệnh <code>jcmd -l</code> được cung cấp bởi JDK.</p>
+<pre><code class="language-java">55784 jdk.jcmd/sun.tools.jcmd.JCmd -l
+85065 org.lift.backend.BackendApplication
+69932 com.intellij.idea.Main
+</code></pre>
+<p>Tên chương trình là tên đầy đủ của class chứa hàm main.</p>
+<p><em><strong>Vậy bên trong JVM có những thành phần nào?</strong></em></p>
+<p><img src="img/jvm-architecture.png" alt="jvm-architecture" /></p>
+<h3><a href="#class-loader-subsystem" aria-hidden="true" class="anchor" id="class-loader-subsystem"></a>Class loader subsystem</h3>
+<p>Thành phần chịu trách nhiệm định vị, nạp (<code>loading</code>), liên kết (<code>linking</code>), khởi tạo (<code>initialization</code>) các class vào JVM.</p>
+<ol>
+<li>Nạp class: nạp class từ thư viện core hoặc các file bytecode.</li>
+<li>Liên kết: kiểm tra tính đúng đắn của các file class, cấp phát vùng nhớ cho các biến static, khởi tạo giá trị mặc định.</li>
+<li>Khởi tạo: chạy các đoạn code khởi tạo trong class (<code>static { ... }</code>).</li>
+</ol>
+<p>Có 3 loại <code>class loader</code> được cung cấp bởi JVM, mỗi loại hoạt động với các đối tượng khác nhau.</p>
+<ul>
+<li><code>Bootstrap classLoader</code>: loader duy nhất được hiện thực bằng native code thay vì Java code, chịu trách nhiệm load các class core của Java runtime lúc khởi chạy JVM.</li>
+<li><code>Extension classLoader</code>: load các class thuộc phần extentions.</li>
+<li><code>Application classLoader</code>: load các class trong đường dẫn classpath của ứng dụng (<code>-cp</code> hay biến môi trường <code>CLASSPATH</code>).</li>
+</ul>
+<p>Ba loại loader này kế thừa nhau, theo thứ tự cha - con là <code>Bootstrap</code> &gt; <code>Extension</code> &gt; <code>Application</code>, ngoài ra lập trình viên có thể tự hiện thực các lớp loader và sử dụng.</p>
+<h4><a href="#nguyên-tắc" aria-hidden="true" class="anchor" id="nguyên-tắc"></a>Nguyên tắc</h4>
+<ol>
+<li>Nguyên tắc uỷ thác (parent delegation principle): JVM sử dụng nguyên lý uỷ quyền cho class cha khi load class, tức là khi có yêu cầu, <code>load loader</code> đẩy yêu cầu lên cho lớp cha của nó trước, nếu không tìm thấy thì nó sẽ xử lý yêu cầu. Nguyên lý làm việc này phù hợp với việc chia trách nhiệm cho từng loại <code>class loader</code>, ví dụ đối với những class core của Java, chỉ có <code>Bootstrap classLoader</code> mới có quyền load, loại trừ khả năng lập trình viên tạo các class trùng tên với thư viện core và thay đổi hành vi, tóm lại là tăng tính bảo mật, tránh lặp lại công việc của nhau.</li>
+</ol>
+<pre><code class="language-java">// Trích dẫn hàm ClassLoader#loadClass.
+protected Class&lt;?&gt; loadClass(String name, boolean resolve)
+        throws ClassNotFoundException
+    {
+        try {
+            if (parent != null) {
+                c = parent.loadClass(name, false);
+            } else {
+                c = findBootstrapClassOrNull(name);
+            }
+        } catch (ClassNotFoundException e) {
+            // ClassNotFoundException thrown if class not found
+            // from the non-null parent class loader
+        }
+    }
+</code></pre>
+<ol start="2">
+<li>
+<p>Nguyên tắc hiển thị (visibility principle): chỉ cung cấp khả năng hiển thị cho trình nạp của class con để xem tất cả các class được tải bởi một parent class, chứ không phải ngược lại.</p>
+</li>
+<li>
+<p>Nguyên tắc duy nhất (uniqueness principle): mỗi class sẽ chỉ được tải một lần.</p>
+</li>
+<li>
+<p>Nguyên tắc lười (lazy loading principle): class được nạp theo yêu cầu sử dụng thay vì được nạp khi JVM khởi tạo.</p>
+</li>
+</ol>
+<h4><a href="#code" aria-hidden="true" class="anchor" id="code"></a>Code</h4>
+<ol>
+<li>
+<p>[Ví dụ cách hiện thực <a href="https://github.com/dntam00/custom-classloader/blob/main/src/main/java/club/shengsheng/MyClassLoader.java">custom class loader</a>].</p>
+</li>
+<li>
+<p>[Ví dụ cách xem <a href="https://github.com/dntam00/java-notes/blob/main/src/main/java/loader/Loader.java">class loader của một class cụ thể</a>].</p>
+</li>
+</ol>
+<p>Chạy mã nguồn (2) được kết quả:</p>
+<p><img src="img/class-loader-result.png" alt="clas-loader-result" /></p>
+<h3><a href="#runtime-data-area" aria-hidden="true" class="anchor" id="runtime-data-area"></a>Runtime data area</h3>
+<p><img src="img/java-memory-architecture.png" alt="java-memory-architecture" /></p>
+<p>JVM chia bộ nhớ thành nhiều vùng dữ liệu để lưu trữ các đối tượng khác nhau:</p>
+<ol>
+<li>
+<p><code>Method area</code>: khái niệm luận lý, HotSpot JVM hiện thực phần này với tên gọi <code>Metaspace</code> sử dụng <strong>native memory</strong> của hệ điều hành (trước Java 9 gọi là <code>PermGen</code>, sử dụng heap), lưu trữ các thông tin:</p>
+<ul>
+<li>Class metadata.</li>
+<li>Runtime constant pool.</li>
+<li>Bytecode của hàm.</li>
+<li>Biến static: giá trị của kiểu dữ liệu primitive hoặc giá trị tham chiếu.</li>
+</ul>
+</li>
+<li>
+<p><code>Stack</code>: JVM sử dụng stack (cấu trúc LIFO) để quản lý việc gọi hàm:</p>
+<ul>
+<li>
+<p>Cơ chế:</p>
+<ul>
+<li>Gọi hàm -&gt; tạo ra frame và push lên stack.</li>
+<li>Thực thi xong hàm -&gt; pop frame ra khỏi stack.</li>
+</ul>
+</li>
+<li>
+<p>Frame chứa dữ liệu về hàm đang được thực thi, bao gồm một số thông tin sau:</p>
+<ul>
+<li><code>Mảng biến cục bộ và tham số</code>: truy xuất theo index, nếu là hàm instane thì biến <code>this</code> được đánh index 0, các index 1 trở đi được dành cho tham số và biến cục bộ.
+<ul>
+<li>Các kiểu dữ liệu như <code>int</code>, <code>float</code>, <code>reference</code> chiếm 1 slot index.</li>
+<li>Các kiểu dữ liệu <code>long</code>, <code>double</code> chiếm 2 slot index.</li>
+</ul>
+</li>
+</ul>
+<p><em><strong>-&gt; Xem bytecode sẽ thấy rõ.</strong></em></p>
+<ul>
+<li>
+<p><code>Stack toán hạng</code>: về mặt cấu trúc dữ liệu thì giống với stack để chứa frame. JVM là một stack machine, nó xử lý các câu lệnh bằng cách thao tác với dữ liệu trên stack:</p>
+<ul>
+<li>Ví dụ: ở stack đang có 2 số 1 và 2, khi thực thi chỉ dẫn <code>iadd</code>, JVM sẽ lấy 2 phần tử ở trên stack và cộng lại với nhau (bởi cpu), sau đó đẩy lại kết quả vào stack. Ví dụ với phép cộng <code>1 + 2</code>:
+<ul>
+<li>Bytecode: <code>iconst_1 → iconst_2 → iadd → istore_1</code></li>
+<li>Stack toán hạng: <code>[] → [1] → [1,2] → [3]</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><code>Liên kết động</code>:  Tham chiếu các hằng số đến địa chỉ vùng nhớ vụ thể, ví dụ trong hàm có sử dụng các hằng string và gán vào biến (<code>String var = &quot;hello&quot;</code>), thì stack frame cần lưu tham chiếu này.</p>
+</li>
+<li>
+<p><code>Địa chỉ trả về</code>: lưu địa chỉ của hàm gọi để trình thông dịch có thể thực thi tiếp sau khi kết thúc gọi hàm hiện tại.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><code>Heap</code>: JVM sử dụng heap để lưu object (class instances, array, String pool), đây là vùng dữ liệu có sự hoạt động của GC và gây ra nhiều vấn đề đối với các ứng dụng phức tạp như tràn bộ nhớ, GC chạy gây ảnh hưởng đến hiệu năng của ứng dụng,...</p>
+</li>
+<li>
+<p><code>PC registers</code>: lưu trữ địa chỉ của lệnh đang được thực thi.</p>
+</li>
+<li>
+<p><code>Native method stack</code>: lưu trữ thông tin liên quan đến việc sử dụng các hàm native của các ngôn ngữ khác như C/C++.</p>
+</li>
+</ol>
+<p>Tiếp theo, hình sau thể hiện mối quan hệ của các vùng nhớ ở trên với thread, đây là điểm kiến thức quan trọng cần nắm khi lập trình với Java.</p>
+<ul>
+<li>Thread isolation: frame stack, pc registers, native method stacks.</li>
+<li>Thread shared: heap, method area.</li>
+</ul>
+<p><img src="img/jvm-runtime-data-area-structure-thread-share.png" alt="jvm-runtime-data-area-structure-thread-share" /></p>
+<p><em><strong>Nói về điểm này, có vài ví dụ cụ thể cần làm rõ:</strong></em></p>
+<ul>
+<li>Biến cục bộ trong hàm:
+<ul>
+<li>Kiểu nguyên thuỷ: ở stack.</li>
+<li>Kiểu object: tham chiếu ở stack, object ở heap.</li>
+</ul>
+</li>
+<li>Biến instance của object: cả kiểu nguyên thuỷ và object đều được lưu ở Heap.</li>
+<li>String pool: ở heap.</li>
+</ul>
+<h3><a href="#execute-engine" aria-hidden="true" class="anchor" id="execute-engine"></a>Execute engine</h3>
+<h4><a href="#thực-thi" aria-hidden="true" class="anchor" id="thực-thi"></a>Thực thi</h4>
+<p>JVM cung cấp các loại thực thi sau:</p>
+<ol>
+<li>Thông dịch: thực thi từng dòng bytecode theo cơ chế stack.
+<ul>
+<li>JVM có 1 tập chỉ dẫn để thực thi, khi khởi tạo JVM, các mã máy tương ứng sẽ được load và lưu trữ.</li>
+</ul>
+</li>
+<li>JIT (Just in time): biên dịch các đoạn hot code (được gọi nhiều) thành mã máy, quá trình này được thực hiện trong quá trình thực thi.</li>
+<li>AOT (Ahead of time): biên dịch sang mã máy trước khi thực thi.</li>
+</ol>
+<p>Hiện tại thì đa số JVM sử dụng Thông dịch và JIT.</p>
+<h4><a href="#garbage-collector" aria-hidden="true" class="anchor" id="garbage-collector"></a>Garbage collector</h4>
+<!-- Nhớ những ngày đầu ngồi lọ mọ cài C++ để học môn lập trình ở ĐH, rồi code chạy hay bị segmentation fault hay tham chiếu con trỏ không hợp lệ :v, C++ hay C để phần quản lý vùng nhớ luôn cho lập trình viên, nghe có vẻ cũng nhiều quyền lực nhưng nếu code không kĩ thì đúng là đau khổ. -->
+<p>Khác với C++ hay C, JVM quản lý bộ nhớ luôn cho lập trình viên, và như một lẽ tự nhiên, có cho thì có lấy, JVM cần hiện thực một trình thu hồi vùng nhớ không sử dụng để tái cấp phát, gọi là trình dọn rác.</p>
+<p>Thông qua quá trình phát triển của JVM, nhiều thuật toán đã được hiện thực với mục đích chính là:</p>
+<ul>
+<li>Quản lý vùng nhớ hiệu quả, giảm phân mảnh.</li>
+<li>Tăng hiệu năng để giảm ảnh hưởng đến ứng dụng.</li>
+</ul>
+<p>Một số thuật toán:</p>
+<ul>
+<li>Serial garbage collector: single thread, hiệu năng thấp.</li>
+<li>Parallel garbage collector:  multi thread, hiệu năng cao.</li>
+<li>Concurrent Mark-Sweep (CMS): không còn được dùng kể từ JDK 14.</li>
+<li>Garbage-First (G1 GC): mặc định kể từ JDK 9.</li>
+<li>The Z Garbage Collector (ZGC): được hỗ trợ từ JDK 15.</li>
+</ul>
+<h2><a href="#phụ-lục" aria-hidden="true" class="anchor" id="phụ-lục"></a>Phụ lục</h2>
+<p>Để bắt đầu tìm hiểu về JVM, có thể sử dụng một số công cụ sau:</p>
+<ul>
+<li>Biên dịch mã nguồn Java thành bytecode bằng <code>javac</code>, sau đó đọc bytecode bằng lệnh <code>javap</code>, thuật ngữ gọi là  giải mã (<code>disassembles</code>).</li>
+<li>Lệnh <code>jcmd</code>, sử dụng <a href="github.com/cschaible/jcmd-ui">jcmd-ui</a> để xem thông tin trực quan hơn.</li>
+</ul>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<ul>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.5">https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.5</a></li>
+<li><a href="https://stuefe.de/posts/metaspace/metaspace-architecture">https://stuefe.de/posts/metaspace/metaspace-architecture</a></li>
+<li><a href="https://blog.jamesdbloom.com/JVMInternals.html">https://blog.jamesdbloom.com/JVMInternals.html</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/compiler.html'>compiler</a><a class='topic-tag' href='/tags/java.html'>java</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
