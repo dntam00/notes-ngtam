@@ -48,7 +48,7 @@
 <li><code>JVM</code>: trình thực thi bytecode, load class, quản lý vùng nhớ,</li>
 <li><code>JRE</code>: bao gồm <code>JVM</code>, các module thư viện cốt lõi của Java (Object, String, Thread, ClassLoader,...), các thư viện tiện ích khác như log, sql, desktop và các thư viện native được viết bằng C/C++.
 <ul>
-<li>Kể từ Java 8, <code>JRE</code> được xem như là thành phần luận lý vì kể từ Java 9, Java ra mắt khái niệm module.</li>
+<li>Bắt đầu từ Java 9, <code>JRE</code> được xem như là thành phần luận lý vì kể từ Java 9, Java ra mắt khái niệm module, Oracle không cung cấp riêng rẽ JRE nữa mà gợi ý người dùng có thể tự build môi trường runtime tuỳ thuộc vào ứng dụng bằng <code>jlink</code>.</li>
 </ul>
 </li>
 <li><code>JDK</code>: bao gồm <code>JRE</code> và các công cụ hỗ trợ phát triển (javac để biên dịch, java để chạy, jar để đóng gói,...).</li>
@@ -70,13 +70,17 @@
 <p>Thành phần chịu trách nhiệm định vị, nạp (<code>loading</code>), liên kết (<code>linking</code>), khởi tạo (<code>initialization</code>) các class vào JVM.</p>
 <ol>
 <li>Nạp class: nạp class từ thư viện core hoặc các file bytecode.</li>
-<li>Liên kết: kiểm tra tính đúng đắn của các file class, cấp phát vùng nhớ cho các biến static, khởi tạo giá trị mặc định.</li>
+<li>Liên kết: kiểm tra tính đúng đắn của các file class, cấp phát vùng nhớ cho các biến, khởi tạo giá trị mặc định.</li>
 <li>Khởi tạo: chạy các đoạn code khởi tạo trong class (<code>static { ... }</code>).</li>
 </ol>
 <p>Có 3 loại <code>class loader</code> được cung cấp bởi JVM, mỗi loại hoạt động với các đối tượng khác nhau.</p>
 <ul>
-<li><code>Bootstrap classLoader</code>: loader duy nhất được hiện thực bằng native code thay vì Java code, chịu trách nhiệm load các class core của Java runtime lúc khởi chạy JVM.</li>
-<li><code>Extension classLoader</code>: load các class thuộc phần extentions.</li>
+<li><code>Bootstrap classLoader</code>: loader duy nhất được hiện thực bằng native code thay vì Java code, chịu trách nhiệm load các class cần thiết được yêu cầu bởi JVM, ví dụ <code>java.base</code>.</li>
+<li><code>Platform Class Loader</code>: load các Java SE modules (<code>Java Platform, Standard Edition java.sql,...</code>), customs module được cung cấp bởi lập trình viên.
+<ul>
+<li>[Hướng dẫn <a href="https://stackoverflow.com/questions/76699669/which-exact-classes-are-loaded-by-platform-classloader">phân loại module</a>]</li>
+</ul>
+</li>
 <li><code>Application classLoader</code>: load các class trong đường dẫn classpath của ứng dụng (<code>-cp</code> hay biến môi trường <code>CLASSPATH</code>).</li>
 </ul>
 <p>Ba loại loader này kế thừa nhau, theo thứ tự cha - con là <code>Bootstrap</code> &gt; <code>Extension</code> &gt; <code>Application</code>, ngoài ra lập trình viên có thể tự hiện thực các lớp loader và sử dụng.</p>
@@ -120,7 +124,21 @@ protected Class&lt;?&gt; loadClass(String name, boolean resolve)
 <p>[Ví dụ cách xem <a href="https://github.com/dntam00/java-notes/blob/main/src/main/java/loader/Loader.java">class loader của một class cụ thể</a>].</p>
 </li>
 </ol>
+<pre><code class="language-java">public static void main(String[] args) {
+    System.out.println(&quot;Classloader of ArrayList:&quot;
+                                + ArrayList.class.getClassLoader());
+    System.out.println(&quot;Classloader of DriverManager:&quot;
+                                + DriverManager.class.getClassLoader());
+    System.out.println(&quot;Classloader of Loader:&quot;
+                                   + Loader.class.getClassLoader());
+}
+</code></pre>
 <p>Chạy mã nguồn (2) được kết quả:</p>
+<ol>
+<li><code>ArrayList</code> thuộc thư viện core nên được load bởi <code>Bootstrap</code>, loader này được viết bằng native code nên lúc in ra sẽ thấy <code>null</code>.</li>
+<li><code>DriverManager</code> thuộc module <code>java.sql</code> và được load bởi <code>Platform loader</code>.</li>
+<li><code>Loader</code> là một class bình thường và được load bởi <code>AppClass loader</code>.</li>
+</ol>
 <p><img src="img/class-loader-result.png" alt="clas-loader-result" /></p>
 <h3><a href="#runtime-data-area" aria-hidden="true" class="anchor" id="runtime-data-area"></a>Runtime data area</h3>
 <p><img src="img/java-memory-architecture.png" alt="java-memory-architecture" /></p>
@@ -220,7 +238,7 @@ protected Class&lt;?&gt; loadClass(String name, boolean resolve)
 <p>Hiện tại thì đa số JVM sử dụng Thông dịch và JIT.</p>
 <h4><a href="#garbage-collector" aria-hidden="true" class="anchor" id="garbage-collector"></a>Garbage collector</h4>
 <!-- Nhớ những ngày đầu ngồi lọ mọ cài C++ để học môn lập trình ở ĐH, rồi code chạy hay bị segmentation fault hay tham chiếu con trỏ không hợp lệ :v, C++ hay C để phần quản lý vùng nhớ luôn cho lập trình viên, nghe có vẻ cũng nhiều quyền lực nhưng nếu code không kĩ thì đúng là đau khổ. -->
-<p>Khác với C++ hay C, JVM quản lý bộ nhớ luôn cho lập trình viên, và như một lẽ tự nhiên, có cho thì có lấy, JVM cần hiện thực một trình thu hồi vùng nhớ không sử dụng để tái cấp phát, gọi là trình dọn rác.</p>
+<p>Khác với C++ hay C, JVM quản lý bộ nhớ luôn cho lập trình viên, và như một lẽ tự nhiên, có cho thì có lấy, JVM cần thu hồi vùng nhớ không sử dụng để tái cấp phát, việc này được thực thi bởi trình dọn rác.</p>
 <p>Thông qua quá trình phát triển của JVM, nhiều thuật toán đã được hiện thực với mục đích chính là:</p>
 <ul>
 <li>Quản lý vùng nhớ hiệu quả, giảm phân mảnh.</li>
@@ -245,6 +263,8 @@ protected Class&lt;?&gt; loadClass(String name, boolean resolve)
 <li><a href="https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.5">https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.5</a></li>
 <li><a href="https://stuefe.de/posts/metaspace/metaspace-architecture">https://stuefe.de/posts/metaspace/metaspace-architecture</a></li>
 <li><a href="https://blog.jamesdbloom.com/JVMInternals.html">https://blog.jamesdbloom.com/JVMInternals.html</a></li>
+<li><a href="https://stackoverflow.com/questions/40891433/understanding-metaspace-line-in-jvm-heap-printout/40899996#40899996">https://stackoverflow.com/questions/40891433/understanding-metaspace-line-in-jvm-heap-printout/40899996#40899996</a></li>
+<li><a href="https://medium.com/azulsystems/using-jlink-to-build-java-runtimes-for-non-modular-applications-9568c5e70ef4">https://medium.com/azulsystems/using-jlink-to-build-java-runtimes-for-non-modular-applications-9568c5e70ef4</a></li>
 </ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/compiler.html'>compiler</a><a class='topic-tag' href='/tags/java.html'>java</a></div>

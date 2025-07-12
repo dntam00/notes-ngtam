@@ -15,7 +15,7 @@ Những gì ngôn ngữ Java cung cấp cho lập trình viên có thể gói g�
 
 - `JVM`: trình thực thi bytecode, load class, quản lý vùng nhớ, 
 - `JRE`: bao gồm `JVM`, các module thư viện cốt lõi của Java (Object, String, Thread, ClassLoader,...), các thư viện tiện ích khác như log, sql, desktop và các thư viện native được viết bằng C/C++.
-    - Kể từ Java 8, `JRE` được xem như là thành phần luận lý vì kể từ Java 9, Java ra mắt khái niệm module.
+    - Bắt đầu từ Java 9, `JRE` được xem như là thành phần luận lý vì kể từ Java 9, Java ra mắt khái niệm module, Oracle không cung cấp riêng rẽ JRE nữa mà gợi ý người dùng có thể tự build môi trường runtime tuỳ thuộc vào ứng dụng bằng `jlink`. 
 - `JDK`: bao gồm `JRE` và các công cụ hỗ trợ phát triển (javac để biên dịch, java để chạy, jar để đóng gói,...).
 
 ![jvm-jre-jdk](img/jvm-jre-jdk.png)
@@ -47,13 +47,14 @@ Tên chương trình là tên đầy đủ của class chứa hàm main.
 Thành phần chịu trách nhiệm định vị, nạp (`loading`), liên kết (`linking`), khởi tạo (`initialization`) các class vào JVM.
 
 1. Nạp class: nạp class từ thư viện core hoặc các file bytecode.
-2. Liên kết: kiểm tra tính đúng đắn của các file class, cấp phát vùng nhớ cho các biến static, khởi tạo giá trị mặc định.
+2. Liên kết: kiểm tra tính đúng đắn của các file class, cấp phát vùng nhớ cho các biến, khởi tạo giá trị mặc định.
 3. Khởi tạo: chạy các đoạn code khởi tạo trong class (`static { ... }`).
 
 Có 3 loại `class loader` được cung cấp bởi JVM, mỗi loại hoạt động với các đối tượng khác nhau.
 
-- `Bootstrap classLoader`: loader duy nhất được hiện thực bằng native code thay vì Java code, chịu trách nhiệm load các class core của Java runtime lúc khởi chạy JVM.
-- `Extension classLoader`: load các class thuộc phần extentions.
+- `Bootstrap classLoader`: loader duy nhất được hiện thực bằng native code thay vì Java code, chịu trách nhiệm load các class cần thiết được yêu cầu bởi JVM, ví dụ `java.base`.
+- `Platform Class Loader`: load các Java SE modules (`Java Platform, Standard Edition java.sql,...`), customs module được cung cấp bởi lập trình viên.
+    + [Hướng dẫn [phân loại module](https://stackoverflow.com/questions/76699669/which-exact-classes-are-loaded-by-platform-classloader)]
 - `Application classLoader`: load các class trong đường dẫn classpath của ứng dụng (`-cp` hay biến môi trường `CLASSPATH`).
 
 Ba loại loader này kế thừa nhau, theo thứ tự cha - con là `Bootstrap` > `Extension` > `Application`, ngoài ra lập trình viên có thể tự hiện thực các lớp loader và sử dụng.
@@ -92,7 +93,22 @@ protected Class<?> loadClass(String name, boolean resolve)
 
 2. [Ví dụ cách xem [class loader của một class cụ thể](https://github.com/dntam00/java-notes/blob/main/src/main/java/loader/Loader.java)].
 
+```java
+public static void main(String[] args) {
+    System.out.println("Classloader of ArrayList:"
+                                + ArrayList.class.getClassLoader());
+    System.out.println("Classloader of DriverManager:"
+                                + DriverManager.class.getClassLoader());
+    System.out.println("Classloader of Loader:"
+                                   + Loader.class.getClassLoader());
+}
+```
+
 Chạy mã nguồn (2) được kết quả:
+
+1. `ArrayList` thuộc thư viện core nên được load bởi `Bootstrap`, loader này được viết bằng native code nên lúc in ra sẽ thấy `null`.
+2. `DriverManager` thuộc module `java.sql` và được load bởi `Platform loader`.
+3. `Loader` là một class bình thường và được load bởi `AppClass loader`.
 
 ![clas-loader-result](img/class-loader-result.png)
 
@@ -164,7 +180,7 @@ Hiện tại thì đa số JVM sử dụng Thông dịch và JIT.
 
 <!-- Nhớ những ngày đầu ngồi lọ mọ cài C++ để học môn lập trình ở ĐH, rồi code chạy hay bị segmentation fault hay tham chiếu con trỏ không hợp lệ :v, C++ hay C để phần quản lý vùng nhớ luôn cho lập trình viên, nghe có vẻ cũng nhiều quyền lực nhưng nếu code không kĩ thì đúng là đau khổ. -->
 
-Khác với C++ hay C, JVM quản lý bộ nhớ luôn cho lập trình viên, và như một lẽ tự nhiên, có cho thì có lấy, JVM cần hiện thực một trình thu hồi vùng nhớ không sử dụng để tái cấp phát, gọi là trình dọn rác.
+Khác với C++ hay C, JVM quản lý bộ nhớ luôn cho lập trình viên, và như một lẽ tự nhiên, có cho thì có lấy, JVM cần thu hồi vùng nhớ không sử dụng để tái cấp phát, việc này được thực thi bởi trình dọn rác.
 
 Thông qua quá trình phát triển của JVM, nhiều thuật toán đã được hiện thực với mục đích chính là:
 - Quản lý vùng nhớ hiệu quả, giảm phân mảnh.
@@ -190,3 +206,5 @@ Một số thuật toán:
 - https://docs.oracle.com/javase/specs/jvms/se11/html/jvms-2.html#jvms-2.5
 - https://stuefe.de/posts/metaspace/metaspace-architecture
 - https://blog.jamesdbloom.com/JVMInternals.html
+- https://stackoverflow.com/questions/40891433/understanding-metaspace-line-in-jvm-heap-printout/40899996#40899996
+- https://medium.com/azulsystems/using-jlink-to-build-java-runtimes-for-non-modular-applications-9568c5e70ef4
