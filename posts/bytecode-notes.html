@@ -1,0 +1,276 @@
+<html>
+
+<head>
+  <title>Bytecode (ghi chú) | Tam's Blog</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Tam's Blog</span></a>
+  </div>
+  <div class="container">
+    <div class="main">
+      <p><a href="/">&lt;- Quay về trang chủ</a></p>
+      <h1>Bytecode (ghi chú)</h1>
+      <p>Bytecode là mã trung gian được tạo ra bởi trình biên dịch (compiler), ngôn ngữ nguồn không nhất thiết là Java, nó không phải là mã máy (machine code) được sử dụng bởi JVM thông qua quá trình thông dịch (interpretation), Just-In-Time (JIT), hoặc Ahead-Of-Time (AOT).</p>
+<p><img src="img/java-bytecode-jit.png" alt="java-bytecode-jit" /></p>
+<h2><a href="#class-file" aria-hidden="true" class="anchor" id="class-file"></a>.class file</h2>
+<p>Trong Java, bytecode được lưu trữ trong các file <code>.class</code>, có thể được tạo ra từ mã nguồn Java bằng trình biên dịch thông qua lệnh <code>javac</code>.</p>
+<p>Ví dụ có một file <code>JavaByteCode.java</code> như sau:</p>
+<pre><code class="language-java">public class JavaByteCode {
+
+    public static void main(String[] args) {
+    }
+
+    public int add(int a, int b) {
+        return a + b;
+    }
+
+    void testConstant() {
+        String var = &quot;Hello&quot;;
+    }
+}
+</code></pre>
+<p>Chạy lệnh <code>javac JavaByteCode.java</code> sẽ tạo ra file <code>JavaByteCode.class</code>, đây là một file chứa mã hex, nếu đọc bằng hex editor sẽ thấy nội dung như sau:</p>
+<p><img src="img/JavaByteCode-class-hex.png" alt="JavaByteCode-class-hex" /></p>
+<p>Tất nhiên đây không phải dạng text có thể đọc được rõ ràng, để xem cấu trúc và nội dung của file này, cần một công cụ giải mã và JDK cung cấp sẵn lệnh <code>javap</code> để làm việc này.</p>
+<p>Lệnh <code>javap -c -verbose JavaByteCode.class</code> cho ra kết quả như sau:</p>
+<pre><code class="language-bash">Classfile /Users/dntam/Projects/java/leetcode/src/main/java/test/JavaByteCode.class
+  Last modified Jul 13, 2025; size 402 bytes
+  SHA-256 checksum e515c50ccb13397ae81db0bc1cdd28c13299c12fc757e200a0caae6c8c3c0131
+  Compiled from &quot;JavaByteCode.java&quot;
+public class test.JavaByteCode
+  minor version: 0
+  major version: 61
+  flags: (0x0021) ACC_PUBLIC, ACC_SUPER
+  this_class: #9                          // test/JavaByteCode
+  super_class: #2                         // java/lang/Object
+  interfaces: 0, fields: 0, methods: 4, attributes: 1
+Constant pool:
+   #1 = Methodref          #2.#3          // java/lang/Object.&quot;&lt;init&gt;&quot;:()V
+   #2 = Class              #4             // java/lang/Object
+   #3 = NameAndType        #5:#6          // &quot;&lt;init&gt;&quot;:()V
+   #4 = Utf8               java/lang/Object
+   #5 = Utf8               &lt;init&gt;
+   #6 = Utf8               ()V
+   #7 = String             #8             // Hello
+   #8 = Utf8               Hello
+   #9 = Class              #10            // test/JavaByteCode
+  #10 = Utf8               test/JavaByteCode
+  #11 = Utf8               Code
+  #12 = Utf8               LineNumberTable
+  #13 = Utf8               main
+  #14 = Utf8               ([Ljava/lang/String;)V
+  #15 = Utf8               add
+  #16 = Utf8               (II)I
+  #17 = Utf8               testConstant
+  #18 = Utf8               SourceFile
+  #19 = Utf8               JavaByteCode.java
+{
+  public test.JavaByteCode();
+    descriptor: ()V
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object.&quot;&lt;init&gt;&quot;:()V
+         4: return
+      LineNumberTable:
+        line 3: 0
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=0, locals=1, args_size=1
+         0: return
+      LineNumberTable:
+        line 6: 0
+
+  public int add(int, int);
+    descriptor: (II)I
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=2, locals=3, args_size=3
+         0: iload_1
+         1: iload_2
+         2: iadd
+         3: ireturn
+      LineNumberTable:
+        line 9: 0
+
+  void testConstant();
+    descriptor: ()V
+    flags: (0x0000)
+    Code:
+      stack=1, locals=2, args_size=1
+         0: ldc           #7                  // String Hello
+         2: astore_1
+         3: return
+      LineNumberTable:
+        line 13: 0
+        line 14: 3
+}
+SourceFile: &quot;JavaByteCode.java&quot;
+</code></pre>
+<h2><a href="#cấu-trúc-file-class" aria-hidden="true" class="anchor" id="cấu-trúc-file-class"></a><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6">Cấu trúc file .class</a></h2>
+<p>Cấu trúc file <code>.class</code> được chia ra các phần chính như sau:</p>
+<table>
+<thead>
+<tr>
+<th>Phần</th>
+<th>Mô tả</th>
+<th>Tham khảo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Class file structure</td>
+<td>Metadata của class: java version, constant_pool_count, access_flags, tham chiếu index this class, super class, fields_count, method_count</td>
+<td><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.1">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.1</a></td>
+</tr>
+<tr>
+<td>Constant pool</td>
+<td>Bảng lưu trữ các kí hiệu (symbolic) cho class, cụ thể là các hằng số, tham chiếu tên class, interface, method, variable,...</td>
+<td><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4</a></td>
+</tr>
+<tr>
+<td>Fields</td>
+<td>Biểu diễn định nghĩa các biến trong class: tên biến, kiểu dữ liệu, access flag</td>
+<td><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5</a></td>
+</tr>
+<tr>
+<td>Methods</td>
+<td>Biểu diễn định nghĩa các method trong class: tên hàm, tham số, access flag, stack size, code thực thi,...</td>
+<td><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6</a></td>
+</tr></tbody></table>
+<h3><a href="#descriptor" aria-hidden="true" class="anchor" id="descriptor"></a><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3">Descriptor</a></h3>
+<p><code>Descriptor</code> là chuỗi kí tự biểu diễn <em>kiểu</em> của:</p>
+<ul>
+<li>field: kiểu của class, biến instance, biến cục bộ. Ví dụ biến có kiểu <code>int</code> sẽ được biểu diễn là <code>I</code>, biến có kiểu <code>String</code> sẽ được biểu diễn là <code>Ljava/lang/String;</code>.</li>
+<li>method: kiểu của hàm, kiểu tham số, kiểu trả về. Ví dụ hàm main được biểu diễn <code>([Ljava/lang/String;)V</code>, trong đó:
+<ul>
+<li><code>[</code> là mảng, <code>L</code> là class (kiểu object), <code>I</code> là kiểu int, <code>V</code> là kiểu void.</li>
+<li><code>([Ljava/lang/String;)V</code> có nghĩa là hàm nhận vào một mảng các đối tượng kiểu String và không trả về giá trị gì.</li>
+</ul>
+</li>
+</ul>
+<h3><a href="#instruction-set" aria-hidden="true" class="anchor" id="instruction-set"></a><a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html">Instruction Set</a></h3>
+<p>Lấy trường hợp JVM cần thông dịch bytecode, JVM có thể được xem là bộ xử lý ảo (virtual processor) cho bytecode, để hiện thực điều này, JVM cung cấp tập hợp các chỉ dẫn (instruction set) để thực thi.</p>
+<p>Nhìn vào phần <code>Code</code> ở mỗi method của file <code>.class</code>, các lệnh như <code>iload_1</code>, <code>iload_2</code>, <code>iadd</code>, <code>ireturn</code> là các chỉ dẫn được định nghĩa bởi JVM, với mỗi chỉ dẫn JVM sẽ thực thi một hành động cụ thể.</p>
+<p>Nhắc lại JVM là một stack machine, các chỉ dẫn sẽ thao tác với các toán hạng trên stack.</p>
+<p>Lấy hàm cộng 2 số để phân tích:</p>
+<pre><code class="language-java">public int add(int a, int b) {
+        return a + b;
+}
+</code></pre>
+<p>Bytecode tương ứng:</p>
+<pre><code>  public int add(int, int);
+    descriptor: (II)I
+    flags: (0x0001) ACC_PUBLIC
+    Code:
+      stack=2, locals=3, args_size=3
+         0: iload_1
+         1: iload_2
+         2: iadd
+         3: ireturn
+      LineNumberTable:
+        line 13: 0
+</code></pre>
+<ol>
+<li><code>iload_1</code> và <code>iload_2</code> sẽ lấy giá trị của biến <code>a</code> và <code>b</code> từ stack, đưa vào stack.
+<ul>
+<li>stack: [a, b] -&gt; 2 phần tử.</li>
+</ul>
+</li>
+<li><code>iadd</code> sẽ lấy 2 giá trị trên stack, thực hiện phép cộng và đưa kết quả lên stack.
+<ul>
+<li>stack: [a + b] -&gt; 1 phần tử.</li>
+</ul>
+</li>
+<li><code>ireturn</code> sẽ lấy giá trị trên stack và trả về kết quả.</li>
+</ol>
+<p>Trong quá trình thực thi 3 bước ở trên, số lượng phần tử tối đa trên stack là 2, điều đặc biệt là trình biên dịch tính toán được số này dựa trên code và ghi vào metadata của hàm.</p>
+<p>Đoạn bytecode ở trên chỉ có những lệnh cơ bản, JVM cung cấp <a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html">hơn 200 lệnh</a> khác nhau để thực hiện các phép toán, thao tác với stack, điều khiển luồng chương trình, thao tác với mảng, đối tượng, v.v.</p>
+<h2><a href="#thao-thác-bytecode" aria-hidden="true" class="anchor" id="thao-thác-bytecode"></a>Thao thác bytecode</h2>
+<p>Một khi nắm được các thông tin về bytecode, có thể sử dụng thư viện <a href="https://github.com/Guardsquare/proguard-core">proguard-core</a> để thử tạo ra một file class và chạy bằng lệnh <code>java</code>.</p>
+<p>Thử tạo một <a href="https://github.com/dntam00/java-notes/blob/6eb0744c87edb4b2c5873fad03ec0af1503bd847/src/main/java/bytecode/JavaByteCodeManipulation.java#L18">hàm cộng 2 số và in ra kết quả</a> &lt;- đường dẫn source code:</p>
+<pre><code class="language-java">package bytecode;
+
+public class HelloWorld {
+    public static void main(String[] var0) {
+        System.out.println(&quot;Hello, world!&quot;);
+        System.out.println(&quot;Sum: &quot; + sum(5, 3));
+    }
+
+    public static int sum(int var0, int var1) {
+        return var0 + var1;
+    }
+}
+</code></pre>
+<p>Sau khi có file <code>.class</code>, có thể sử dụng lệnh <code>java</code> để chạy và xem kết quả:</p>
+<p><img src="img/java-bytecode-manipulation.png" alt="manipulation" /></p>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<ul>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html">https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html</a></li>
+<li><a href="https://blogs.oracle.com/javamagazine/post/mastering-the-mechanics-of-java-method-invocation">https://blogs.oracle.com/javamagazine/post/mastering-the-mechanics-of-java-method-invocation</a></li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/compiler.html'>compiler</a><a class='topic-tag' href='/tags/java.html'>java</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
