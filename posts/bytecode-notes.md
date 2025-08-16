@@ -212,3 +212,4 @@ Sau khi có file `.class`, có thể sử dụng lệnh `java` để chạy và 
 - https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html
 - https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html
 - https://blogs.oracle.com/javamagazine/post/mastering-the-mechanics-of-java-method-invocation
+- https://blogs.oracle.com/javamagazine/category/jm-jvm-internals
