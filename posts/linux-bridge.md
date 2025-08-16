@@ -2,7 +2,7 @@
 title: Networking (4) Virtual bridge
 published: true
 date: 2024-11-09 20:07:00
-tags: docker, network
+tags: docker, networking
 description: Try to understand docker network bridge
 image: 
 ---

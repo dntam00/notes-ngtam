@@ -2,7 +2,7 @@
 title: Health check using TCP
 published: true
 date: 2024-08-06 22:06:00
-tags: tcp, network
+tags: tcp, networking
 description: Some thought about doing health check using tcp connection
 image: 
 ---

@@ -2,7 +2,7 @@
 title: Pooling HTTP client
 published: true
 date: 2024-11-15 23:40:00
-tags: http, tcp, network, golang
+tags: http, tcp, networking, golang
 description: Understand HTTP Client in Golang
 image: 
 ---

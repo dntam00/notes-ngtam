@@ -2,7 +2,7 @@
 title: Networking (5) Docker network - bridge driver
 published: true
 date: 2024-11-14 15:24:00
-tags: docker, network
+tags: docker, networking
 description: Try to understand docker network bridge
 image: 
 ---

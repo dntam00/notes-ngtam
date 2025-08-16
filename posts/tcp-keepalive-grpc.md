@@ -2,7 +2,7 @@
 title: gRPC connection keep alive
 published: true
 date: 2024-08-16 23:13:00
-tags: tcp, network, grpc
+tags: tcp, networking, grpc
 description: Manage gRPC connection
 image: 
 ---
