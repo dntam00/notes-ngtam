@@ -1739,7 +1739,7 @@ p.special word wise {
 }
 
 .toc-level-1 {
-  /* font-weight: 600; */
+  font-weight: normal;
   padding-left: 0;
   /* font-size: 0.9em; */
 }
@@ -1849,12 +1849,17 @@ a.toc-link {
 
 /* Small screens: TOC at the top, condensed */
 @media screen and (max-width: 768px) {
+  .container.has-toc {
+    margin: 0;
+    padding: 20px;
+  }
+  
   .table-of-contents {
     background: none;
     border: none;
     border-left: 3px solid #007bff;
     padding: 12px 0 12px 12px;
-    margin: 0 0 25px 0;
+    margin: 0 0 20px 0;
   }
   
   .toc-title {
@@ -1883,4 +1888,38 @@ a.toc-link {
 
 .navigation-box {
   padding-bottom: 0px;
+  margin-bottom: 0;
+}
+
+/* Fix iOS Safari spacing issues */
+@media screen and (max-width: 768px) {
+  .navigation-box {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    min-height: auto;
+  }
+  
+  .container.has-toc.navigation-box {
+    margin-bottom: 0;
+    padding: 20px;
+  }
+  
+  .container.has-toc.navigation-box + .container.has-toc {
+    margin-top: 0;
+    padding-top: 0;
+  }
+}
+
+/* Specific fix for iPhone Safari */
+@supports (-webkit-touch-callout: none) {
+  @media screen and (max-width: 768px) {
+    .navigation-box {
+      display: block;
+      margin-bottom: 0;
+    }
+    
+    .container.has-toc.navigation-box + .container.has-toc {
+      margin-top: 0;
+    }
+  }
 }
