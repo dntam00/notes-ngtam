@@ -29,7 +29,7 @@ Nếu các bước này diễn ra đúng, `receiver` sẽ đóng connection bìn
 
 Vậy tại sao một TCP connection lại có trạng thái `TIME_WAIT`, liệu nó thực sự quan trọng?
 
-## TIME_WAIT
+## TIME WAIT
 
 Lý do phía chủ động đóng TCP connection bước vào trạng thái `TIME_WAIT` trong khoảng thời gian 2MSL thay vì trực tiếp bước vào trạng thái `CLOSED`:
 

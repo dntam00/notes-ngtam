@@ -7,8 +7,6 @@ description: Explain how async annotation in Spring works
 image: 
 ---
 
-Spring - framework toi yeu. :")
-
 Khi sử dụng Spring để phát triển các ứng dụng web, annotation là một phần không thể thiếu,
 từ thuở bắt đầu, Spring sử dụng xml để cấu hình mọi thứ, nhưng rõ ràng cách này rất cồng kềnh và mất thời gian,
 thời gian trôi qua, mọi thứ đều phát triển, Spring cũng vậy, thay vì sử dụng xml,
@@ -25,12 +23,16 @@ bạn cần tìm hiểu về các phần sau:
 
 —-----
 
+# @Async
+
 Trong bài này, mình sẽ viết về annotation `Async`.
 
 Annotation này cho phép bạn thực hiện lời gọi hàm bất đồng bộ,
 hàm được gọi sẽ được thực thi trong một thread khác và hàm gọi không cần chờ hàm được gọi thực thi xong để tiếp tục hay kết thúc,
 điều này giúp bạn tối ưu performance khi có những công việc tốn thời gian mà không cần thực thi theo thứ tự,
 một trường hợp thường gặp đó là việc gửi thông báo cho người dùng.
+
+## Ví dụ
 
 Để dùng annotation này, bạn chỉ cần sử dụng:
 
@@ -85,6 +87,8 @@ Về lí thuyết, bạn có thể không cần sử dụng thread pool executor
 - chỉ định prefix tên thread, dễ dàng trace log
 - chỉ định được queue size
 - chỉ định cách executor xử lý khi số job vượt quá những thông số đã được cấu hình
+
+## Nguyên lý
 
 Tiếp theo, làm thế nào Spring xử lý được annotation `@Async`?
 Câu trả lời nằm ở dynamic proxy.
@@ -152,9 +156,7 @@ public Object postProcessAfterInitialization(Object bean, String beanName) {
 }
 ```
 
-Trong trường hợp object proxy được tạo, chú ý cách mà Spring khởi tạo proxy factory,
- framework thêm `advisor` vào `proxy factory` trước khi tạo ra object proxy
-  bằng câu lệnh `proxyFactory.getProxy(classLoader)`.
+Trong trường hợp object proxy được tạo, chú ý cách mà Spring khởi tạo proxy factory, framework thêm `advisor` vào `proxy factory` trước khi tạo ra object proxy bằng câu lệnh `proxyFactory.getProxy(classLoader)`.
 
 `Advisor` trong trường hợp của `@Async` annotation là `AsyncAnnotationAdvisor`,
  dưới đây là đoạn code khởi tạo `advisor`:
@@ -253,6 +255,8 @@ Cuối cùng, mình chạy chương trình và monitor thread pool executor đ�
 2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks Completed: 24
 2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks in Queue: 0
 ```
+
+## Tổng kết
 
 Qua bài viết này mình đã phân tích cách Spring khởi tạo cũng như hiện thực annotation `@Async`,
 để có thể hiểu rõ và ứng dụng tương tự vào các annotation khác của Spring,

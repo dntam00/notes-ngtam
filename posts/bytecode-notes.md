@@ -121,10 +121,9 @@ Constant pool:
 SourceFile: "JavaByteCode.java"
 ```
 
-## [Cấu trúc file .class](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6)
+## Cấu trúc file .class
 
-
-Cấu trúc file `.class` được chia ra các phần chính như sau:
+[Cấu trúc file `.class`](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6) được chia ra các phần chính như sau:
 
 | Phần                 | Mô tả                                                                                                                                     | Tham khảo                                                               |
 |----------------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
@@ -133,17 +132,17 @@ Cấu trúc file `.class` được chia ra các phần chính như sau:
 | Fields               | Biểu diễn định nghĩa các biến trong class: tên biến, kiểu dữ liệu, access flag                                                            | https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5 |
 | Methods              | Biểu diễn định nghĩa các method trong class: tên hàm, tham số, access flag, stack size, code thực thi,...                                                                                                                                            | https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6 |
 
-### [Descriptor](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3)
+### Descriptor
 
-`Descriptor` là chuỗi kí tự biểu diễn *kiểu* của:
+[Descriptor](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3) là chuỗi kí tự biểu diễn *kiểu* của:
 - field: kiểu của class, biến instance, biến cục bộ. Ví dụ biến có kiểu `int` sẽ được biểu diễn là `I`, biến có kiểu `String` sẽ được biểu diễn là `Ljava/lang/String;`.
 - method: kiểu của hàm, kiểu tham số, kiểu trả về. Ví dụ hàm main được biểu diễn `([Ljava/lang/String;)V`, trong đó:
   - `[` là mảng, `L` là class (kiểu object), `I` là kiểu int, `V` là kiểu void.
   - `([Ljava/lang/String;)V` có nghĩa là hàm nhận vào một mảng các đối tượng kiểu String và không trả về giá trị gì.
 
-### [Instruction Set](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html)
+### Tập chỉ dẫn
 
-Lấy trường hợp JVM cần thông dịch bytecode, JVM có thể được xem là bộ xử lý ảo (virtual processor) cho bytecode, để hiện thực điều này, JVM cung cấp tập hợp các chỉ dẫn (instruction set) để thực thi. 
+Lấy trường hợp JVM cần thông dịch bytecode, JVM có thể được xem là bộ xử lý ảo (virtual processor) cho bytecode, để hiện thực điều này, JVM cung cấp tập hợp các chỉ dẫn ([instruction set](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html)) để thực thi. 
 
 Nhìn vào phần `Code` ở mỗi method của file `.class`, các lệnh như `iload_1`, `iload_2`, `iadd`, `ireturn` là các chỉ dẫn được định nghĩa bởi JVM, với mỗi chỉ dẫn JVM sẽ thực thi một hành động cụ thể.
 

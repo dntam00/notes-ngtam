@@ -43,7 +43,8 @@
         </div>
   <div class="container has-toc">
     <div class="table-of-contents">
-      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#time-wait" class="toc-link toc-level-2"><span class="toc-hash">#</span> TIME_WAIT</a></li>
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list">  <li><a href="#time-wait" class="toc-link toc-level-2"><span class="toc-hash">#</span> TIME WAIT</a></li>
     <li><a href="#tnh-tin-cy-trong-vic-truyn-d-liu" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính tin cậy trong việc truyền dữ liệu</a></li>
     <li><a href="#tnh-ng-n-ca-vic-ng-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính đúng đắn của việc đóng connection</a></li>
   <li><a href="#v-d-go-netstat" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ Go + Netstat</a></li>
@@ -73,7 +74,7 @@
 <p>Tạm dịch: MSL là khoảng thời gian tối đa một gói tin TCP tồn tại trong đường truyền mạng. Theo thiết kế ban đầu RFC 793, nó có giá trị 2 phút.</p>
 </blockquote>
 <p>Vậy tại sao một TCP connection lại có trạng thái <code>TIME_WAIT</code>, liệu nó thực sự quan trọng?</p>
-<h2><a href="#time_wait" aria-hidden="true" class="anchor" id="time_wait"></a>TIME_WAIT</h2>
+<h2><a href="#time-wait" aria-hidden="true" class="anchor" id="time-wait"></a>TIME WAIT</h2>
 <p>Lý do phía chủ động đóng TCP connection bước vào trạng thái <code>TIME_WAIT</code> trong khoảng thời gian 2MSL thay vì trực tiếp bước vào trạng thái <code>CLOSED</code>:</p>
 <ul>
 <li>ngăn chặn việc những việc gói tin bị delayed do network được nhận bởi một connection mới → nếu việc này xảy ra, TCP không còn là một giao thức tin cậy nữa</li>

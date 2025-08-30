@@ -43,12 +43,15 @@
         </div>
   <div class="container has-toc">
     <div class="table-of-contents">
-      
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list"><li><a href="#async" class="toc-link toc-level-1"><span class="toc-hash">#</span> @Async</a></li>
+  <li><a href="#v-d" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
+  <li><a href="#nguyn-l" class="toc-link toc-level-2"><span class="toc-hash">#</span> Nguyên lý</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
     <div class="main">
       <h1>Async annotation in Spring</h1>
-      <p>Spring - framework toi yeu. :&quot;)</p>
-<p>Khi sử dụng Spring để phát triển các ứng dụng web, annotation là một phần không thể thiếu,
+      <p>Khi sử dụng Spring để phát triển các ứng dụng web, annotation là một phần không thể thiếu,
 từ thuở bắt đầu, Spring sử dụng xml để cấu hình mọi thứ, nhưng rõ ràng cách này rất cồng kềnh và mất thời gian,
 thời gian trôi qua, mọi thứ đều phát triển, Spring cũng vậy, thay vì sử dụng xml,
 bạn có thể sử dụng các annotation để cấu hình,
@@ -63,11 +66,13 @@ bạn cần tìm hiểu về các phần sau:</p>
 <li>Dynamic proxy</li>
 </ul>
 <p>—-----</p>
+<h1><a href="#async" aria-hidden="true" class="anchor" id="async"></a>@Async</h1>
 <p>Trong bài này, mình sẽ viết về annotation <code>Async</code>.</p>
 <p>Annotation này cho phép bạn thực hiện lời gọi hàm bất đồng bộ,
 hàm được gọi sẽ được thực thi trong một thread khác và hàm gọi không cần chờ hàm được gọi thực thi xong để tiếp tục hay kết thúc,
 điều này giúp bạn tối ưu performance khi có những công việc tốn thời gian mà không cần thực thi theo thứ tự,
 một trường hợp thường gặp đó là việc gửi thông báo cho người dùng.</p>
+<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
 <p>Để dùng annotation này, bạn chỉ cần sử dụng:</p>
 <ul>
 <li><code>@EnableAsync</code></li>
@@ -120,6 +125,7 @@ việc này sẽ mang lại nhiều lợi ích:</p>
 <li>chỉ định được queue size</li>
 <li>chỉ định cách executor xử lý khi số job vượt quá những thông số đã được cấu hình</li>
 </ul>
+<h2><a href="#nguyên-lý" aria-hidden="true" class="anchor" id="nguyên-lý"></a>Nguyên lý</h2>
 <p>Tiếp theo, làm thế nào Spring xử lý được annotation <code>@Async</code>?
 Câu trả lời nằm ở dynamic proxy.</p>
 <p><img src="img/proxy-async.png" alt="Proxy async object" /></p>
@@ -180,9 +186,7 @@ public Object postProcessAfterInitialization(Object bean, String beanName) {
     return bean;
 }
 </code></pre>
-<p>Trong trường hợp object proxy được tạo, chú ý cách mà Spring khởi tạo proxy factory,
-framework thêm <code>advisor</code> vào <code>proxy factory</code> trước khi tạo ra object proxy
-bằng câu lệnh <code>proxyFactory.getProxy(classLoader)</code>.</p>
+<p>Trong trường hợp object proxy được tạo, chú ý cách mà Spring khởi tạo proxy factory, framework thêm <code>advisor</code> vào <code>proxy factory</code> trước khi tạo ra object proxy bằng câu lệnh <code>proxyFactory.getProxy(classLoader)</code>.</p>
 <p><code>Advisor</code> trong trường hợp của <code>@Async</code> annotation là <code>AsyncAnnotationAdvisor</code>,
 dưới đây là đoạn code khởi tạo <code>advisor</code>:</p>
 <pre><code class="language-java">public AsyncAnnotationAdvisor(@Nullable Supplier&lt;Executor&gt; executor, 
@@ -269,6 +273,7 @@ nhiều aspect cho cùng một method.</p>
 2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks Completed: 24
 2024-04-30T14:14:23.961+07:00  INFO [,,] 60157 --- [pool-1-thread-1] n.l.asycnannotation.ExecutorThreadPool   : Number of Tasks in Queue: 0
 </code></pre>
+<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
 <p>Qua bài viết này mình đã phân tích cách Spring khởi tạo cũng như hiện thực annotation <code>@Async</code>,
 để có thể hiểu rõ và ứng dụng tương tự vào các annotation khác của Spring,
 bạn có thể sẽ phải nghiên cứu kĩ hơn các phần mình đề cập ở đầu bài viết.</p>

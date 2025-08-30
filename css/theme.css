@@ -1805,6 +1805,16 @@ a.toc-link {
     order: 0;
     width: 100%;
   }
+  
+  /* When TOC is empty, center the main content */
+  .container.has-toc.toc-empty {
+    justify-content: center;
+    max-width: 720px;
+  }
+  
+  .container.has-toc.toc-empty .main {
+    margin: 0 auto;
+  }
 }
 
 /* Medium screens: TOC at the top */

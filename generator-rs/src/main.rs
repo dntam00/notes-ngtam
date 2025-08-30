@@ -121,11 +121,29 @@ fn generate_meta(post: &Metadata) -> String {
 
 fn generate_toc(markdown: &str) -> String {
     let heading_regex = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
+    let code_fence_regex = Regex::new(r"^```").unwrap();
     let mut toc_items: Vec<String> = vec![];
+    let mut in_code_block = false;
     
     println!("Generating TOC from {} lines of markdown", markdown.lines().count());
     
     for line in markdown.lines() {
+        let trimmed_line = line.trim();
+        
+        // Check for fenced code blocks
+        if code_fence_regex.is_match(line) {
+            in_code_block = !in_code_block;
+            continue;
+        }
+        
+        // Check for indented code blocks (4+ spaces or 1+ tabs at start)
+        let is_indented_code = line.starts_with("    ") || line.starts_with("\t");
+        
+        // Skip heading parsing if we're in a code block
+        if in_code_block || is_indented_code {
+            continue;
+        }
+        
         if let Some(captures) = heading_regex.captures(line) {
             let level = captures.get(1).unwrap().as_str().len();
             let title = captures.get(2).unwrap().as_str().trim();
@@ -136,7 +154,8 @@ fn generate_toc(markdown: &str) -> String {
                 .chars()
                 .filter_map(|c| match c {
                     'a'..='z' | 'A'..='Z' | '0'..='9' => Some(c.to_ascii_lowercase()),
-                    ' ' | '-' | '_' | '.' => Some('-'),
+                    '_' => Some('_'), // Keep underscores as-is
+                    ' ' | '-' | '.' => Some('-'),
                     _ => None,
                 })
                 .collect::<String>()
@@ -158,8 +177,7 @@ fn generate_toc(markdown: &str) -> String {
     }
     
     format!(
-        "<div class=\"toc-title\">Table of Contents</div>\
-         <ul class=\"toc-list\">\
+        "<ul class=\"toc-list\">\
          {}\
          </ul>",
         toc_items.join("\n")

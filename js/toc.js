@@ -7,6 +7,15 @@
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', function() {
         const tocContainer = document.querySelector('.table-of-contents');
+        const hasToC = document.querySelector('.container.has-toc');
+        
+        // Add class to container when TOC is empty
+        if (tocContainer && hasToC) {
+            if (tocContainer.innerHTML.trim() === '' || tocContainer.children.length === 0) {
+                hasToC.classList.add('toc-empty');
+            }
+        }
+        
         if (!tocContainer) return;
 
         const tocLinks = tocContainer.querySelectorAll('.toc-link');
@@ -24,7 +33,7 @@
                 const text = heading.textContent.trim();
                 const id = text
                     .toLowerCase()
-                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[^a-z0-9\s_-]/g, '')
                     .replace(/\s+/g, '-')
                     .replace(/-+/g, '-')
                     .replace(/^-|-$/g, '');

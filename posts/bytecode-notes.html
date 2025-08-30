@@ -43,10 +43,11 @@
         </div>
   <div class="container has-toc">
     <div class="table-of-contents">
-      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#class-file" class="toc-link toc-level-2"><span class="toc-hash">#</span> .class file</a></li>
-  <li><a href="#cu-trc-file-classhttpsdocs-oracle-comjavasespecsjvmsse8htmljvms-4-htmljvms-4-4-6" class="toc-link toc-level-2"><span class="toc-hash">#</span> [Cấu trúc file .class](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6)</a></li>
-    <li><a href="#descriptorhttpsdocs-oracle-comjavasespecsjvmsse8htmljvms-4-htmljvms-4-3" class="toc-link toc-level-3"><span class="toc-hash">#</span> [Descriptor](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3)</a></li>
-    <li><a href="#instruction-sethttpsdocs-oracle-comjavasespecsjvmsse7htmljvms-6-html" class="toc-link toc-level-3"><span class="toc-hash">#</span> [Instruction Set](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html)</a></li>
+        <div class="toc-title">Table of Contents</div>
+        <ul class="toc-list">  <li><a href="#class-file" class="toc-link toc-level-2"><span class="toc-hash">#</span> .class file</a></li>
+  <li><a href="#cu-trc-file-class" class="toc-link toc-level-2"><span class="toc-hash">#</span> Cấu trúc file .class</a></li>
+    <li><a href="#descriptor" class="toc-link toc-level-3"><span class="toc-hash">#</span> Descriptor</a></li>
+    <li><a href="#tp-ch-dn" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tập chỉ dẫn</a></li>
   <li><a href="#thao-thc-bytecode" class="toc-link toc-level-2"><span class="toc-hash">#</span> Thao thác bytecode</a></li>
   <li><a href="#references" class="toc-link toc-level-2"><span class="toc-hash">#</span> References</a></li></ul>
     </div>
@@ -153,8 +154,8 @@ Constant pool:
 }
 SourceFile: &quot;JavaByteCode.java&quot;
 </code></pre>
-<h2><a href="#cấu-trúc-file-class" aria-hidden="true" class="anchor" id="cấu-trúc-file-class"></a><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6">Cấu trúc file .class</a></h2>
-<p>Cấu trúc file <code>.class</code> được chia ra các phần chính như sau:</p>
+<h2><a href="#cấu-trúc-file-class" aria-hidden="true" class="anchor" id="cấu-trúc-file-class"></a>Cấu trúc file .class</h2>
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.6">Cấu trúc file <code>.class</code></a> được chia ra các phần chính như sau:</p>
 <table>
 <thead>
 <tr>
@@ -184,8 +185,8 @@ SourceFile: &quot;JavaByteCode.java&quot;
 <td>Biểu diễn định nghĩa các method trong class: tên hàm, tham số, access flag, stack size, code thực thi,...</td>
 <td><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6">https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.6</a></td>
 </tr></tbody></table>
-<h3><a href="#descriptor" aria-hidden="true" class="anchor" id="descriptor"></a><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3">Descriptor</a></h3>
-<p><code>Descriptor</code> là chuỗi kí tự biểu diễn <em>kiểu</em> của:</p>
+<h3><a href="#descriptor" aria-hidden="true" class="anchor" id="descriptor"></a>Descriptor</h3>
+<p><a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3">Descriptor</a> là chuỗi kí tự biểu diễn <em>kiểu</em> của:</p>
 <ul>
 <li>field: kiểu của class, biến instance, biến cục bộ. Ví dụ biến có kiểu <code>int</code> sẽ được biểu diễn là <code>I</code>, biến có kiểu <code>String</code> sẽ được biểu diễn là <code>Ljava/lang/String;</code>.</li>
 <li>method: kiểu của hàm, kiểu tham số, kiểu trả về. Ví dụ hàm main được biểu diễn <code>([Ljava/lang/String;)V</code>, trong đó:
@@ -195,8 +196,8 @@ SourceFile: &quot;JavaByteCode.java&quot;
 </ul>
 </li>
 </ul>
-<h3><a href="#instruction-set" aria-hidden="true" class="anchor" id="instruction-set"></a><a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html">Instruction Set</a></h3>
-<p>Lấy trường hợp JVM cần thông dịch bytecode, JVM có thể được xem là bộ xử lý ảo (virtual processor) cho bytecode, để hiện thực điều này, JVM cung cấp tập hợp các chỉ dẫn (instruction set) để thực thi.</p>
+<h3><a href="#tập-chỉ-dẫn" aria-hidden="true" class="anchor" id="tập-chỉ-dẫn"></a>Tập chỉ dẫn</h3>
+<p>Lấy trường hợp JVM cần thông dịch bytecode, JVM có thể được xem là bộ xử lý ảo (virtual processor) cho bytecode, để hiện thực điều này, JVM cung cấp tập hợp các chỉ dẫn (<a href="https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-6.html">instruction set</a>) để thực thi.</p>
 <p>Nhìn vào phần <code>Code</code> ở mỗi method của file <code>.class</code>, các lệnh như <code>iload_1</code>, <code>iload_2</code>, <code>iadd</code>, <code>ireturn</code> là các chỉ dẫn được định nghĩa bởi JVM, với mỗi chỉ dẫn JVM sẽ thực thi một hành động cụ thể.</p>
 <p>Nhắc lại JVM là một stack machine, các chỉ dẫn sẽ thao tác với các toán hạng trên stack.</p>
 <p>Lấy hàm cộng 2 số để phân tích:</p>
