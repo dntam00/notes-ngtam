@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,20 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#trnh-bin-dch" class="toc-link toc-level-2"><span class="toc-hash">#</span> Trình biên dịch</a></li>
+    <li><a href="#phn-tch-t-vng-lexical-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích từ vựng (Lexical analysis)</a></li>
+    <li><a href="#phn-tch-ng-php-syntax-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích ngữ pháp (Syntax analysis)</a></li>
+    <li><a href="#to-cy-c-php-tru-tng-abstract-syntax-tree-generation" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</a></li>
+    <li><a href="#intermediate-code-generation" class="toc-link toc-level-3"><span class="toc-hash">#</span> Intermediate code generation</a></li>
+    <li><a href="#tng-kt" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Trình biên dịch</h1>
       <p>Sử dụng Java nhiều năm rồi nhưng mình chưa có cơ hội tìm hiểu nhiều về <code>JVM</code>, nó như một chiếc hộp kín đầy bí ẩn và đáng sợ, như ai đó đã từng nói một trong những lý do mình sợ cái một cái gì đó là do mình chưa hiểu rõ về nó, nên để bớt sợ hơn thì mình bắt đầu công cuộc xoá mù JVM.</p>
 <p>Để tìm kiếm những mảnh chìa khoá đầu tiên trong hành trình mở khoá chiếc hộp này (hy vọng mở được :v), mình bắt đầu <em>lại</em> với cách một trình biên dịch hoạt động. Nói tìm hiểu lại là vì hồi đại học trường mình có dạy môn <code>Nguyên lý ngôn ngữ lập trình</code> nói về cách một ngôn ngữ lập trình (NNLT) hoạt động (môn này giờ nghĩ lại vẫn thấy sợ :3). May mắn là sau nhiều năm mình vẫn còn lưu lại mã nguồn của bài tập lớn nên có gì lấy làm ví dụ trong bài này luôn. :D</p>

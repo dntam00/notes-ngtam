@@ -92,7 +92,7 @@ protected Class<?> loadClass(String name, boolean resolve)
 
 4. Nguyên tắc lười (lazy loading principle): class được nạp theo yêu cầu sử dụng thay vì được nạp khi JVM khởi tạo.
 
-#### Code
+#### Code ví dụ
 
 1. [Ví dụ cách hiện thực [custom class loader](https://github.com/dntam00/custom-classloader/blob/main/src/main/java/club/shengsheng/MyClassLoader.java)].
 

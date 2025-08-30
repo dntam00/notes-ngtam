@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,20 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#core-component" class="toc-link toc-level-2"><span class="toc-hash">#</span> Core component</a></li>
+  <li><a href="#resolver" class="toc-link toc-level-2"><span class="toc-hash">#</span> Resolver</a></li>
+  <li><a href="#balancer" class="toc-link toc-level-2"><span class="toc-hash">#</span> Balancer</a></li>
+  <li><a href="#v-d" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>gRPC Load balancing (2) - Client architecture</h1>
       <p>Tiếp nối chuỗi bài viết về cân bằng tải <code>gRPC</code>, hôm nay mình sẽ tìm hiểu về các thành phần ở <code>gRPC client</code>, đặc biệt là những thành phần liên quan đến cân bằng tải.</p>
 <h2><a href="#core-component" aria-hidden="true" class="anchor" id="core-component"></a>Core component</h2>

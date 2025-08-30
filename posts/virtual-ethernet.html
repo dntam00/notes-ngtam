@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,25 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#network-namespace" class="toc-link toc-level-2"><span class="toc-hash">#</span> Network Namespace</a></li>
+  <li><a href="#virtual-ethernet" class="toc-link toc-level-2"><span class="toc-hash">#</span> Virtual ethernet</a></li>
+    <li><a href="#veth-pair-cng-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair cùng network namespace</a></li>
+    <li><a href="#veth-pair-khc-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair khác network namespace</a></li>
+<li><a href="#to-mi-1-network-namespace" class="toc-link toc-level-1"><span class="toc-hash">#</span> tạo mới 1 network namespace</a></li>
+<li><a href="#to-cp-veth" class="toc-link toc-level-1"><span class="toc-hash">#</span> tạo cặp veth</a></li>
+<li><a href="#gn-veth4-vo-namespace-ns-example" class="toc-link toc-level-1"><span class="toc-hash">#</span> gán veth4 vào namespace ns-example</a></li>
+<li><a href="#setup-veth-in-another-network-namespace" class="toc-link toc-level-1"><span class="toc-hash">#</span> setup veth in another network namespace</a></li>
+<li><a href="#terminal-1" class="toc-link toc-level-1"><span class="toc-hash">#</span> terminal 1</a></li>
+<li><a href="#terminal-2" class="toc-link toc-level-1"><span class="toc-hash">#</span> terminal 2</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Networking (3) Network namespace / Virtual ethernet (Veth)</h1>
       <h2><a href="#network-namespace" aria-hidden="true" class="anchor" id="network-namespace"></a>Network Namespace</h2>
 <p>Một từ khoá mà từ hồi năm 3 đại học đến bây giờ mình đã học và nghe rất nhiều đó là <code>isolation</code>, tiếng Việt có nghĩa là sự tách biệt, không ảnh hưởng lẫn nhau, những ngữ cảnh mình tiếp xúc với khái niệm này theo thời gian như sau:</p>

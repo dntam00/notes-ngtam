@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,21 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#time-wait" class="toc-link toc-level-2"><span class="toc-hash">#</span> TIME_WAIT</a></li>
+    <li><a href="#tnh-tin-cy-trong-vic-truyn-d-liu" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính tin cậy trong việc truyền dữ liệu</a></li>
+    <li><a href="#tnh-ng-n-ca-vic-ng-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính đúng đắn của việc đóng connection</a></li>
+  <li><a href="#v-d-go-netstat" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ Go + Netstat</a></li>
+    <li><a href="#trng-thi-ca-tcp-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Trạng thái của TCP connection</a></li>
+    <li><a href="#connection-reset-by-peer" class="toc-link toc-level-3"><span class="toc-hash">#</span> Connection reset by peer</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+    <li><a href="#references" class="toc-link toc-level-3"><span class="toc-hash">#</span> References</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Networking (2) TCP Close connection</h1>
       <p>Dạo gần đây mình có cơ hội làm việc với nhiều thứ liên quan đến TCP/UDP protocol mà mơ hồ quá nên phải dành thời gian đọc lại chủ đề này, rồi mình phát hiện ra môn Mạng máy tính ở BK mình học không hiểu gì cả :v, không biết sao qua môn được nữa :)). À mà cũng đúng thôi, hồi đó học không hiểu gì toàn trốn xuống H1 hoặc ngủ trên lớp với mấy đứa bạn xD, công nhận tiết học này mình có sức ngủ thật ~~.</p>
 <p>Vì đọc vẫn còn nhiều thứ mơ hồ nên mình muốn viết ra để tự vấn lại bản thân những thứ mình tìm hiểu được, bài hôm nay sẽ  viết về cách TCP connection được đóng.</p>

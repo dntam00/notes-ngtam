@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,16 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#docker-network" class="toc-link toc-level-2"><span class="toc-hash">#</span> Docker network</a></li>
+  <li><a href="#expose" class="toc-link toc-level-2"><span class="toc-hash">#</span> Expose</a></li>
+  <li><a href="#publish" class="toc-link toc-level-2"><span class="toc-hash">#</span> Publish</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Docker expose and publish command</h1>
       <p>Yesterday, I got stuck when trying to write a docker compose file of several services including redis, mysql and web services. The log of all web services showed that they couldn't connect to mysql database, after trying debugging and reading documentation, I've found that I misunderstood the usage of <code>expose</code> and <code>publish</code> command in dockerfile and docker-compose file. So I write this post to explain how <code>expose</code> and <code>publish</code> command work.</p>
 <h2><a href="#docker-network" aria-hidden="true" class="anchor" id="docker-network"></a>Docker network</h2>

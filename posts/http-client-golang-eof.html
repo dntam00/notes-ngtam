@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,19 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#pooling" class="toc-link toc-level-2"><span class="toc-hash">#</span> Pooling</a></li>
+  <li><a href="#http-client-trong-go" class="toc-link toc-level-2"><span class="toc-hash">#</span> HTTP client trong Go</a></li>
+  <li><a href="#vn" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+  <li><a href="#gii-php" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li>
+  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Pooling HTTP client</h1>
       <!-- `HTTP` is a application protocol based on TCP transport (layer 4 OSI), I have a related post [[TCP Close connection](https://notes-ngtam.pages.dev/posts/close-tcp)], you could read it before going ahead. -->
 <p><code>HTTP</code> là 1 giao thức ở tầng ứng dụng (application) sử dụng giao thức <code>TCP</code> ở tầng vận chuyển (transport), trước đó mình cũng có viết 1 bài liên quan đến <code>TCP</code>, bạn có thể đọc trước [<a href="https://notes-ngtam.pages.dev/posts/close-tcp">TCP Close connection</a>].</p>

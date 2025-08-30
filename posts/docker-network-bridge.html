@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,22 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#overview" class="toc-link toc-level-2"><span class="toc-hash">#</span> Overview</a></li>
+    <li><a href="#v-d" class="toc-link toc-level-3"><span class="toc-hash">#</span> Ví dụ</a></li>
+<li><a href="#verify" class="toc-link toc-level-1"><span class="toc-hash">#</span> verify</a></li>
+<li><a href="#verify" class="toc-link toc-level-1"><span class="toc-hash">#</span> verify</a></li>
+<li><a href="#result" class="toc-link toc-level-1"><span class="toc-hash">#</span> result</a></li>
+<li><a href="#result" class="toc-link toc-level-1"><span class="toc-hash">#</span> result</a></li>
+<li><a href="#result" class="toc-link toc-level-1"><span class="toc-hash">#</span> result</a></li>
+<li><a href="#result" class="toc-link toc-level-1"><span class="toc-hash">#</span> result</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Networking (5) Docker network - bridge driver</h1>
       <p>Tiếp tục chuỗi bài viết tìm hiểu về <code>virtual netowrk interface</code>, trái ngược với những bài viết trước hơi mang tính lí thuyết, bài viết hôm nay sẽ có tính ứng dụng hơn, đó là cách <code>docker</code> sử dụng <code>virtual ethernet</code> và <code>virtual bridge</code> để hiện thực một phần hệ thống <code>network</code>.</p>
 <p>Dựa theo tài liệu của <a href="https://docs.docker.com/engine/network/#drivers">Docker</a>, <code>bridge</code> là diver mặc định của <code>docker network</code>, <code>bridge driver</code> cho phép các container chạy trên cùng 1 máy vật lý giao tiếp với nhau, đối với các container chạy trên các máy vật lý khác nhau, chúng ta cần sử dụng các <code>driver network</code> khác như <code>host</code>, <code>NAT</code>, <code>overlay (e.g VxLAN)</code>,...</p>

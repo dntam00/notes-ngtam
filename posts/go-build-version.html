@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,15 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#git-tag-revision" class="toc-link toc-level-2"><span class="toc-hash">#</span> Git tag, revision</a></li>
+  <li><a href="#go" class="toc-link toc-level-2"><span class="toc-hash">#</span> Go</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Application version in Go</h1>
       <p>Hiện nay, chúng ta có thể thấy CI/CD được áp dụng ở nơi, việc chuẩn hoá các quá trình này bằng các công cụ như Jenkins giúp các lập trình viên giảm thiểu thời gian tích hợp, triển khai phần mềm. Tuy nhiên, không phải lúc nào những pipeline này cũng chạy đúng, team infra có thể viết script không cẩn thận và một ngày đẹp trời ứng dụng của bạn vẫn chạy với code cũ sau nhiều lần bấm deploy trên pipeline :). Để đảm bảo an toàn và tiết kiệm thời gian, có một cách mà nhiều người sử dụng đó là hiển thị tag, commit, thời gian build code khi build source code.</p>
 <h2><a href="#git-tag-revision" aria-hidden="true" class="anchor" id="git-tag-revision"></a>Git tag, revision</h2>

@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,27 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#bridge" class="toc-link toc-level-2"><span class="toc-hash">#</span> Bridge</a></li>
+<li><a href="#verify-result" class="toc-link toc-level-1"><span class="toc-hash">#</span> verify result</a></li>
+<li><a href="#bridge-link" class="toc-link toc-level-1"><span class="toc-hash">#</span> bridge link</a></li>
+<li><a href="#brctl-show" class="toc-link toc-level-1"><span class="toc-hash">#</span> brctl show</a></li>
+<li><a href="#ping" class="toc-link toc-level-1"><span class="toc-hash">#</span> ping</a></li>
+<li><a href="#tcpdump" class="toc-link toc-level-1"><span class="toc-hash">#</span> tcpdump</a></li>
+<li><a href="#arp-n" class="toc-link toc-level-1"><span class="toc-hash">#</span> arp -n</a></li>
+<li><a href="#brctl-showmacs-br0-mac-address-de9a36c34893-ca-veth1" class="toc-link toc-level-1"><span class="toc-hash">#</span> brctl showmacs br0 -> mac address de:9a:36:c3:48:93 của veth1</a></li>
+<li><a href="#ping" class="toc-link toc-level-1"><span class="toc-hash">#</span> ping</a></li>
+<li><a href="#tcpdump" class="toc-link toc-level-1"><span class="toc-hash">#</span> tcpdump</a></li>
+  <li><a href="#ng-dng" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ứng dụng</a></li>
+    <li><a href="#virtual-machine" class="toc-link toc-level-3"><span class="toc-hash">#</span> Virtual machine</a></li>
+    <li><a href="#docker-container" class="toc-link toc-level-3"><span class="toc-hash">#</span> Docker container</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Networking (4) Virtual bridge</h1>
       <p>Ở bài trước, mình đã tìm hiểu về <code>network namepsace</code> và <code>virtual ethernet</code>, hôm nay mình sẽ tiếp tục tìm hiểu về một thiết bị mạng ảo quan trọng khác, đó là <code>bridge</code>.</p>
 <h2><a href="#bridge" aria-hidden="true" class="anchor" id="bridge"></a>Bridge</h2>

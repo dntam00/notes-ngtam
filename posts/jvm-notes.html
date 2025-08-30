@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,24 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#tng-quan" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng quan</a></li>
+  <li><a href="#jvm" class="toc-link toc-level-2"><span class="toc-hash">#</span> JVM</a></li>
+    <li><a href="#class-loader-subsystem" class="toc-link toc-level-3"><span class="toc-hash">#</span> Class loader subsystem</a></li>
+      <li><a href="#nguyn-tc" class="toc-link toc-level-4"><span class="toc-hash">#</span> Nguyên tắc</a></li>
+      <li><a href="#code-v-d" class="toc-link toc-level-4"><span class="toc-hash">#</span> Code ví dụ</a></li>
+    <li><a href="#runtime-data-area" class="toc-link toc-level-3"><span class="toc-hash">#</span> Runtime data area</a></li>
+    <li><a href="#execute-engine" class="toc-link toc-level-3"><span class="toc-hash">#</span> Execute engine</a></li>
+      <li><a href="#thc-thi" class="toc-link toc-level-4"><span class="toc-hash">#</span> Thực thi</a></li>
+      <li><a href="#garbage-collector" class="toc-link toc-level-4"><span class="toc-hash">#</span> Garbage collector</a></li>
+  <li><a href="#ph-lc" class="toc-link toc-level-2"><span class="toc-hash">#</span> Phụ lục</a></li>
+  <li><a href="#references" class="toc-link toc-level-2"><span class="toc-hash">#</span> References</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>JVM (ghi chú)</h1>
       <p><em><strong>Thông tin cập nhật:</strong></em></p>
 <ul>
@@ -120,7 +136,7 @@ protected Class&lt;?&gt; loadClass(String name, boolean resolve)
 <p>Nguyên tắc lười (lazy loading principle): class được nạp theo yêu cầu sử dụng thay vì được nạp khi JVM khởi tạo.</p>
 </li>
 </ol>
-<h4><a href="#code" aria-hidden="true" class="anchor" id="code"></a>Code</h4>
+<h4><a href="#code-ví-dụ" aria-hidden="true" class="anchor" id="code-ví-dụ"></a>Code ví dụ</h4>
 <ol>
 <li>
 <p>[Ví dụ cách hiện thực <a href="https://github.com/dntam00/custom-classloader/blob/main/src/main/java/club/shengsheng/MyClassLoader.java">custom class loader</a>].</p>

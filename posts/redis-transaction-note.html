@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,16 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#vn" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+  <li><a href="#redis-transaction" class="toc-link toc-level-2"><span class="toc-hash">#</span> Redis transaction</a></li>
+    <li><a href="#watch" class="toc-link toc-level-3"><span class="toc-hash">#</span> WATCH</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Redis transaction note</h1>
       <h2><a href="#vấn-đề" aria-hidden="true" class="anchor" id="vấn-đề"></a>Vấn đề</h2>
 <p>Có 1 API trả ra quá nhiều lỗi internal server error, mình kiểm tra thì thấy client go của redis hiển thị lỗi nil message, tìm hiểu sâu hơn thì thấy có vẻ như transaction không được thực thi, sau khi đọc lý thuyết lại thì thấy có vài trường hợp transaction không được thực thi và mình cố chứng minh điều đó nhưng ban đầu không được, mang lên github hỏi (<a href="https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180">https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180</a>), và 1 tuần sau may mắn mình đã tìm ra vấn đề.</p>

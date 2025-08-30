@@ -27,6 +27,7 @@
         <script src="/js/highlight.min.js"></script>
         <script src="/js/autosizing.js"></script>
         <script src="/js/fetch.js"></script>
+        <script src="/js/toc.js"></script>
         <script>
             hljs.initHighlightingOnLoad();
             hljs.highlightAll();
@@ -36,9 +37,14 @@
         <div class="header">
           <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a> 
         </div>
-        <div class="container">
+        <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+        <div class="container has-toc">
+            <div class="table-of-contents">
+              {%toc%}
+            </div>
             <div class="main">
-                <p><a href="/">&larr; Quay về trang chủ</a></p>
                 <h1>{%title%}</h1>
                 {%content%}
                 {%tags%}

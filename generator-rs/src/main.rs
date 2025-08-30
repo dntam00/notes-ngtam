@@ -42,7 +42,8 @@ struct Metadata {
     tags: Vec<String>,
     markdown: String,
     output_file: PathBuf,
-    output_html: String
+    output_html: String,
+    toc_html: String
 }
 
 fn post_can_be_parsed(status: &str) -> bool {
@@ -118,6 +119,53 @@ fn generate_meta(post: &Metadata) -> String {
     format!("<meta property='og:image' content='{}'>", img)
 }
 
+fn generate_toc(markdown: &str) -> String {
+    let heading_regex = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
+    let mut toc_items: Vec<String> = vec![];
+    
+    println!("Generating TOC from {} lines of markdown", markdown.lines().count());
+    
+    for line in markdown.lines() {
+        if let Some(captures) = heading_regex.captures(line) {
+            let level = captures.get(1).unwrap().as_str().len();
+            let title = captures.get(2).unwrap().as_str().trim();
+            println!("Found heading: level={}, title={}", level, title);
+            
+            // Generate anchor id from title (matching comrak's algorithm)
+            let anchor_id = title
+                .chars()
+                .filter_map(|c| match c {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' => Some(c.to_ascii_lowercase()),
+                    ' ' | '-' | '_' | '.' => Some('-'),
+                    _ => None,
+                })
+                .collect::<String>()
+                .trim_matches('-')
+                .replace("--", "-")
+                .replace("--", "-"); // Run twice to handle multiple consecutive dashes
+            
+            // Create TOC item with proper indentation and single # symbol
+            let indent = "  ".repeat(level - 1);
+            toc_items.push(format!(
+                "{}<li><a href=\"#{}\" class=\"toc-link toc-level-{}\"><span class=\"toc-hash\">#</span> {}</a></li>",
+                indent, anchor_id, level, title
+            ));
+        }
+    }
+    
+    if toc_items.is_empty() {
+        return String::new();
+    }
+    
+    format!(
+        "<div class=\"toc-title\">Table of Contents</div>\
+         <ul class=\"toc-list\">\
+         {}\
+         </ul>",
+        toc_items.join("\n")
+    )
+}
+
 fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts: Option<&Shared>) -> String {
     //dotenv().ok();
     let mut options = ComrakOptions::default();
@@ -137,7 +185,10 @@ fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts
         .replace("{%tags%}", &generate_tags(tag_text, &post.tags))
         .replace("{%related%}", &generate_related_post(related_posts, &post.tags, (&post.title).to_string()))
         .replace("{%postslug%}", &file_name.replace(".html", ""))
-        .replace("{%posturl%}", &format!("{}/posts/{}", env::var("DOMAIN_NAME").unwrap(), file_name));
+        .replace("{%posturl%}", &format!("{}/posts/{}", env::var("DOMAIN_NAME").unwrap(), file_name))
+        .replace("{%toc%}", &post.toc_html);
+    
+    // println!("TOC replacement: '{{%toc%}}' -> '{}'", &post.toc_html);
     format!("{}", html)
 }
 
@@ -162,7 +213,8 @@ fn parse_metadata(path: &Path) -> Metadata {
         tags: vec![],
         markdown: format!(""),
         output_file: path.with_extension("html"),
-        output_html: format!("")
+        output_html: format!(""),
+        toc_html: format!("")
     };
 
     let mut line_count = 0;
@@ -224,7 +276,8 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             tags: vec![],
             markdown: markdown,
             output_file: PathBuf::from("./index.html"),
-            output_html: format!("")
+            output_html: format!(""),
+            toc_html: format!("")
         };
         post.output_html = apply_template(&template, &post, "", None);
         let _ = save_as_html(&post.output_html, &PathBuf::from("./index.html"));
@@ -248,7 +301,8 @@ fn generate_tags_page(tags: &HashMap<String, Vec<Article>>) {
                 tags: Vec::from(tags_except_key),
                 markdown: markdown,
                 output_file: PathBuf::from(&format!("./tags/{}.html", &key)),
-                output_html: format!("")
+                output_html: format!(""),
+                toc_html: format!("")
             };
             let output_html = apply_template(&template, &post, "Other ", None);
             let _ = save_as_html(&output_html, &post.output_file);
@@ -303,6 +357,10 @@ fn parse_post(template: &str, shared: &Shared, path: &Path, force: bool) -> Opti
         post.markdown = custom_parser(&post.markdown, |src| src.replace("<math>", "<pre class='math'>$$").replace("</math>", "$$</pre>"));
         // Parse video
         post.markdown = custom_parser(&post.markdown, |src| src.replace("<animate>", "<video style='max-width: 800px; margin-left: -140px' autoplay loop><source type='video/mp4' src='").replace("</animate>", "'></source></video>"));
+
+        // Generate table of contents
+        post.toc_html = generate_toc(&post.markdown);
+        // println!("Generated TOC: {}", post.toc_html);
 
         let output_html = apply_template(&template, &post, "", Some(&shared));
         post.output_html = output_html;

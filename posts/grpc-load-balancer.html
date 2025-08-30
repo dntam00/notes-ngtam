@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,19 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#phng-php" class="toc-link toc-level-2"><span class="toc-hash">#</span> Phương pháp</a></li>
+    <li><a href="#http2" class="toc-link toc-level-3"><span class="toc-hash">#</span> HTTP/2</a></li>
+  <li><a href="#grpc-load-balancing" class="toc-link toc-level-2"><span class="toc-hash">#</span> gRPC load balancing</a></li>
+    <li><a href="#load-balancer-as-proxy" class="toc-link toc-level-3"><span class="toc-hash">#</span> Load balancer as proxy</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>gRPC Load balancing (1)</h1>
       <p>Khi thị trường có xu hướng chuyển dần từ monolithic sang microservice, bài toán giao tiếp giữa các service trở nên rất quan trọng, với những service thông thường hiện nay, mình thấy có 3 cách giao tiếp phổ biến:</p>
 <ul>

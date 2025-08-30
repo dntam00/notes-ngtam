@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,22 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#service-mesh" class="toc-link toc-level-2"><span class="toc-hash">#</span> Service mesh</a></li>
+  <li><a href="#service-mesh-trong-k8s" class="toc-link toc-level-2"><span class="toc-hash">#</span> Service mesh trong K8s</a></li>
+  <li><a href="#hin-thc-kim-tra" class="toc-link toc-level-2"><span class="toc-hash">#</span> Hiện thực / Kiểm tra</a></li>
+  <li><a href="#kim-tra" class="toc-link toc-level-2"><span class="toc-hash">#</span> Kiểm tra</a></li>
+  <li><a href="#traffic-managementhttpsistio-iolatestdocsconceptstraffic-managementintroducing-istio-traffic-management" class="toc-link toc-level-2"><span class="toc-hash">#</span> [Traffic management](https://istio.io/latest/docs/concepts/traffic-management/#introducing-istio-traffic-management)</a></li>
+  <li><a href="#nh-gi" class="toc-link toc-level-2"><span class="toc-hash">#</span> Đánh giá</a></li>
+  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
+  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>gRPC Load balancing (4) - Service mesh</h1>
       <p>Tiếp theo với chuỗi bài tìm hiểu <code>gRPC load balancing</code>, bài viết hôm nay thảo luận về việc sử dụng service mesh để cân bằng tải gRPC trong k8s. Chủ đề chính vẫn là <code>gRPC load balancing</code> nên những kiến thức khác mình chỉ lướt qua ở mức vừa đủ để các bạn có thể theo dõi bài viết.</p>
 <h2><a href="#service-mesh" aria-hidden="true" class="anchor" id="service-mesh"></a>Service mesh</h2>

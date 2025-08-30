@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,17 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#interface" class="toc-link toc-level-2"><span class="toc-hash">#</span> Interface</a></li>
+  <li><a href="#custom-error-type" class="toc-link toc-level-2"><span class="toc-hash">#</span> Custom error type</a></li>
+  <li><a href="#error-assignment" class="toc-link toc-level-2"><span class="toc-hash">#</span> Error assignment</a></li>
+  <li><a href="#notes" class="toc-link toc-level-2"><span class="toc-hash">#</span> Notes</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Error checking in Golang </h1>
       <p>Trong thế giới của ngôn ngữ lập trình Golang, mọi người có thể bắt gặp việc sử dụng <code>if else</code> để kiểm tra lỗi ở mọi nơi, kiểu như thế này:</p>
 <pre><code class="language-Go">if err != nil {

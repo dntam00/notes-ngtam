@@ -27,6 +27,7 @@
   <script src="../js/highlight.min.js"></script>
   <script src="../js/autosizing.js"></script>
   <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
     hljs.highlightAll();
@@ -37,9 +38,16 @@
   <div class="header">
     <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
   </div>
-  <div class="container">
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+      <div class="toc-title">Table of Contents</div><ul class="toc-list">  <li><a href="#dial-to-unkown-ip-address" class="toc-link toc-level-2"><span class="toc-hash">#</span> Dial to unkown ip address</a></li>
+  <li><a href="#packet-is-dropped-by-firewall" class="toc-link toc-level-2"><span class="toc-hash">#</span> Packet is dropped by firewall</a></li>
+  <li><a href="#no-listening-process-on-a-port" class="toc-link toc-level-2"><span class="toc-hash">#</span> No listening process on a port</a></li></ul>
+    </div>
     <div class="main">
-      <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>Health check using TCP</h1>
       <p>Hello ~</p>
 <p>Today is a post about performing health check to manage a cluster of services using <code>TCP</code>, why <code>TCP</code>? Because I need to monitor a type of service which don't provide Restful API or anything similar.</p>
