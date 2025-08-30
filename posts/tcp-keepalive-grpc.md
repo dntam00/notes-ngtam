@@ -3,6 +3,7 @@ title: gRPC connection keep alive
 published: true
 date: 2024-08-16 23:13:00
 tags: tcp, networking, grpc
+language: vi
 description: Manage gRPC connection
 image: 
 ---

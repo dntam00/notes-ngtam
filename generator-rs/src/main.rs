@@ -39,6 +39,7 @@ struct Metadata {
     date: String,
     description: String,
     image: String,
+    language: String,
     tags: Vec<String>,
     markdown: String,
     output_file: PathBuf,
@@ -119,7 +120,15 @@ fn generate_meta(post: &Metadata) -> String {
     format!("<meta property='og:image' content='{}'>", img)
 }
 
-fn generate_toc(markdown: &str) -> String {
+fn get_toc_title(language: &str) -> &'static str {
+    println!("Getting TOC title for language: {}", language);
+    match language.to_lowercase().as_str() {
+        "en" => "Table of Contents",
+        "" | "vi" | _ => "Mục lục",
+    }
+}
+
+fn generate_toc(markdown: &str, language: &str) -> String {
     let heading_regex = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
     let code_fence_regex = Regex::new(r"^```").unwrap();
     let mut toc_items: Vec<String> = vec![];
@@ -204,7 +213,8 @@ fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts
         .replace("{%related%}", &generate_related_post(related_posts, &post.tags, (&post.title).to_string()))
         .replace("{%postslug%}", &file_name.replace(".html", ""))
         .replace("{%posturl%}", &format!("{}/posts/{}", env::var("DOMAIN_NAME").unwrap(), file_name))
-        .replace("{%toc%}", &post.toc_html);
+        .replace("{%toc%}", &post.toc_html)
+        .replace("{%toc_title%}", get_toc_title(&post.language));
     
     // println!("TOC replacement: '{{%toc%}}' -> '{}'", &post.toc_html);
     format!("{}", html)
@@ -228,6 +238,7 @@ fn parse_metadata(path: &Path) -> Metadata {
         date: format!(""),
         description: format!(""),
         image: format!(""),
+        language: format!("vn"),
         tags: vec![],
         markdown: format!(""),
         output_file: path.with_extension("html"),
@@ -261,6 +272,9 @@ fn parse_metadata(path: &Path) -> Metadata {
             else if line.starts_with("image: ") {
                 metadata.image = line.replace("image: ", "");
             }
+            else if line.starts_with("language: ") {
+                metadata.language = line.replace("language: ", "");
+            }
         }
     }
 
@@ -291,6 +305,7 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             date: "".to_string(),
             description: "".to_string(),
             image: "".to_string(),
+            language: format!("en"),
             tags: vec![],
             markdown: markdown,
             output_file: PathBuf::from("./index.html"),
@@ -316,6 +331,7 @@ fn generate_tags_page(tags: &HashMap<String, Vec<Article>>) {
                 date: "".to_string(),
                 description: "".to_string(),
                 image: "".to_string(),
+                language: format!("en"),
                 tags: Vec::from(tags_except_key),
                 markdown: markdown,
                 output_file: PathBuf::from(&format!("./tags/{}.html", &key)),
@@ -377,7 +393,7 @@ fn parse_post(template: &str, shared: &Shared, path: &Path, force: bool) -> Opti
         post.markdown = custom_parser(&post.markdown, |src| src.replace("<animate>", "<video style='max-width: 800px; margin-left: -140px' autoplay loop><source type='video/mp4' src='").replace("</animate>", "'></source></video>"));
 
         // Generate table of contents
-        post.toc_html = generate_toc(&post.markdown);
+        post.toc_html = generate_toc(&post.markdown, &post.language);
         // println!("Generated TOC: {}", post.toc_html);
 
         let output_html = apply_template(&template, &post, "", Some(&shared));

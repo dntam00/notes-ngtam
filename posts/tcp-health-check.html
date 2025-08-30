@@ -50,7 +50,8 @@
     </div>
     <div class="main">
       <h1>Health check using TCP</h1>
-      <p>Hello ~</p>
+      <hr />
+<p>Hello ~</p>
 <p>Today is a post about performing health check to manage a cluster of services using <code>TCP</code>, why <code>TCP</code>? Because I need to monitor a type of service which don't provide Restful API or anything similar.</p>
 <p>My current project uses Golang, the easiest approach is to use <code>http/net</code> package to create a new TCP connection each time, the initial code might look like this:</p>
 <pre><code class="language-go">func CheckTcpPort(host string, port string, timeoutSecond int) {
