@@ -6,6 +6,7 @@ extern crate dotenv;
 #[macro_use]
 extern crate rouille;
 extern crate chrono;
+extern crate deunicode;
 
 use dotenv::dotenv;
 use std::env;
@@ -19,6 +20,7 @@ use std::collections::HashMap;
 use regex::Regex;
 use rss::ChannelBuilder;
 use chrono::prelude::*;
+use deunicode::deunicode;
 
 const TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
@@ -128,6 +130,34 @@ fn get_toc_title(language: &str) -> &'static str {
     }
 }
 
+fn generate_anchor_id(title: &str) -> String {
+    let ascii_title = deunicode(title);
+    ascii_title
+        .to_lowercase()
+        .chars()
+        .filter_map(|c| match c {
+            'a'..='z' | '0'..='9' => Some(c),
+            '_' => Some('_'),
+            ' ' | '-' | '.' => Some('-'),
+            _ => None,
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .replace("--", "-")
+        .replace("--", "-") // Run twice to handle multiple consecutive dashes
+}
+
+fn add_heading_ids(html: &str) -> String {
+    let heading_regex = Regex::new(r"<h([1-6])>([^<]+)</h[1-6]>").unwrap();
+    
+    heading_regex.replace_all(html, |caps: &regex::Captures| {
+        let level = &caps[1];
+        let title = &caps[2];
+        let anchor_id = generate_anchor_id(title);
+        format!(r#"<h{} id="{}">{}</h{}>"#, level, anchor_id, title, level)
+    }).to_string()
+}
+
 fn generate_toc(markdown: &str, language: &str) -> String {
     let heading_regex = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
     let code_fence_regex = Regex::new(r"^```").unwrap();
@@ -158,19 +188,8 @@ fn generate_toc(markdown: &str, language: &str) -> String {
             let title = captures.get(2).unwrap().as_str().trim();
             println!("Found heading: level={}, title={}", level, title);
             
-            // Generate anchor id from title (matching comrak's algorithm)
-            let anchor_id = title
-                .chars()
-                .filter_map(|c| match c {
-                    'a'..='z' | 'A'..='Z' | '0'..='9' => Some(c.to_ascii_lowercase()),
-                    '_' => Some('_'), // Keep underscores as-is
-                    ' ' | '-' | '.' => Some('-'),
-                    _ => None,
-                })
-                .collect::<String>()
-                .trim_matches('-')
-                .replace("--", "-")
-                .replace("--", "-"); // Run twice to handle multiple consecutive dashes
+            // Generate anchor id from title using shared function
+            let anchor_id = generate_anchor_id(title);
             
             // Create TOC item with proper indentation and single # symbol
             let indent = "  ".repeat(level - 1);
@@ -199,9 +218,10 @@ fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts
     options.ext_strikethrough = true;
     options.ext_table = true;
     options.ext_autolink = true;
-    options.ext_header_ids = Some("".to_string());
+    options.ext_header_ids = None; // Disable comrak's automatic header IDs
     options.ext_footnotes = true;
-    let parsed = markdown_to_html(&post.markdown, &options);
+    let parsed_html = markdown_to_html(&post.markdown, &options);
+    let parsed = add_heading_ids(&parsed_html); // Add IDs to headings
     let file_name = post.output_file.file_name().unwrap().to_str().unwrap();
     let html =
         &template

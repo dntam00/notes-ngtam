@@ -50,7 +50,7 @@
     <div class="main">
       <h1>Application version in Go</h1>
       <p>Hiện nay, chúng ta có thể thấy CI/CD được áp dụng ở nơi, việc chuẩn hoá các quá trình này bằng các công cụ như Jenkins giúp các lập trình viên giảm thiểu thời gian tích hợp, triển khai phần mềm. Tuy nhiên, không phải lúc nào những pipeline này cũng chạy đúng, team infra có thể viết script không cẩn thận và một ngày đẹp trời ứng dụng của bạn vẫn chạy với code cũ sau nhiều lần bấm deploy trên pipeline :). Để đảm bảo an toàn và tiết kiệm thời gian, có một cách mà nhiều người sử dụng đó là hiển thị tag, commit, thời gian build code khi build source code.</p>
-<h2><a href="#git-tag-revision" aria-hidden="true" class="anchor" id="git-tag-revision"></a>Git tag, revision</h2>
+<h2 id="git-tag-revision">Git tag, revision</h2>
 <p>Để lấy được thông tin <code>tag</code>, <code>revision commit</code> của source code và gán vào các biến môi trường của một bash session, ta có thể dùng các câu lệnh sau đây:</p>
 <pre><code class="language-bash">export GitTags=$(git describe --tags)
 export RevVersion=$(git rev-parse --short HEAD)
@@ -58,7 +58,7 @@ export RevVersion=$(git rev-parse --short HEAD)
 <p>Dòng lệnh sau lấy được thông tin thời gian build code:</p>
 <pre><code class="language-bash">export BuildTime=$(date -u &quot;+%Y%m%d%I%M&quot;)
 </code></pre>
-<h2><a href="#go" aria-hidden="true" class="anchor" id="go"></a>Go</h2>
+<h2 id="go">Go</h2>
 <p>Go cung cấp flag <code>ldflags</code> ở quá trình build code để có thể truyền những thông tin cần thiết cho ứng dụng, trường hợp này mình cần truyền <code>AppVersion</code>, câu lệnh build như sau:</p>
 <pre><code class="language-bash">go build -ldflags &quot;-X main.AppVersion=$GitTags.$RevVersion.$BuildTime&quot; -o bin/app cmd/app/main.go
 

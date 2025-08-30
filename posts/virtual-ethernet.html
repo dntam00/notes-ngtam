@@ -46,14 +46,14 @@
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#network-namespace" class="toc-link toc-level-2"><span class="toc-hash">#</span> Network Namespace</a></li>
   <li><a href="#virtual-ethernet" class="toc-link toc-level-2"><span class="toc-hash">#</span> Virtual ethernet</a></li>
-    <li><a href="#veth-pair-cng-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair cùng network namespace</a></li>
-    <li><a href="#veth-pair-khc-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair khác network namespace</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    <li><a href="#veth-pair-cung-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair cùng network namespace</a></li>
+    <li><a href="#veth-pair-khac-network-namespace" class="toc-link toc-level-3"><span class="toc-hash">#</span> Veth pair khác network namespace</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>Networking (3) Network namespace / Virtual ethernet (Veth)</h1>
-      <h2><a href="#network-namespace" aria-hidden="true" class="anchor" id="network-namespace"></a>Network Namespace</h2>
+      <h2 id="network-namespace">Network Namespace</h2>
 <p>Một từ khoá mà từ hồi năm 3 đại học đến bây giờ mình đã học và nghe rất nhiều đó là <code>isolation</code>, tiếng Việt có nghĩa là sự tách biệt, không ảnh hưởng lẫn nhau, những ngữ cảnh mình tiếp xúc với khái niệm này theo thời gian như sau:</p>
 <ul>
 <li><code>database transaction</code>: transaction phải thực thi độc lập và không được ảnh hưởng lẫn nhau.</li>
@@ -73,10 +73,10 @@
 <li><code>Cgroup</code> - cung cấp sự độc lập về thư mục gốc cgroup</li>
 </ul>
 <p>Bài này viết sẽ tập trung vào <code>network namespace</code>, có chứng năng tạo ra các môi trường network độc lập, cho phép các process trong các <code>network namespace</code> có network stack khác nhau, bao gồm routing policy, network interface, firewal policy,...</p>
-<h2><a href="#virtual-ethernet" aria-hidden="true" class="anchor" id="virtual-ethernet"></a>Virtual ethernet</h2>
+<h2 id="virtual-ethernet">Virtual ethernet</h2>
 <p><code>Virtual ethernet</code> cho phép các process ở các <code>network namespace</code> giao tiếp với nhau, ví dụ điển hình nhất là cho phép các container giao tiếp với bên ngoài.</p>
 <p><img src="img/virtual-pair-ns.png" alt="virtual-pair-ns" /></p>
-<h3><a href="#veth-pair-cùng-network-namespace" aria-hidden="true" class="anchor" id="veth-pair-cùng-network-namespace"></a>Veth pair cùng network namespace</h3>
+<h3 id="veth-pair-cung-network-namespace">Veth pair cùng network namespace</h3>
 <p>Tuy nhiên, đầu tiên hãy bắt đầu trước với mô hình 2 virtual ethernet trên cùng một network namespace.</p>
 <p><img src="img/virtual-pair.png" alt="virtual-pair" /></p>
 <p>Một virtual ethernet có 2 đầu, 1 đầu kết nối với network protocol stack, đầu còn lại kết nối trực tiếp với một virtual ethernet khác, một packet được gửi đi bởi một <code>veth</code> sẽ trực tiếp đi đến <code>veth</code> còn lại.</p>
@@ -131,7 +131,7 @@ echo 0 &gt; /proc/sys/net/ipv4/conf/all/rp_filter
 10:55:48.412648 IP 20.1.0.11 &gt; 20.1.0.10: ICMP echo reply, id 50, seq 2, length 64
 </code></pre>
 <p>Từ ví dụ này, chúng ta có kết luận lại việc gói tin được gửi đi từ một <code>veth</code> thì sẽ đi vào <code>veth</code> còn lại.</p>
-<h3><a href="#veth-pair-khác-network-namespace" aria-hidden="true" class="anchor" id="veth-pair-khác-network-namespace"></a>Veth pair khác network namespace</h3>
+<h3 id="veth-pair-khac-network-namespace">Veth pair khác network namespace</h3>
 <p>Phần trên dành nhiều thời gian giải thích cách <code>veth pair</code> hoạt động, phần này mình sẽ đưa ra một ví dụ thực tế hơn, đó là việc giao tiếp giữa 2 network namespace khác nhau.</p>
 <pre><code class="language-bash"># tạo mới 1 network namespace
 ip netns add ns-example
@@ -163,14 +163,14 @@ ip netns exec ns-example tcpdump -i eth4
 11:12:26.991266 IP 192.168.10.1 &gt; 192.168.10.2: ICMP echo request, id 55, seq 2, length 64
 11:12:26.991340 IP 192.168.10.2 &gt; 192.168.10.1: ICMP echo reply, id 55, seq 2, length 64
 </code></pre>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Qua bài này, hy vọng bạn có thể hiểu thêm về khái niệm <code>virtual ethernet</code> trong linux, cách hoạt động của lệnh <code>ping</code> và hành trình của gói tin trong hệ thống.</p>
 <ul>
 <li><code>Network namespace</code> cung cấp các môi trường network độc lập với cách tính năng đầy đủ nhưng <code>network protocol stack</code>, <code>routing policy</code>, <code>filewwall policy</code>,...</li>
 <li>Gói tin đi ra từ 1 <code>veth</code> thì sẽ đi vào trực tiếp <code>veth</code> còn lại trong <code>veth pair</code>.</li>
 <li>Các process trong các <code>network namespace</code> khác nhau có thể sử dụng <code>veth pair</code> để giao tiếp với nhau.</li>
 </ul>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <ul>
 <li><a href="https://www.sobyte.net/post/2022-04/network-virtualization-veth-pair">https://www.sobyte.net/post/2022-04/network-virtualization-veth-pair</a></li>
 <li><a href="https://networklessons.com/cisco/ccie-routing-switching-written/arp-address-resolution-protocol-explained">https://networklessons.com/cisco/ccie-routing-switching-written/arp-address-resolution-protocol-explained</a></li>

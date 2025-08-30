@@ -78,7 +78,7 @@
 <li>dial to a unkown IP address (I learned from my colleague :V).</li>
 <li>packet is dropped by firewall.</li>
 </ul>
-<h2><a href="#dial-to-unkown-ip-address" aria-hidden="true" class="anchor" id="dial-to-unkown-ip-address"></a>Dial to unkown ip address</h2>
+<h2 id="dial-to-unkown-ip-address">Dial to unkown ip address</h2>
 <p>I run above program and capture packet by <code>wireshark</code> tool:</p>
 <p><img src="img/unknow-ip.png" alt="wirehsark-dial-to-unknown-ip" /></p>
 <p>A fews things that are worth analyzing:</p>
@@ -88,7 +88,7 @@
 <li>TCP performs multiple retransmissions and the distance between retransmissions is based on an exponential backoff algorithm.</li>
 </ul>
 <p>After a period of time (timeout), I know the health check is failed.</p>
-<h2><a href="#packet-is-dropped-by-firewall" aria-hidden="true" class="anchor" id="packet-is-dropped-by-firewall"></a>Packet is dropped by firewall</h2>
+<h2 id="packet-is-dropped-by-firewall">Packet is dropped by firewall</h2>
 <p>After asking ChatGPT, I know how to drop all TCP traffic on a specific port in a loopback network interface.</p>
 <p>Update file <code>/etc/pf.conf</code></p>
 <pre><code class="language-vim">block drop quick on lo0 proto tcp from any to any port 7995
@@ -98,7 +98,7 @@
 sudo pfctl -e
 </code></pre>
 <p>After testing again, wireshark doesn't capture any packets and the result is the same as previous section.</p>
-<h2><a href="#no-listening-process-on-a-port" aria-hidden="true" class="anchor" id="no-listening-process-on-a-port"></a>No listening process on a port</h2>
+<h2 id="no-listening-process-on-a-port">No listening process on a port</h2>
 <p>In this part, I will test with a normal ip address and a port that has no process listening on it.</p>
 <p>Run above program with the destination IP <code>127.0.0.1</code> and port <code>7996</code>, the result of <code>wireshark</code>:</p>
 <p><img src="img/no-listen-process.png" alt="wirehsark-dial-to-know-ip" /></p>

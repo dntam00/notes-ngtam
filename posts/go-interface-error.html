@@ -59,7 +59,7 @@
 </code></pre>
 <p>Thường thì <code>error</code> trong Go là interface, có bao giờ mọi người tự hỏi khi nào thì <code>err == nil</code>? Có phải đơn giản là giá trị của biến bằng <code>nil</code> thì câu lệnh kiểm tra đó sẽ đúng? Thực ra mình cũng mặc định là vậy, cho tới một ngày mình gặp bug :|</p>
 <p>Nếu chương trình của chúng ta chỉ sử dụng mỗi <code>error interface</code> của Go để trả về lỗi thì có thể an tâm sử dụng, tuy nhiên đối với các ứng dụng phức tạp, chúng ta sẽ có nhu cầu tuỳ chỉnh một kiểu mới để có thể lưu trữ thông tin thêm cho lỗi ví dụ <code>stack trace</code>, <code>cause</code>, <code>error type</code>,... và từ đây, vấn đề sẽ xuất hiện nếu chúng ta không thực sự hiểu về interface trong Go.</p>
-<h2><a href="#interface" aria-hidden="true" class="anchor" id="interface"></a>Interface</h2>
+<h2 id="interface">Interface</h2>
 <p>Interface cho phép lập trình viên định nghĩa một tập các hàm mà bất cứ kiểu dữ liệu nào cũng có thể hiện thực, một thực thể interface (instance) nắm giữ giá trị và kiểu dữ liệu của một biến mà nó đang tham chiếu tới. Go định nghĩa cấu trúc dữ liệu để lưu trữ một thực thể interface như sau:</p>
 <pre><code class="language-Go">type iface struct {
 	tab  *itab
@@ -75,7 +75,7 @@ type itab struct {
 }
 </code></pre>
 <p><code>interfacetype</code> là kiểu của interface, <code>_type</code> là kiểu cụ thể (struct) mà một thực thể interface đang giữ giá trị.</p>
-<h2><a href="#custom-error-type" aria-hidden="true" class="anchor" id="custom-error-type"></a>Custom error type</h2>
+<h2 id="custom-error-type">Custom error type</h2>
 <p>Như mình đã đề cập ở trên, trong nhiều trường hợp <code>error interface</code> không phù hợp với những yêu cầu về nghiệp vụ và kĩ thuật, lúc đó, chúng ta thường định nghĩa một struct để quản lý error và sử dụng chúng trong suốt chương trình, ví dụ:</p>
 <pre><code class="language-Go">type AppError struct {
 	code      int
@@ -87,7 +87,7 @@ func (err *AppError) Error() string {
 	return fmt.Sprintf(&quot;code: %v, cause: %v&quot;, err.code, err.cause)
 }
 </code></pre>
-<h2><a href="#error-assignment" aria-hidden="true" class="anchor" id="error-assignment"></a>Error assignment</h2>
+<h2 id="error-assignment">Error assignment</h2>
 <p>Lúc này, nếu không cần thận, chúng ta có thể khai báo một số hàm trả về kiểu <code>*AppError</code> và sử dụng interface <code>error</code> để lưu những giá trị này, và từ đó, bug sẽ xảy ra nếu chúng ra kiểm tra error có <code>nil</code> hay không. Được đề cập ở phần đầu, cấu trúc dữ liệu được dùng để lưu một thực thể interface gồm 2 phần, giá trị và kiểu của biến. Để một biến interface bằng <code>nil</code> (được kiểm tra bằng phép kiểm tra <code>==</code>) thì cả 2 phần của nó đều phải <code>nil</code>.</p>
 <pre><code class="language-Go">func checkAssignError() {
 	var err error
@@ -111,7 +111,7 @@ fmt.Println(reflect.ValueOf(err).IsNil())
 // true
 </code></pre>
 <p>Kiểu của <code>error</code> không phải <code>nil</code> mà là kiểu struct <code>*AppError</code>.</p>
-<h2><a href="#notes" aria-hidden="true" class="anchor" id="notes"></a>Notes</h2>
+<h2 id="notes">Notes</h2>
 <p>Với kiến thức này, bạn có thể thiết kế code xử lý lỗi một cách nhất quán, tránh những lỗi tìm ẩn và tiết kiệm thời gian debug, đặc biệt khi chương trình của bạn sử dụng các thư viện thứ 3 và sử dụng nhiều high order function, trong Golang thì mình gặp rất nhiều thư viện code theo style HOC, ví dụ <code>go breaker</code>, các hàm của <code>go breaker</code> sử dụng <code>error interface</code>, nếu hàm của bạn sử dụng <code>custom error type</code> như <code>AppError</code> ở trên thì chắc chắn câu lệnh kiểm tra <code>err == nil</code> sẽ sai. Một ví dụ:</p>
 <pre><code class="language-Go">func (cb *CircuitBreaker[T]) Execute(req func() (T, error)) (T, error) {}
 </code></pre>

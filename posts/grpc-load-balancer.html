@@ -44,12 +44,12 @@
   <div class="container has-toc">
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
-        <ul class="toc-list">  <li><a href="#phng-php" class="toc-link toc-level-2"><span class="toc-hash">#</span> Phương pháp</a></li>
+        <ul class="toc-list">  <li><a href="#phuong-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Phương pháp</a></li>
     <li><a href="#http2" class="toc-link toc-level-3"><span class="toc-hash">#</span> HTTP/2</a></li>
   <li><a href="#grpc-load-balancing" class="toc-link toc-level-2"><span class="toc-hash">#</span> gRPC load balancing</a></li>
     <li><a href="#load-balancer-as-proxy" class="toc-link toc-level-3"><span class="toc-hash">#</span> Load balancer as proxy</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>gRPC Load balancing (1)</h1>
@@ -66,7 +66,7 @@
 <li>Hiểu phương pháp cân bằng tải ở <code>transport layer</code> và <code>application layer</code>.</li>
 <li>Thiết lập và kiểm thử các phương pháp cân bằng tải gRPC.</li>
 </ul>
-<h2><a href="#phương-pháp" aria-hidden="true" class="anchor" id="phương-pháp"></a>Phương pháp</h2>
+<h2 id="phuong-phap">Phương pháp</h2>
 <p>Hiện tại có một vài phương pháp phổ biến để xử lý cân bằng tải cho grPC:</p>
 <ul>
 <li><strong>Proxy load balancing</strong>: là phương pháp truyền thống, LB sẽ đóng vai trò như một reverse proxy, HAProxy, Nginx, LB của cloud provider,... là các ví dụ.</li>
@@ -76,13 +76,13 @@
 </ul>
 <p>Mỗi phương pháp sẽ có ưu nhược điểm riêng cũng như chi phí cài đặt, bảo trì khác nhau.</p>
 <p>Tuy nhiên, trước hết hãy cùng mình tìm hiểu một số kiến thức cơ bản cần nắm rõ như <code>HTTP/2</code>, <code>long-lived TCP connection</code>,...</p>
-<h3><a href="#http2" aria-hidden="true" class="anchor" id="http2"></a>HTTP/2</h3>
+<h3 id="http2">HTTP/2</h3>
 <p><code>HTTP/2</code> cho phép client và server gửi/nhận cùng lúc nhiều request/response trên cùng 1 TCP connection (<code>multiplexing</code>), phân biệt với nhau dựa trên <code>logical stream</code>.</p>
 <p><img src="img/http2.png" alt="http/2" /></p>
 <p><code>HTTP/2</code> ra đời giản quyết vấn đề <a href="https://en.wikipedia.org/wiki/Head-of-line_blocking">head-of-line_blocking</a> của <code>HTTP/1.1</code>, ở phiên bản cũ, mặc dù chúng ta có thể tái sử dụng connection, nhưng những requests được xử lý tuần tự, có thể gây hiện tượng thắt cổ chai nếu có nhiều request trên cùng 1 connection.</p>
 <p>Với tính chất này, nếu không có yêu cầu gì đặc biệt, chúng ta sẽ có nhu cầu tái sử dụng connection của <code>HTTP/2</code> để giảm thiểu chi phí khởi tạo connection, do đó, <code>TCP connection</code> trong <code>HTTP/2</code> sẽ là <code>long-lived connection</code>.</p>
-<h2><a href="#grpc-load-balancing" aria-hidden="true" class="anchor" id="grpc-load-balancing"></a>gRPC load balancing</h2>
-<h3><a href="#load-balancer-as-proxy" aria-hidden="true" class="anchor" id="load-balancer-as-proxy"></a>Load balancer as proxy</h3>
+<h2 id="grpc-load-balancing">gRPC load balancing</h2>
+<h3 id="load-balancer-as-proxy">Load balancer as proxy</h3>
 <p><em><strong>Transport layer (layer 4)</strong></em></p>
 <p>Khi cân bằng tải ở tầng <code>transport</code>, LB sẽ làm việc với các gói tin TCP, một khi client khởi tạo connection tới LB, nó sẽ tạo 1 connection tương ứng đến một backend server rồi chuyển tiếp tất cả gói tin dựa trên sự ánh xạ này, sự ánh xạ này sẽ được giữ cho đến khi connection bị đóng, từ tổng thể, 2 connection được tạo ra có thể được xem là 1 <code>persistent connection</code>.</p>
 <p><img src="img/grpc-connection-load-balancing.png" alt="grpc-connection-load-balancing" /></p>
@@ -128,14 +128,14 @@
 <li><a href="https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md">xDS API</a>: <code>look-aside</code> load balancing, <code>gRPC client</code> hỗ trợ việc sử dụng xDS API của Envoy thông qua <code>resolver</code> và <code>LB plugin</code>, <code>resolver</code> và <code>LB plugin</code> sẽ cần tương tác với một <code>xDS server</code>.</li>
 </ul>
 <p>Để tăng hiệu năng cũng như throughput về mặt số lượng request, chúng ta cũng có thể áp dụng kĩ thuật pooling ở phía client cho phương pháp này.</p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Ở bài viết này, mình đã phân tích ý tưởng load balancing grpc, có 2 điều cần hiểu rõ để tránh mơ hồ trong lúc hiện thực các phương pháp này:</p>
 <ul>
 <li><code>connection-based load balancing:</code> chia tải từng connection đến từng backend server, những connection này có tính chất <code>long-lived</code>.</li>
 <li><code>request-based load balancing:</code> chia tải từng request đến từng connection, có thể hiểu chia tải ở tầng ứng dụng.</li>
 </ul>
 <p>Ở các bài tiếp theo, mình sẽ đi vào hiện thực và kiểm thử các phương pháp cân bằng tải gRPC để làm rõ hơn phần lý thuyết này.</p>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <ul>
 <li><a href="https://grpc.io/blog/grpc-load-balancing/">gRPC Load Balancing</a></li>
 <li><a href="https://phuc-ch.medium.com/exploring-grpc-load-balancing-gateway-service-mesh-and-xds-with-go-a527ab0e7ce8">Exploring gRPC Load Balancing: Gateway, Service Mesh, and xDS with Go</a></li>

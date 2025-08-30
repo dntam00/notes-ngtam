@@ -53,9 +53,9 @@
     <div class="main">
       <h1>Git command: git reset</h1>
       <hr />
-<h2><a href="#202501/19" aria-hidden="true" class="anchor" id="202501/19"></a>2025/01/19</h2>
+<h2 id="20250119">2025/01/19</h2>
 <p>After receiving some feedback from a friend. I have some updates on this post.</p>
-<h2><a href="#git-ls-files--reset" aria-hidden="true" class="anchor" id="git-ls-files--reset"></a>git ls-files / reset</h2>
+<h2 id="git-ls-files-reset">git ls-files / reset</h2>
 <p>To begin with this post, let's explore the command using to inspect git's <code>staging area</code> first.</p>
 <pre><code class="language-bash">$ git ls-files -s
 100644 9c59e24b8393179a5d712de4f990178df5734d99 0	first.txt
@@ -70,7 +70,7 @@
 <blockquote>
 <p><strong>Note:</strong> working directory is a single checkout of one version of the git project, these files <strong>has been already added</strong> to git, they're different from the untracked ones.</p>
 </blockquote>
-<h2><a href="#--hard" aria-hidden="true" class="anchor" id="--hard"></a>--hard</h2>
+<h2 id="hard">--hard</h2>
 <p>Syntax:</p>
 <pre><code class="language-bash">$ git reset --hard HEAD~n
 // or
@@ -148,7 +148,7 @@ Untracked files:
 nothing added to commit but untracked files present (use &quot;git add&quot; to track)
 </code></pre>
 <p><code>fourth.txt</code> is still being present because it has not been added to git, git leaves these file untouch.</p>
-<h2><a href="#--mixed" aria-hidden="true" class="anchor" id="--mixed"></a>--mixed</h2>
+<h2 id="mixed">--mixed</h2>
 <p>This option resets the history and staging area to target commit (we could verify the status of staging area by command <code>git ls-files -s</code> mentioned above). <em>Any file which is difference from the state of staging area at target commit will be moved to working directory.</em></p>
 <p>From the state of git folder after running command in <code>--hard</code> part, we add <code>fourth.txt</code> to git and create a new commit for this change, then run command <code>git reset</code> with <code>--mixed</code> option</p>
 <pre><code class="language-bash">$ git add fourth.txt
@@ -184,7 +184,7 @@ nothing added to commit but untracked files present (use &quot;git add&quot; to 
 <blockquote>
 <p><strong>Usage:</strong> We could use this option to reset commit and keep all changes from <code>HEAD~n</code> commit to <code>HEAD</code> (state of project before applying git reset command) to prepare for new commit, because these changes is put into working area so you could decide which files will be put into next commit.</p>
 </blockquote>
-<h2><a href="#--soft" aria-hidden="true" class="anchor" id="--soft"></a>--soft</h2>
+<h2 id="soft">--soft</h2>
 <p>This option reset the commit history to target commit, keep staging area untouched, so the the result is all files commited in range <code>HEAD~n to HEAD</code> will be put in staging area.</p>
 <p>We will use the git folder after running commands in <code>--hard option</code> section again to demonstrate how option <code>--soft</code> works.</p>
 <pre><code class="language-bash">$ git add fourth.txt

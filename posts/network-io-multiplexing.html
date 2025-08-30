@@ -47,8 +47,8 @@
         <ul class="toc-list">  <li><a href="#pollselect" class="toc-link toc-level-2"><span class="toc-hash">#</span> poll/select</a></li>
   <li><a href="#epoll" class="toc-link toc-level-2"><span class="toc-hash">#</span> epoll</a></li>
   <li><a href="#level-triggered-vs-edge-triggered" class="toc-link toc-level-2"><span class="toc-hash">#</span> Level-Triggered vs Edge-Triggered</a></li>
-  <li><a href="#v-d" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+  <li><a href="#vi-du" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
     <div class="main">
       <h1>Networking (1) I/O multiplexing</h1>
@@ -65,7 +65,7 @@
 <p>Trong linux, FD là khái niệm chỉ sự định danh cho tệp tin, hoặc các tài nguyên I/O khác như socket khi một process thao tác với các tài nguyên này. Kernel lưu trữ thông tin các file được mở của mỗi process và FD là giá trị index trỏ tới các bản ghi này.</p>
 <p>Mô hình I/O multiplexing hỗ trợ 1 thread có thể theo dõi vào nhiều FD cùng 1 lúc, bị block, chờ và nhận được thông báo về các FD sẵn sàng cho việc đọc dữ liệu. Ưu điểm của mô hình này so với mô hình truyền thống I/O blocking là giảm context switch giữa các threads vì chúng ta chỉ có 1 main thread để nhận request, xử lý cũng như đọc gói tin, tránh được race condition trong lập trình multithreads, có thể handle được số lượng lớn requests cùng lúc, tuy nhiên, mô hình này lại bị giới hạn bởi 1 CPU.</p>
 <p>Các system call giúp bạn gọi Linux theo dõi các FD là poll, select và epoll.</p>
-<h2><a href="#pollselect" aria-hidden="true" class="anchor" id="pollselect"></a>poll/select</h2>
+<h2 id="pollselect">poll/select</h2>
 <pre><code class="language-go">int select(int nfds,
            fd_set *restrict readfds,
            fd_set *restrict writefds,
@@ -85,7 +85,7 @@
 <li>FD cần được theo dõi được truyền từ user space sang kernel state, đây là một chi phí CPU lớn khi có nhiều FD cần theo dõi</li>
 <li>Kernel kiểm tra các FD bằng cách lặp qua tất cả giá trị, độ phức tạp là O(n), vì vậy CPU time cần để sử lý sẽ tăng tuyến tính với số lượng FD cần kiểm tra</li>
 </ul>
-<h2><a href="#epoll" aria-hidden="true" class="anchor" id="epoll"></a>epoll</h2>
+<h2 id="epoll">epoll</h2>
 <p><code>epoll</code> là một phiên bản cải tiến của poll/select, giải quyết vấn đề hiệu năng và số lượng FD.</p>
 <pre><code class="language-go">int listenfd = socket(AF_INET, SOCK_STREAM, 0);   
 bind(listenfd, ...)
@@ -121,7 +121,7 @@ while(1){
 </li>
 <li>Sử dụng hàm callback để thêm FD sẵn sàng vào ready list thay vì lặp qua tất cả FD để kiểm tra.</li>
 </ul>
-<h2><a href="#level-triggered-vs-edge-triggered" aria-hidden="true" class="anchor" id="level-triggered-vs-edge-triggered"></a>Level-Triggered vs Edge-Triggered</h2>
+<h2 id="level-triggered-vs-edge-triggered">Level-Triggered vs Edge-Triggered</h2>
 <!-- Đây là 2 khái niệm nói về cách làm việc với tín hiệu, có thể hiểu là cách hệ thống phản hồi với sự thay đổi về tín hiệu.
 
 - `Level-Triggered`: kernel sẽ trả về những fd thoả mãn các sự kiện được đăng kí, ví dụ dữ liệu sẵn sàng để đọc ở `fd`.
@@ -151,7 +151,7 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 </ul>
 </li>
 </ul>
-<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
+<h2 id="vi-du">Ví dụ</h2>
 <ul>
 <li>
 <p>Repository <a href="https://github.com/smallnest/epoller">epoller</a> là một ví dụ để bạn có thể kiểm tra lại các kiến thức ở trên, khi sử dụng để kiểm tra, mình có phát hiện 1 lỗi và có tạo issue hỏi ở đây: <a href="https://github.com/smallnest/epoller/issues/11">Should we close connection when flag is EOF in Wait method</a> <i class='em em-relaxed'></i></p>
@@ -160,7 +160,7 @@ Giả sử chúng ta muốn theo dõi để đọc dữ liệu một socket, có
 <p>Ngoài ra, mình có tạo 1 ví dụ để cách hoạt động của <code>level-triggered</code> ở đây nữa, bạn có thể chạy sử dụng để chạy trên hệ điều hành Linux. <a href="https://github.com/dntam00/go-notes/blob/main/linux_io/epoll/main.go">epoll - level-triggered</a></p>
 </li>
 </ul>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Qua bài viết này, mình đã tóm gọn lại về tổng quát cách mô hình I/O multiplexing hoạt động với các cơ chế ở đằng sau như poll, select và epoll.</p>
 <p>Hiện nay, nhiều công cụ và framework nổi tiếng cũng áp dụng <code>epoll</code>:</p>
 <ul>

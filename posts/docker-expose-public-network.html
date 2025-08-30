@@ -51,7 +51,7 @@
     <div class="main">
       <h1>Docker expose and publish command</h1>
       <p>Yesterday, I got stuck when trying to write a docker compose file of several services including redis, mysql and web services. The log of all web services showed that they couldn't connect to mysql database, after trying debugging and reading documentation, I've found that I misunderstood the usage of <code>expose</code> and <code>publish</code> command in dockerfile and docker-compose file. So I write this post to explain how <code>expose</code> and <code>publish</code> command work.</p>
-<h2><a href="#docker-network" aria-hidden="true" class="anchor" id="docker-network"></a>Docker network</h2>
+<h2 id="docker-network">Docker network</h2>
 <!-- <span style="color:#f03c15"></span> -->
 <p>In the scope of this post, I would only mention <code>docker bridge</code> network mode. Let's cite the definition from oficial documentation first:</p>
 <blockquote>
@@ -62,9 +62,9 @@
     NETWORK ID     NAME      DRIVER    SCOPE
     4064fdbdf055   bridge    bridge    local
 </code></pre>
-<h2><a href="#expose" aria-hidden="true" class="anchor" id="expose"></a>Expose</h2>
+<h2 id="expose">Expose</h2>
 <p>The <code>expose</code> is just an instruction from the author of dockerfile for whom intends to use the image built from the dockerfile, it doens't actually publish the port of container.</p>
-<h2><a href="#publish" aria-hidden="true" class="anchor" id="publish"></a>Publish</h2>
+<h2 id="publish">Publish</h2>
 <p>Firstly, please see the below image for docker network.</p>
 <p><img src="img/docker-network.png" alt="" /></p>
 <p>If we don't public ports, we cannot access the container through the outside, like typing <code>https://127.0.0.1/path</code> in search bar of web browser of host machine. We could do this through <code>-p</code> option when running docker, or through port mapping of docker compose.</p>

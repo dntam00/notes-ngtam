@@ -44,13 +44,13 @@
   <div class="container has-toc">
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
-        <ul class="toc-list">  <li><a href="#trnh-bin-dch" class="toc-link toc-level-2"><span class="toc-hash">#</span> Trình biên dịch</a></li>
-    <li><a href="#phn-tch-t-vng-lexical-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích từ vựng (Lexical analysis)</a></li>
-    <li><a href="#phn-tch-ng-php-syntax-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích ngữ pháp (Syntax analysis)</a></li>
-    <li><a href="#to-cy-c-php-tru-tng-abstract-syntax-tree-generation" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</a></li>
+        <ul class="toc-list">  <li><a href="#trinh-bien-dich" class="toc-link toc-level-2"><span class="toc-hash">#</span> Trình biên dịch</a></li>
+    <li><a href="#phan-tich-tu-vung-lexical-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích từ vựng (Lexical analysis)</a></li>
+    <li><a href="#phan-tich-ngu-phap-syntax-analysis" class="toc-link toc-level-3"><span class="toc-hash">#</span> Phân tích ngữ pháp (Syntax analysis)</a></li>
+    <li><a href="#tao-cay-cu-phap-truu-tuong-abstract-syntax-tree-generation" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</a></li>
     <li><a href="#intermediate-code-generation" class="toc-link toc-level-3"><span class="toc-hash">#</span> Intermediate code generation</a></li>
-    <li><a href="#tng-kt" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tổng kết</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+    <li><a href="#tong-ket" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>Trình biên dịch</h1>
@@ -75,10 +75,10 @@
 </ul>
 <p><img src="img/just-in-time-model.png" alt="just-in-time-model" /></p>
 <p>Giới thiệu qua các kĩ thuật biên/thông dịch vậy đủ rồi, vào chủ đề chính thôi, bài này mình sẽ đi tìm hiểu <em>lại</em> tổng quan các bước mà một <em><strong>trình biên dịch</strong></em> cần làm khi xử lý mã nguồn, nói tìm hiểu lại là vì hồi đại học trường mình có dạy môn <code>Nguyên lý ngôn ngữ lập trình</code> trình bày về cách một ngôn ngữ lập trình (<code>NNLT</code>) hoạt động (môn này giờ nghĩ lại vẫn thấy sợ :3). May mắn là sau nhiều năm mình vẫn còn lưu lại mã nguồn của bài tập lớn nên có gì lấy làm ví dụ trong bài này luôn. :D</p>
-<h2><a href="#trình-biên-dịch" aria-hidden="true" class="anchor" id="trình-biên-dịch"></a>Trình biên dịch</h2>
+<h2 id="trinh-bien-dich">Trình biên dịch</h2>
 <p>Để thực thi được các câu lệnh trên cpu, bằng cách này hay cách khác, tất cả những gì lập trình viên viết ra phải được chuyển thành thứ mà cpu có thể hiểu và xử lý được. Quá trình này khi sử dụng trình biên dịch thì được biểu diễn như hình sau:</p>
 <p><img src="img/overview-of-compilation.png" alt="overview-of-compilation" /></p>
-<h3><a href="#phân-tích-từ-vựng-lexical-analysis)" aria-hidden="true" class="anchor" id="phân-tích-từ-vựng-lexical-analysis)"></a>Phân tích từ vựng (Lexical analysis)</h3>
+<h3 id="phan-tich-tu-vung-lexical-analysis">Phân tích từ vựng (Lexical analysis)</h3>
 <p>Lấy ví dụ về việc giao tiếp giữa con người, những gì chúng ta nói ra cần có ý nghĩa thì người đối diện mới hiểu được, chúng được cấu thành từ các bộ từ vựng đã được tạo ra, duy trì và phát triển. Đối với NNLT cũng vậy, đội ngũ phát triển ngôn ngữ phải định nghĩa được các từ nào có ý nghĩa đối với NNTL của họ, từ nào không, ví dụ cùng một ý nghĩa <code>rỗng</code> nhưng Golang và Java sử dụng các từ khoá khác nhau, lần lượt là <code>nil</code> và <code>null</code>.</p>
 <p>Quá trình tìm ra các từ khoá có ý nghĩa từ mã nguồn để xử lý được gọi là phân tích từ vựng. Công cụ phân tích từ vựng sẽ đọc mã nguồn và lấy ra các từ khoá cần thiết dựa trên bộ quy tắc được thiết lập sẵn. Quá trình này có thể cho ra output như:</p>
 <ul>
@@ -89,7 +89,7 @@
 <p>được gọi chung là <code>tokens</code>.</p>
 <p>Một công cụ mình đã sử dụng trong lúc làm bài tập lớn ở đại học là <a href="https://github.com/antlr/antlr4">ANTLR</a>, mọi người có thể tham khảo thêm.</p>
 <p><img src="img/lexical-analysis.png" alt="lexical-analysis" /></p>
-<h3><a href="#phân-tích-ngữ-pháp-syntax-analysis)" aria-hidden="true" class="anchor" id="phân-tích-ngữ-pháp-syntax-analysis)"></a>Phân tích ngữ pháp (Syntax analysis)</h3>
+<h3 id="phan-tich-ngu-phap-syntax-analysis">Phân tích ngữ pháp (Syntax analysis)</h3>
 <p>Bước tiếp theo trong việc xử lý mã nguồn là phân tích ngữ pháp.</p>
 <p>Từ kết quả của bước phân tích từ vựng, bộ phân tích ngữ pháp sẽ kiểm tra xem lập trình viên có sử dụng các từ khoá đúng với ngữ pháp đã được quy định hay không. Ví dụ ngữ pháp tiếng Việt có cấu trúc chủ ngữ pháp chủ ngữ rồi đến động từ, thì các NNLT cũng có các quy định của nó, về bản chất đó là sự thống nhất để 2 bên có thể hiểu được nhau.</p>
 <p>Ví dụ với Java, khi viết câu điều kiện, chúng ta cần một cặp dấu ngoặc tròn <code>()</code> để chứa điều kiện, nếu bạn quên chúng, trình biên dịch sẽ báo lỗi cú pháp.</p>
@@ -106,7 +106,7 @@
 <p>Sử dụng quy tắc mình vừa giới thiệu và tập tokens từ bước phân tích từ vựng, bộ phân tích ngữ pháp sẽ thực hiện kiểm tra ngữ pháp, kết quả của quá trình này là một cây ngữ pháp được sử dụng cho các bước tiếp theo. Nếu có lỗi trong quá trình tạo cây, lỗi sẽ được trả về, lập trình viên có thể dựa vào lỗi để sửa mã nguồn của mình.</p>
 <p>Hình sau minh hoạ parse-tree cho biểu thức <code>3 + 5 ∗ 2</code>.</p>
 <p><img src="img/parser-tree-output.png" alt="parser-tree-output" /></p>
-<h3><a href="#tạo-cây-cú-pháp-trừu-tượng-abstract-syntax-tree-generation)" aria-hidden="true" class="anchor" id="tạo-cây-cú-pháp-trừu-tượng-abstract-syntax-tree-generation)"></a>Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</h3>
+<h3 id="tao-cay-cu-phap-truu-tuong-abstract-syntax-tree-generation">Tạo cây cú pháp trừu tượng (Abstract syntax tree generation)</h3>
 <p>Cây cú pháp trừu tượng (<code>Abstract syntax tree - AST</code>) về cơ bản cũng biểu diễn cấu trúc cú pháp của mã nguồn, nhưng ở mức trừu tượng hơn cây cú pháp chi tiết.</p>
 <ol>
 <li>Cây phân cấp: có node gốc và các node con, mỗi node biển diễn một cấu trúc cụ thể của mã nguồn, ví dụ khai báo biến, câu lệnh lặp, điều kiện, biểu thức toán học,...</li>
@@ -165,7 +165,7 @@ class BinaryOp(Expr):
 <li>Sinh code (<code>code generation</code>): AST được sử dụng để sinh ra mã nguồn đích, ví dụ bytecode.</li>
 <li>Tái cấu trúc code: gợi ý các cách code tốt hơn, được sử dụng bởi các IDE.</li>
 </ol>
-<h3><a href="#intermediate-code-generation" aria-hidden="true" class="anchor" id="intermediate-code-generation"></a>Intermediate code generation</h3>
+<h3 id="intermediate-code-generation">Intermediate code generation</h3>
 <p>Đây là một bước có thể có hoặc không, tuỳ vào thiết kế của ngôn ngữ.</p>
 <p>Dựa vào cây AST, trình biên dịch sinh ra mã trung gian, đây là một loại mã nguồn có level thấp hơn các ngôn ngữ bậc cao như Java, Go.</p>
 <p>Mã trung gian như một chiếc cầu nối giữa mã nguồn của ngôn ngữ bậc cao và mã máy, loại mã không phụ thuộc vào cấu trúc vật lý của bộ xử lý (<code>machine-independent</code>). Thông thường với kiểu thiết kế này thì sẽ mang lại lợi ích là tách biệt sự phụ thuộc của ngôn ngữ bậc cao và máy tính vật lý, mọi người chắc hẳn cũng nghe đến câu marketing nổi tiếng của Java: <code>write once run anywhere</code>.</p>
@@ -194,12 +194,12 @@ class BinaryOp(Expr):
 <li><code>iconst_5</code> -&gt; push 5 vào stack.</li>
 <li><code>istore_1</code> -&gt; pop phần tử từ stack ra, lưu vào biến x (index của biến x trong hàm này là 1, <code>this</code> sẽ có index là 0).</li>
 </ol>
-<h3><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h3>
+<h3 id="tong-ket">Tổng kết</h3>
 <p>Trong bài này, mình bắt đầu với những thứ cở bản nhất của lập trình, biên dịch, thông dịch và làm rõ một số giai đoạn mà một trình biên dịch xử lý mã nguồn.</p>
 <p>Kiến thức nền tảng là thứ cần thiết để đi được con đường dài, mình nghĩ vậy.</p>
 <p>Lúc tìm hiểu lại những kiến thức này đối với bản thân vẫn còn nhiều chỗ mơ hồ, hy vọng đi tiếp chuỗi bài viết nãy sẽ có thêm cơ sở để củng cố kiến thức cũng như giải thích các thuật ngữ, khái niệm một cách rõ ràng, rành mạch hơn.</p>
 <p>Viết cho người mà thực ra là viết cho mình.</p>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <ol>
 <li>Slides môn học Nguyên lý ngôn ngữ lập trình ở trường Đại học Bách khoa Tp.Hồ Chí Minh.</li>
 <li><a href="https://medium.com/@saikadali/building-your-own-jvm-interpreter-from-scratch-86a085e225b1">https://medium.com/@saikadali/building-your-own-jvm-interpreter-from-scratch-86a085e225b1</a></li>

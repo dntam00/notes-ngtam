@@ -45,15 +45,15 @@
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#bridge" class="toc-link toc-level-2"><span class="toc-hash">#</span> Bridge</a></li>
-  <li><a href="#ng-dng" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ứng dụng</a></li>
+  <li><a href="#ung-dung" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ứng dụng</a></li>
     <li><a href="#virtual-machine" class="toc-link toc-level-3"><span class="toc-hash">#</span> Virtual machine</a></li>
     <li><a href="#docker-container" class="toc-link toc-level-3"><span class="toc-hash">#</span> Docker container</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
     <div class="main">
       <h1>Networking (4) Virtual bridge</h1>
       <p>Ở bài trước, mình đã tìm hiểu về <code>network namepsace</code> và <code>virtual ethernet</code>, hôm nay mình sẽ tiếp tục tìm hiểu về một thiết bị mạng ảo quan trọng khác, đó là <code>bridge</code>.</p>
-<h2><a href="#bridge" aria-hidden="true" class="anchor" id="bridge"></a>Bridge</h2>
+<h2 id="bridge">Bridge</h2>
 <p><code>Bridge</code> là một thiết bị mạng ảo (virtual network device), cũng giống như <code>veth</code> mình đã tìm hiểu ở bài trước, mặc định, <code>bridge</code> hoạt động ở layer 2 (mô hình OSI), và có chức năng tương tự như một switch (kết nối các máy tính ở cùng mạng LAN). Tuy nhiên, khi được gán cho địa chỉ IP, nó cũng có thể hoạt động ở layer 3.</p>
 <p><code>Bridge</code> kết nối vào <code>network protocol stack</code> (mình sẽ dùng <code>NPS</code> để chỉ cụm từ này trong xuyên suốt bài viết) và giống như switch, nó có các cổng để các thiết bị mạng ảo khác có thể kết nối vào như <code>veth</code>, <code>tap</code>,...</p>
 <p><img src="img/bridge-linux.png" alt="bridge-linux" /></p>
@@ -153,15 +153,15 @@ rtt min/avg/max/mdev = 0.717/0.717/0.717/0.000 ms
 20.1.0.10             ether   8e:5e:c2:c9:74:2a   C              veth1
 </code></pre>
 <p>Hãy quay lại ví dụ lúc mà mình chưa thiết lập địa chỉ IP cho <code>br0</code>, nó sẽ là một thiết bị hoạt động đơn thuần ở <code>layer 2</code> với các <code>ethernet frame</code>, không có sự liên kết trực tiếp đến <code>NPS</code> (<code>layer 3</code>) thông qua routing, nên lúc này các kết nối đến máy chủ vật lý bằng địa chỉ IP thông qua <code>virtual bridge</code> là không thể xảy ra.</p>
-<h2><a href="#ứng-dụng" aria-hidden="true" class="anchor" id="ứng-dụng"></a>Ứng dụng</h2>
-<h3><a href="#virtual-machine" aria-hidden="true" class="anchor" id="virtual-machine"></a>Virtual machine</h3>
+<h2 id="ung-dung">Ứng dụng</h2>
+<h3 id="virtual-machine">Virtual machine</h3>
 <p><img src="img/bridge-vm.png" alt="bridge-vm" /></p>
 <p>Mô hình network cơ bản của VM đó là các NIC trong VM sẽ kết nối với <code>tun/tap</code> device và đi qua <code>br0</code>, lúc này <code>br0</code> đóng vai trò như 1 <code>switch layer 2</code>. Nếu muốn VM giao tiếp được với máy chủ, chúng ta phải cấu hình thêm địa chỉ IP cho <code>br0</code> và nó sẽ có thêm vai trò là 1 <code>gateway</code>.</p>
-<h3><a href="#docker-container" aria-hidden="true" class="anchor" id="docker-container"></a>Docker container</h3>
+<h3 id="docker-container">Docker container</h3>
 <p><code>Bridge</code> được sử dụng như driver mặc định trong docker, cung cấp sự giao tiếp cho các container chạy trên cùng 1 máy chủ vật lý, mô hình hoạt động như sau:</p>
 <p><img src="img/docker-container.png" alt="bridge-linux" /></p>
 <p>Ở bài viết tiếp theo mình sẽ phân tích chi tiết hơn về mô hình này và cách docker dùng <code>port forwarding</code> bằng <code>iptables</code>.</p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Bài viết này mình đã tìm hiểu qua một thiết bị mạng ảo quan trọng đó là <code>bridge</code>, cách nó hoạt động ở <code>layer 2</code> và <code>layer 3</code> cũng như một số ứng dụng trong thực tế.</p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/docker.html'>docker</a><a class='topic-tag' href='/tags/networking.html'>networking</a></div>

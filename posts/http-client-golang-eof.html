@@ -46,21 +46,21 @@
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#pooling" class="toc-link toc-level-2"><span class="toc-hash">#</span> Pooling</a></li>
   <li><a href="#http-client-trong-go" class="toc-link toc-level-2"><span class="toc-hash">#</span> HTTP client trong Go</a></li>
-  <li><a href="#vn" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
-  <li><a href="#gii-php" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li>
-  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li></ul>
+  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+  <li><a href="#giai-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li>
+  <li><a href="#ma-nguon" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li></ul>
     </div>
     <div class="main">
       <h1>Pooling HTTP client</h1>
       <!-- `HTTP` is a application protocol based on TCP transport (layer 4 OSI), I have a related post [[TCP Close connection](https://notes-ngtam.pages.dev/posts/close-tcp)], you could read it before going ahead. -->
 <p><code>HTTP</code> là 1 giao thức ở tầng ứng dụng (application) sử dụng giao thức <code>TCP</code> ở tầng vận chuyển (transport), trước đó mình cũng có viết 1 bài liên quan đến <code>TCP</code>, bạn có thể đọc trước [<a href="https://notes-ngtam.pages.dev/posts/close-tcp">TCP Close connection</a>].</p>
 <!-- ## Why do we want to reuse connection? -->
-<h2><a href="#pooling" aria-hidden="true" class="anchor" id="pooling"></a>Pooling</h2>
+<h2 id="pooling">Pooling</h2>
 <!-- We all heard about `pooling technique`, from `HTTP` to `GRPC`, database connection, it's very popular. T -->
 <p>HTTP là một giao thức <code>client-server</code> dựa trên <code>TCP</code>, để thực thi 1 yêu cầu, phía <code>client</code> sẽ cần khởi tạo <code>TCP</code> connection tới <code>server</code> bằng cơ chế bắt tay 3 bước (<code>3-way handshake</code>), <code>SYN -&gt; SYN/ACK -&gt; SYN</code>, ngoài ra, nếu sử dụng TLS thì sau quá trình trên còn diễn ra thêm quá trình trao đổi khoá để mã hoá message, chi phí để liên tục mở và đóng các connection là rất lớn và lãng phí nếu ứng dụng cần gửi một cách thường xuyên.</p>
 <p>Để giải quyết vấn đề này, một kĩ thuật đã được áp dụng rộng rãi, đó là <code>pooling</code>, thay vì tạo mới connection mỗi lần gửi yêu cầu thì chúng ta sẽ tạo ra một tập các connection và tái sử dụng nó.</p>
-<h2><a href="#http-client-trong-go" aria-hidden="true" class="anchor" id="http-client-trong-go"></a>HTTP client trong Go</h2>
+<h2 id="http-client-trong-go">HTTP client trong Go</h2>
 <p>Ở phần này mình sử dụng phiên bản <code>Go v1.23</code> để phân tích.</p>
 <blockquote>
 <p>If the returned error is nil, the Response will contain a non-nil Body which the user is expected to close. If the Body is not both read to EOF and closed, the Client's underlying RoundTripper (typically Transport) may not be able to re-use a persistent TCP connection to the server for a subsequent &quot;keep-alive&quot; request.</p>
@@ -71,7 +71,7 @@
 <li>Gán biến <code>Close</code> của struct <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/request.go;l=112">Request</a> thành <code>true</code> khi khởi tạo 1 request mới.</li>
 <li>Gán biến <code>DisableKeepAlives</code> của struct <a href="https://cs.opensource.google/go/go/+/refs/tags/go1.23.3:src/net/http/transport.go;l=96">Transport</a> thành <code>true</code> khi khởi tạo <code>HTTP client</code></li>
 </ol>
-<h2><a href="#vấn-đề" aria-hidden="true" class="anchor" id="vấn-đề"></a>Vấn đề</h2>
+<h2 id="van-de">Vấn đề</h2>
 <p>Khi triển khai ứng dụng trong 1 thời gian dài, mình thấy có một vài API xảy ra lỗi <code>EOF</code>, lỗi này xảy ra khi server và client đều có tác động đến connection theo 2 hướng khác nhau:</p>
 <ul>
 <li><code>server</code>: đóng connection bởi vì <code>idle timeout</code>.</li>
@@ -208,15 +208,15 @@ func NewTransport() http.RoundTripper {
 <p>Sử dụng wireshark thì thấy được khi dừng ở bước 4, server sẽ gửi gói tin <code>FIN</code> để đóng <code>idle connection</code>.</p>
 <p><img src="img/idle-connection-fin.png" alt="FIN packet" /></p>
 <p>Cách tốt hơn là bạn có thể gửi 1 số lượng lớn request vào những lúc server đóng connection, tuy nhiên mình thử vài lần không được nên sử dụng cách này.</p>
-<h2><a href="#giải-pháp" aria-hidden="true" class="anchor" id="giải-pháp"></a>Giải pháp</h2>
+<h2 id="giai-phap">Giải pháp</h2>
 <p>Để xử lý vấn đề trên có vài cách sau:</p>
 <ul>
 <li>Cấu hình <code>idle timeout</code> ở phía <code>client</code> thấp hơn <code>server</code>.</li>
 <li>Retry request, tuy nhiên phương pháp này cần được cân nhắc cẩn thận vì tính chất <code>idempotency</code> của request.</li>
 </ul>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <p><a href="https://medium.com/@p408865/til-go-http-client-reuse-connection-5d8c48731dec">[TIL] Go HTTP client reuse connection</a></p>
-<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<h2 id="ma-nguon">Mã nguồn</h2>
 <p><a href="https://github.com/dntam00/go-notes/tree/main/http">[Http server &amp; client]</a></p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/http.html'>http</a><a class='topic-tag' href='/tags/tcp.html'>tcp</a><a class='topic-tag' href='/tags/networking.html'>networking</a><a class='topic-tag' href='/tags/golang.html'>golang</a></div>

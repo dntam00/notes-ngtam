@@ -45,12 +45,12 @@
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#time-wait" class="toc-link toc-level-2"><span class="toc-hash">#</span> TIME WAIT</a></li>
-    <li><a href="#tnh-tin-cy-trong-vic-truyn-d-liu" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính tin cậy trong việc truyền dữ liệu</a></li>
-    <li><a href="#tnh-ng-n-ca-vic-ng-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính đúng đắn của việc đóng connection</a></li>
-  <li><a href="#v-d-go-netstat" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ Go + Netstat</a></li>
-    <li><a href="#trng-thi-ca-tcp-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Trạng thái của TCP connection</a></li>
+    <li><a href="#tinh-tin-cay-trong-viec-truyen-du-lieu" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính tin cậy trong việc truyền dữ liệu</a></li>
+    <li><a href="#tinh-dung-dan-cua-viec-dong-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tính đúng đắn của việc đóng connection</a></li>
+  <li><a href="#vi-du-go-netstat" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ Go + Netstat</a></li>
+    <li><a href="#trang-thai-cua-tcp-connection" class="toc-link toc-level-3"><span class="toc-hash">#</span> Trạng thái của TCP connection</a></li>
     <li><a href="#connection-reset-by-peer" class="toc-link toc-level-3"><span class="toc-hash">#</span> Connection reset by peer</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
     <li><a href="#references" class="toc-link toc-level-3"><span class="toc-hash">#</span> References</a></li></ul>
     </div>
     <div class="main">
@@ -74,17 +74,17 @@
 <p>Tạm dịch: MSL là khoảng thời gian tối đa một gói tin TCP tồn tại trong đường truyền mạng. Theo thiết kế ban đầu RFC 793, nó có giá trị 2 phút.</p>
 </blockquote>
 <p>Vậy tại sao một TCP connection lại có trạng thái <code>TIME_WAIT</code>, liệu nó thực sự quan trọng?</p>
-<h2><a href="#time-wait" aria-hidden="true" class="anchor" id="time-wait"></a>TIME WAIT</h2>
+<h2 id="time-wait">TIME WAIT</h2>
 <p>Lý do phía chủ động đóng TCP connection bước vào trạng thái <code>TIME_WAIT</code> trong khoảng thời gian 2MSL thay vì trực tiếp bước vào trạng thái <code>CLOSED</code>:</p>
 <ul>
 <li>ngăn chặn việc những việc gói tin bị delayed do network được nhận bởi một connection mới → nếu việc này xảy ra, TCP không còn là một giao thức tin cậy nữa</li>
 <li>đảm bảo TCP connection được đóng lại chính xác ở peer, tức peer có thể nhận được gói tin <code>FIN</code></li>
 </ul>
-<h3><a href="#tính-tin-cậy-trong-việc-truyền-dữ-liệu" aria-hidden="true" class="anchor" id="tính-tin-cậy-trong-việc-truyền-dữ-liệu"></a>Tính tin cậy trong việc truyền dữ liệu</h3>
+<h3 id="tinh-tin-cay-trong-viec-truyen-du-lieu">Tính tin cậy trong việc truyền dữ liệu</h3>
 <p>Nếu client tạo một connection mới ngay sau khi gửi gói tin <code>ACK</code> và port của connection này trùng với connection trước đó, có thể xảy ra trường hợp những gói tin của connection trước bị delay và sẽ được xử lý bởi connection mới, điều này xảy ra đồng nghĩa với việc giao thức TCP không còn là một giao thức truyền dữ liệu đáng tin cậy nữa.</p>
 <p><img src="img/delay-packet.png" alt="Delayed packet process" /></p>
 <p>Ví dụ gói tin với SEQ=301, nếu không có trạng thái <code>TIME_WAIT</code> hoặc giá trị của <code>TIME_WAIT</code> không đúng, nó có thể được xử lý bởi connection mới.</p>
-<h3><a href="#tính-đúng-đắn-của-việc-đóng-connection" aria-hidden="true" class="anchor" id="tính-đúng-đắn-của-việc-đóng-connection"></a>Tính đúng đắn của việc đóng connection</h3>
+<h3 id="tinh-dung-dan-cua-viec-dong-connection">Tính đúng đắn của việc đóng connection</h3>
 <p>Nếu client tạo mới một connection tới peer ngay lập tức mà không quan tâm liệu peer có nhận được gói tin <code>ACK</code> cuối cùng không thì sẽ xảy ra vấn đề, peer vẫn xem connection hiện tại là hợp lệ và sẽ gửi gói tin <code>RST</code> khi client cố gắng tạo connection mới bằng gói tin <code>SYN</code> (3-handshake).</p>
 <p>Trạng thái <code>TIME_WAIT</code> sẽ đảm bảo được:</p>
 <ul>
@@ -93,8 +93,8 @@
 </ul>
 <p><img src="img/rst-packet.png" alt="RST packet process" /></p>
 <p>Ví dụ khi client tạo connection mới với gói tin <code>SYN</code>, <code>SEQ=100</code>, peer phản hồi bằng gói tin <code>RST</code> để từ chối tạo connection mới.</p>
-<h2><a href="#ví-dụ-go--netstat" aria-hidden="true" class="anchor" id="ví-dụ-go--netstat"></a>Ví dụ Go + Netstat</h2>
-<h3><a href="#trạng-thái-của-tcp-connection" aria-hidden="true" class="anchor" id="trạng-thái-của-tcp-connection"></a>Trạng thái của TCP connection</h3>
+<h2 id="vi-du-go-netstat">Ví dụ Go + Netstat</h2>
+<h3 id="trang-thai-cua-tcp-connection">Trạng thái của TCP connection</h3>
 <pre><code class="language-go">// server
 func main() {
 	ln, err := net.Listen(&quot;tcp&quot;, &quot;:12345&quot;)
@@ -153,7 +153,7 @@ tcp46      0      0  *.12345                *.*                    LISTEN
 tcp4       0      0  127.0.0.1.65482        127.0.0.1.12345        TIME_WAIT
 
 </code></pre>
-<h3><a href="#connection-reset-by-peer" aria-hidden="true" class="anchor" id="connection-reset-by-peer"></a>Connection reset by peer</h3>
+<h3 id="connection-reset-by-peer">Connection reset by peer</h3>
 <p>Đối với các ứng dụng thông thường, developer sẽ làm việc với các giao thức ở tầng ứng dụng, ví dụ HTTP. Nếu từng sử dụng các thư viện client HTTP, ít nhiều mọi người đã từng thấy lỗi <strong>Connection reset by peer</strong>, đây là một lỗi xảy ra ở tầng transport, khi client nhận được gói tin <code>RST</code> từ server. Như đã được đề cập ở trên, TCP connection được quản lý bởi client và peer, nên có thể xảy ra trường hợp client chưa nhận thức được connection đã được đóng từ phía peer.</p>
 <p>Mình sẽ demo bằng bằng Go và dùng Wireshark để capture gói tin:</p>
 <pre><code class="language-go">// server
@@ -240,14 +240,14 @@ func main() {
 </code></pre>
 <p>Wireshark:</p>
 <p><img src="img/wireshark.png" alt="Wireshark" /></p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Bài viết này đề cập đến quá trình đóng TCP connection và một số vấn đề liên quan nếu quá trình này xảy ra không đúng, một số keyword ở bài này:</p>
 <ul>
 <li>4-way handshake</li>
 <li>SYN, FIN, ACK, RST</li>
 <li>Connection reset by peer</li>
 </ul>
-<h3><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h3>
+<h3 id="references">References</h3>
 <ul>
 <li><a href="https://www.sobyte.net/post/2021-12/whys-the-design-tcp-time-wait/">https://www.sobyte.net/post/2021-12/whys-the-design-tcp-time-wait/</a></li>
 <li><a href="https://medium.com/@xuan11290/tcp-connection-termination-in-go-d786ecd071f2">https://medium.com/@xuan11290/tcp-connection-termination-in-go-d786ecd071f2</a></li>

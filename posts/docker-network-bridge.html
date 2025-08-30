@@ -45,14 +45,14 @@
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#overview" class="toc-link toc-level-2"><span class="toc-hash">#</span> Overview</a></li>
-    <li><a href="#v-d" class="toc-link toc-level-3"><span class="toc-hash">#</span> Ví dụ</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+    <li><a href="#vi-du" class="toc-link toc-level-3"><span class="toc-hash">#</span> Ví dụ</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
     <div class="main">
       <h1>Networking (5) Docker network - bridge driver</h1>
       <p>Tiếp tục chuỗi bài viết tìm hiểu về <code>virtual netowrk interface</code>, trái ngược với những bài viết trước hơi mang tính lí thuyết, bài viết hôm nay sẽ có tính ứng dụng hơn, đó là cách <code>docker</code> sử dụng <code>virtual ethernet</code> và <code>virtual bridge</code> để hiện thực một phần hệ thống <code>network</code>.</p>
 <p>Dựa theo tài liệu của <a href="https://docs.docker.com/engine/network/#drivers">Docker</a>, <code>bridge</code> là diver mặc định của <code>docker network</code>, <code>bridge driver</code> cho phép các container chạy trên cùng 1 máy vật lý giao tiếp với nhau, đối với các container chạy trên các máy vật lý khác nhau, chúng ta cần sử dụng các <code>driver network</code> khác như <code>host</code>, <code>NAT</code>, <code>overlay (e.g VxLAN)</code>,...</p>
-<h2><a href="#overview" aria-hidden="true" class="anchor" id="overview"></a>Overview</h2>
+<h2 id="overview">Overview</h2>
 <p>Các container chạy trong các namespace khác nhau với sự độc lập về tài nguyên, network, hình dưới mô tả cách docker sử dụng <code>bridge driver</code>.</p>
 <p><img src="img/docker-bridge-network.png" alt="docker-network-bridge" /></p>
 <p><code>bridge driver</code> cho phép các container trong cùng 1 <code>bridge</code> giao tiếp với nhau, có 2 thành phần trong mô hình này:</p>
@@ -61,7 +61,7 @@
 <li><code>bridge</code>: giao tiếp giữa các <code>veth</code></li>
 </ul>
 <p>Các gói tin sẽ đi từ trong namespace ra máy chủ, qua <code>bridge</code> rồi đi vào namespace còn lại, <code>bridge</code> đóng vai trò như 1 gateway và điều chuyển các gói tin <code>ethernet</code>.</p>
-<h3><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h3>
+<h3 id="vi-du">Ví dụ</h3>
 <p>Mình sẽ chạy thử một ví dụ và capture gói tin bằng <code>tcpdump</code> để chứng minh flow ở trên.</p>
 <p>Đầu tiên, tạo mới 1 network với driver <code>bridge</code> có tên <code>bridge_example</code> và kiểm tra bằng lệnh <code>docker network ls</code></p>
 <pre><code class="language-bash">docker network create \
@@ -235,7 +235,7 @@ port no	mac addr		is local?	ageing timer
   2	c2:9a:a8:9e:3b:2d	yes		   0.00
 </code></pre>
 <p>Nếu sử dụng địa chỉ MAC từ kết quả ở trên để kiểm tra lại với lệnh <code>ifconfig</code>, bạn sẽ thấy 2 địa chỉ MAC sẽ ứng với 2 <code>veth</code>, như vậy lúc này <code>bridge</code> sẽ có vai trò như 1 <code>switch</code> và điều chuyển gói tin <code>ethernet</code> dựa trên địa chỉ MAC.</p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Thông qua bài viết này, mình đã phân tích cách docker sử dụng <code>driver bridge</code> và kiểm chứng bằng các công cụ network như <code>tcpdump</code>, <code>ifconfig</code>, <code>ping</code>,...
 Trong xu hướng công nghệ hiện nay, <code>docker</code> có thể được xem là 1 phần không thể thiếu trong công việc hàng ngày của mỗi lập trình viên, việc hiểu sâu hơn cách <code>docker</code> hoạt động cũng giúp mình nâng cao chất lượng công việc, giảm thời gian debug khi có lỗi xảy ra.</p>
 

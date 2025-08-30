@@ -46,10 +46,10 @@
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#nlb-aws" class="toc-link toc-level-2"><span class="toc-hash">#</span> NLB AWS</a></li>
   <li><a href="#grpc-in-linux-os" class="toc-link toc-level-2"><span class="toc-hash">#</span> gRPC in Linux OS</a></li>
-  <li><a href="#gii-php" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
+  <li><a href="#giai-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
     <li><a href="#server" class="toc-link toc-level-3"><span class="toc-hash">#</span> Server</a></li>
     <li><a href="#client" class="toc-link toc-level-3"><span class="toc-hash">#</span> Client</a></li>
-  <li><a href="#kt-bi" class="toc-link toc-level-2"><span class="toc-hash">#</span> Kết bài</a></li></ul>
+  <li><a href="#ket-bai" class="toc-link toc-level-2"><span class="toc-hash">#</span> Kết bài</a></li></ul>
     </div>
     <div class="main">
       <h1>gRPC connection keep alive</h1>
@@ -62,7 +62,7 @@ read tcp &lt;src&gt;-&gt;&lt;dest&gt;: read: connection reset by peer
 </code></pre>
 <p>Mô hình triển khai hiện tại là gRPC server sẽ nằm sau một NLB để chia tải. Những lỗi kiểu này muôn thuở sẽ liên quan đến việc TCP connection bị đóng (có thể đúng hoặc không đúng cách) và tầng ứng dụng không phát hiện kịp thời nên vẫn sử dụng các connection này để gửi/nhận dữ liệu.</p>
 <p>Để xử lý những vấn đề này thì chắc hẳn mọi người đều nghĩ đến cơ chế <code>ping-pong</code> và <code>retry</code> rồi, tuy nhiên vì mình muốn tìm hiểu cụ thể vì sao connection bị đóng với mô hình hiện tại, nên có bài viết này :V.</p>
-<h2><a href="#nlb-aws" aria-hidden="true" class="anchor" id="nlb-aws"></a>NLB AWS</h2>
+<h2 id="nlb-aws">NLB AWS</h2>
 <p>Tài liệu chính thức của AWS có đề cập tới cách họ hiện thực <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html#connection-idle-timeout">idle timeout</a> ở NLB. Sau khi đọc và chạy thử một số trường hợp, mình có rút ra vài ý sau đây:</p>
 <ul>
 <li>NLB hoạt động với keep alive packet của TCP connection, điều này khác với ALB.</li>
@@ -75,7 +75,7 @@ read tcp &lt;src&gt;-&gt;&lt;dest&gt;: read: connection reset by peer
 <ul>
 <li>NLB giữ trạng thái của mỗi connection, khi <code>idle timeout</code> qua đi, NLB không đóng connection bằng các gói tin <code>FIN/RST</code> mà chỉ gửi những gói tin này khi client sử dụng lại connection sau thời gian <code>idle timeout</code>.</li>
 </ul>
-<h2><a href="#grpc-in-linux-os" aria-hidden="true" class="anchor" id="grpc-in-linux-os"></a>gRPC in Linux OS</h2>
+<h2 id="grpc-in-linux-os">gRPC in Linux OS</h2>
 <p>Mời bạn tham khảo bài viết của <a href="https://blog.cloudflare.com/when-tcp-sockets-refuse-to-die">Cloudflare engineer</a> để hiểu được chi tiết về các yếu tố ảnh hưởng đến một TCP connection.</p>
 <ul>
 <li>Thông số TCP keep alive</li>
@@ -130,9 +130,9 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 }
 </code></pre>
 <p>Như vậy, với giá trị của những thông số mặc định này, nếu không có dữ liệu truyền qua 1 connection trong vòng 15 giây, TCP sẽ bắt đầu gửi keepalive và chỉ cần 2 gói tin keepalive không nhận về gói tin <code>ACK</code> thì TCP sẽ đóng connection và gửi gói tin <code>RST</code> đến NLB. Đối với trường hợp có 1 số lượng lớn connection thì hiện tượng này cũng có thể xảy ra thường xuyên.</p>
-<h2><a href="#giải-pháp" aria-hidden="true" class="anchor" id="giải-pháp"></a>Giải pháp</h2>
+<h2 id="giai-phap">Giải pháp</h2>
 <p>gRPC cung cấp cơ chế chủ động <code>ping-pong</code>, tầng ứng dụng nên sử dụng các cơ chế chủ động này thay vì phụ thuộc hoàn toàn vào các tầng thấp hơn.</p>
-<h3><a href="#server" aria-hidden="true" class="anchor" id="server"></a>Server</h3>
+<h3 id="server">Server</h3>
 <pre><code class="language-go">type ServerParameters struct {
 
     // After a duration of this time if the server doesn't see any activity it
@@ -176,7 +176,7 @@ var kasp = keepalive.ServerParameters{
 	return f.endWrite()
 }
 </code></pre>
-<h3><a href="#client" aria-hidden="true" class="anchor" id="client"></a>Client</h3>
+<h3 id="client">Client</h3>
 <pre><code class="language-go">kaConfig := grpcConfig.GrpcKeepAlive
 		
 ka := grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -186,7 +186,7 @@ ka := grpc.WithKeepaliveParams(keepalive.ClientParameters{
 })
 </code></pre>
 <p>Ở phía client, những thông số này cần được suy nghĩ cẩn thận và phù hợp với phía server, giá trị càng nhỏ thì client sẽ ít gặp lỗi hơn, tuy nhiên việc gửi ping quá nhiều và liên tục cũng gây ảnh hưởng đến server.</p>
-<h2><a href="#kết-bài" aria-hidden="true" class="anchor" id="kết-bài"></a>Kết bài</h2>
+<h2 id="ket-bai">Kết bài</h2>
 <p>Trong bài này mình đã tóm tắt lại những yếu tố ảnh hưởng đến trạng thái của một TCP connection cũng như cách thư viện gRPC của Go sử dụng để hiện thực protocol, có một vài từ khoá để bạn có thể nghiên cứu sâu thêm:</p>
 <ul>
 <li>TCP keepalive</li>

@@ -45,17 +45,17 @@
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
         <ul class="toc-list">  <li><a href="#load-balancer-reverse-proxy" class="toc-link toc-level-2"><span class="toc-hash">#</span> Load balancer / Reverse proxy</a></li>
-  <li><a href="#hin-thc-v-kim-tra" class="toc-link toc-level-2"><span class="toc-hash">#</span> Hiện thực và kiểm tra</a></li>
+  <li><a href="#hien-thuc-va-kiem-tra" class="toc-link toc-level-2"><span class="toc-hash">#</span> Hiện thực và kiểm tra</a></li>
     <li><a href="#layer-4" class="toc-link toc-level-3"><span class="toc-hash">#</span> Layer 4</a></li>
     <li><a href="#layer-7" class="toc-link toc-level-3"><span class="toc-hash">#</span> Layer 7</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
-  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#ma-nguon" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>gRPC Load balancing (3) - LB as Proxy</h1>
       <p><a href="https://notes-ngtam.pages.dev/posts/grpc-load-balancer">Ở bài viết đầu tiên về cân bằng tải gRPC</a>, mình đã tìm hiểu về các ý tưởng cân bằng tải cho <code>gRPC</code> protocol, dựa trên phần lý thuyết đó, hôm nay mình sẽ làm một ví dụ sử dụng <code>load balancer</code>. Ở mô hình này, <code>load balancer</code> đóng vai trò như một <code>reverse proxy</code> cho cụm backend server.</p>
-<h2><a href="#load-balancer--reverse-proxy" aria-hidden="true" class="anchor" id="load-balancer--reverse-proxy"></a>Load balancer / Reverse proxy</h2>
+<h2 id="load-balancer-reverse-proxy">Load balancer / Reverse proxy</h2>
 <p>Chúng ta cần một load balancer đứng giữa client và server, có nhiều ứng viên có thể làm được việc này một cách hiệu quả, ví dụ:</p>
 <ul>
 <li>HAProxy</li>
@@ -74,7 +74,7 @@
 <li>Nếu không quản lý tốt, load balancer có thể là điểm gây lỗi duy nhất (single point of failure).</li>
 <li>Tăng latency của request.</li>
 </ul>
-<h2><a href="#hiện-thực-và-kiểm-tra" aria-hidden="true" class="anchor" id="hiện-thực-và-kiểm-tra"></a>Hiện thực và kiểm tra</h2>
+<h2 id="hien-thuc-va-kiem-tra">Hiện thực và kiểm tra</h2>
 <p>Ví dụ này của mình sử dụng <code>HAProxy</code> làm load balancer và server/client được hiện thực bằng <code>Go</code>.</p>
 <p><em><strong>gRPC proto</strong></em></p>
 <pre><code>syntax = &quot;proto3&quot;;
@@ -96,7 +96,7 @@ message HelloResponse {
   string serverId = 1;
 }
 </code></pre>
-<h3><a href="#layer-4" aria-hidden="true" class="anchor" id="layer-4"></a>Layer 4</h3>
+<h3 id="layer-4">Layer 4</h3>
 <p>Khi cân bằng tải ở L4, chúng ta sẽ nói đến <code>connection-based loadbalancing</code>, mô hình như sau:</p>
 <p><img src="img/grpc-loadbalacning-lb-proxy.png" alt="lb-proxy" /></p>
 <p>Việc cân bằng tải được thực hiện <strong>ở giai đoạn thiết lập connection</strong>, sau đó, LB sẽ như một proxy để chuyển tiếp các requests từ các connection đến server tương ứng.</p>
@@ -186,7 +186,7 @@ stop:
 <p><img src="img/haproxy-connections-L4.png" alt="haproxy-connections-L4" /></p>
 <p>Chạy chương trình một thời gian, dựa vào kết quả ở hình dưới, mình thấy <strong>tất cả requests trên một client được sử lý bởi duy nhất một server</strong>, điều này đúng với những điều mình đã phân tích.</p>
 <p><img src="img/haproxy-test-result-L4.png" alt="haproxy-test-result-L4" /></p>
-<h3><a href="#layer-7" aria-hidden="true" class="anchor" id="layer-7"></a>Layer 7</h3>
+<h3 id="layer-7">Layer 7</h3>
 <p><em><strong>HAProxy</strong></em></p>
 <p>Lần này, <code>HAProxy</code> sẽ sử dụng <code>mode http</code> để hoạt động ở <code>L7</code>.</p>
 <pre><code># HAProxy version: 3.1.0-f2b9791
@@ -260,16 +260,16 @@ backend be_grpc
 <p><img src="img/haproxy-test-result-L7-stream.png" alt="haproxy-test-result-L7-stream" /></p>
 <p><em><strong>Nhận xét</strong></em></p>
 <p>Về mặt gửi nhận message, <code>bidirectional stream</code> của gRPC cũng tựa tựa <code>web socket</code>, protocol có tính <a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/load-balancer-stickiness/options.html">stickiness</a>, do đó bạn sẽ thấy, khi mình cấu hình <code>HAProxy</code> ở L7, mình không cần phải quan tâm đến tính năng <code>stick table</code>. Về cơ bản, <code>HAProxy</code> đã hiện thực những tính chất này khi cân bằng tải <code>gRPC</code>, mà thực chất là <code>HTTP/2</code>.</p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Ở bài viết này, mình đã phân tích sâu hơn cách load balancer cân bằng tải gRPC protol với những chương trình kiểm tra trên <code>HAProxy</code>, qua đó hiểu thêm về cách connection, requests được xử lý.</p>
 <ul>
 <li>LB hoạt động ở L4 sẽ thực hiện cân bằng tải ngay khi connection được thiết lập.</li>
 <li>LB hạot động ở L7 sẽ thực hiện cân bằng tải requests.</li>
 <li>Đặc tính <code>stickiness</code> tự nhiên của <code>stream method</code> giống với <code>web socket</code>, vì vậy nếu chỉ để cân bằng tải, chúng ta không cần sử dụng tính năng này trên các LB.</li>
 </ul>
-<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<h2 id="ma-nguon">Mã nguồn</h2>
 <p>Bạn có thể tham khảo mã nguồn ở repository <a href="https://github.com/dntam00/grpc-loadblancing">grpc-loadblancing</a>.</p>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <ul>
 <li><a href="https://grpc.io/blog/grpc-load-balancing/">gRPC Load Balancing</a></li>
 <li><a href="https://www.haproxy.com/documentation/haproxy-configuration-tutorials/load-balancing/grpc/">gRPC - HaProxy</a></li>

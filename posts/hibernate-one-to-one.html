@@ -57,14 +57,14 @@
 <li><code>30/08/2025</code>: add use case for 1-1 mapping in RDBMS.</li>
 </ul>
 <hr />
-<h2><a href="#context" aria-hidden="true" class="anchor" id="context"></a>Context</h2>
+<h2 id="context">Context</h2>
 <ul>
 <li>Hibernate uses <code>@OneToOne</code> annotation to model 1-1 relationship in RDBMS. When we want to travel through entity
 relationship, we model these relationships as bidirectional ones. But with <code>one-to-one</code> relationship, <code>hibernate</code> will
 trigger additional query to fetch child entity if we map the relationship like others relationship.</li>
 <li>In <strong>hibernate context</strong>, an object will be identified by <code>id</code> and <code>entity type</code> (aka class) [1].</li>
 </ul>
-<h2><a href="#solution" aria-hidden="true" class="anchor" id="solution"></a>Solution</h2>
+<h2 id="solution">Solution</h2>
 <p>When we model relationship as regular bidirectional <code>one-to-one</code> relationship like two entity below:</p>
 <pre><code class="language-java">public class QuizEntity {
 
@@ -119,7 +119,7 @@ select q1_0.id,q1_0.quiz_id from quiz_result q1_0 where q1_0.quiz_id=?
 <p>Query log:</p>
 <pre><code class="language-sql">select q1_0.id from quiz q1_0 where q1_0.id=?
 </code></pre>
-<h2><a href="#use-case" aria-hidden="true" class="anchor" id="use-case"></a>Use case</h2>
+<h2 id="use-case">Use case</h2>
 <p>With these complex mappings, why on earth would you want to use them? Of course, it does not exist for fun. There are many cases in which one-to-one mappings are useful.</p>
 <ul>
 <li><a href="https://en.wikipedia.org/wiki/Partition_(database)#Vertical_partitioning">Vertical partition</a>: when an entity has many fields, we can split it into multiple tables based on query pattern to improve performance. For example, we have a <code>User</code> entity with many fields, we can split it into <code>User</code> and <code>UserProfile</code> entities. The <code>UserProfile</code> entity will have a 1-1 relationship with the <code>User</code> entity.
@@ -130,7 +130,7 @@ select q1_0.id,q1_0.quiz_id from quiz_result q1_0 where q1_0.quiz_id=?
 </li>
 <li>Avoid <code>NULLs</code> and subtype discrimination: when an entity has multiple subtypes, for example, we have a <code>Product</code> entity with subtypes <code>Software_Product</code> and <code>Hardware_Product</code>, we can use 1-1 mapping to store the common fields in the <code>Product</code> table and the subtype-specific fields in separate tables.</li>
 </ul>
-<h2><a href="#appendix" aria-hidden="true" class="anchor" id="appendix"></a>Appendix</h2>
+<h2 id="appendix">Appendix</h2>
 <p>Example source code: <a href="https://github.com/dntam00/learning-spring/tree/master/one-to-one">https://github.com/dntam00/learning-spring/tree/master/one-to-one</a></p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/java.html'>java</a><a class='topic-tag' href='/tags/hibernate.html'>hibernate</a></div>

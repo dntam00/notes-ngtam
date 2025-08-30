@@ -44,15 +44,15 @@
   <div class="container has-toc">
     <div class="table-of-contents">
         <div class="toc-title">Mục lục</div>
-        <ul class="toc-list">  <li><a href="#vn" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+        <ul class="toc-list">  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
   <li><a href="#redis-transaction" class="toc-link toc-level-2"><span class="toc-hash">#</span> Redis transaction</a></li>
     <li><a href="#watch" class="toc-link toc-level-3"><span class="toc-hash">#</span> WATCH</a></li></ul>
     </div>
     <div class="main">
       <h1>Redis transaction note</h1>
-      <h2><a href="#vấn-đề" aria-hidden="true" class="anchor" id="vấn-đề"></a>Vấn đề</h2>
+      <h2 id="van-de">Vấn đề</h2>
 <p>Có 1 API trả ra quá nhiều lỗi internal server error, mình kiểm tra thì thấy client go của redis hiển thị lỗi nil message, tìm hiểu sâu hơn thì thấy có vẻ như transaction không được thực thi, sau khi đọc lý thuyết lại thì thấy có vài trường hợp transaction không được thực thi và mình cố chứng minh điều đó nhưng ban đầu không được, mang lên github hỏi (<a href="https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180">https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180</a>), và 1 tuần sau may mắn mình đã tìm ra vấn đề.</p>
-<h2><a href="#redis-transaction" aria-hidden="true" class="anchor" id="redis-transaction"></a>Redis transaction</h2>
+<h2 id="redis-transaction">Redis transaction</h2>
 <p>Với mô hình single thread, Redis cung cấp tính khả tuần tự hoá (serializable) và tính cô lập (isolation) cho một transaction, để thực thi một transaction, sử dụng cặp lệnh <code>MULTI</code> và <code>EXEC</code> hoặc <code>DISCARD</code> để huỷ, cụ thể:</p>
 <ul>
 <li><code>MULTI</code> : lệnh bắt đầu để chuẩn bị cho một transaction</li>
@@ -62,7 +62,7 @@
 </ul>
 <p>Với cách hoạt động như trên và mô hình single thread, Redis đảm bảo được tính cô lập của một transaction, câu lệnh đến từ một client khác sẽ <strong>không được thực thi</strong> ở giữa một transaction.</p>
 <p>Nghe có vẻ ổn, tuy nhiên một transaction thông thường sẽ có một pattern như <code>get → compute → set</code>, input và output của các bước sẽ phụ thuộc lẫn nhau, và chúng ta không thể làm điều này trong Redis 😑, do đó, hành động <code>get</code> và <code>set</code> sẽ không mang tính <code>atomic</code> , giá trị được get ra lúc đầu đã bị thay đổi trước khi bắt đầu thực hiện bước sau. Ở RDBMS, kết quả cuối cùng của trường hợp này sẽ tuỳ thuộc vào mức độ cô lập của một transaction, có thể ghi đè, có thể rollback dữ liệu, tuy nhiên vì độ phức tạp và hiệu năng, Redis không hỗ trợ rollback dữ liệu và cung cấp một cơ chế khác, đó là <code>CAS: check-and-set</code>.</p>
-<h3><a href="#watch" aria-hidden="true" class="anchor" id="watch"></a>WATCH</h3>
+<h3 id="watch">WATCH</h3>
 <p>Lệnh <code>WATCH</code> cho phép Redis theo dõi giá trị một hoặc nhiều key đến lúc nhận được lệnh <code>EXEC</code> , như vậy về cơ bản, các lệnh sẽ được gọi theo thứ tự: <code>WATCH</code> → <code>GET COMMAND</code> → <code>MULTI</code> → <code>COMMAND1</code> → <code>COMMAND 2</code> → … → <code>EXEC</code>, khi nhận và thực thi lệnh <code>EXEC</code>, Redis sẽ kiểm tra xem giá trị của các key được theo dõi có được thay đổi hay không, nếu có thì transaction sẽ bị aborted và Redis trả về <code>empty message</code> với nội dung <code>_\r\n</code>, thông thường các client sẽ xử lý message này như một error với <code>nil message</code>.</p>
 <p>Khi <code>EXEC</code> được gọi hoặc connection được đóng, tất cả các key sẽ được <code>UNWATCH</code> .</p>
 <p>Như đã đề cập ở đầu bài viết, mình cố chứng minh lý thuyết trên, nhưng không được :v, sau đó bằng cách reproduce lại, mình đã thấy được vấn đề nằm ở lệnh <code>WATCH</code> , và <strong>ở bản thân mình 😐😐😐😐😐😐😐😐😐</strong>.</p>

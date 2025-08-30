@@ -47,15 +47,15 @@
         <ul class="toc-list">  <li><a href="#core-component" class="toc-link toc-level-2"><span class="toc-hash">#</span> Core component</a></li>
   <li><a href="#resolver" class="toc-link toc-level-2"><span class="toc-hash">#</span> Resolver</a></li>
   <li><a href="#balancer" class="toc-link toc-level-2"><span class="toc-hash">#</span> Balancer</a></li>
-  <li><a href="#v-d" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
-  <li><a href="#tng-kt" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
-  <li><a href="#m-ngun" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
-  <li><a href="#tham-kho" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
+  <li><a href="#vi-du" class="toc-link toc-level-2"><span class="toc-hash">#</span> Ví dụ</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#ma-nguon" class="toc-link toc-level-2"><span class="toc-hash">#</span> Mã nguồn</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>gRPC Load balancing (2) - Client architecture</h1>
       <p>Tiếp nối chuỗi bài viết về cân bằng tải <code>gRPC</code>, hôm nay mình sẽ tìm hiểu về các thành phần ở <code>gRPC client</code>, đặc biệt là những thành phần liên quan đến cân bằng tải.</p>
-<h2><a href="#core-component" aria-hidden="true" class="anchor" id="core-component"></a>Core component</h2>
+<h2 id="core-component">Core component</h2>
 <ul>
 <li><code>Stub</code>: client-facing interface, giúp chúng ta có cảm giác gọi một hàm ở remote như ở local.</li>
 <li><code>Client connection</code>: &quot;virtual connection&quot; đến một endpoint, quản lý một hoặc nhiều connection thật đến các gRPC servers (cho phép hiện thực client-side load balancing) và cung cấp các tính năng như phân giản domain name, TLS handshake, reconnect,.. thông qua các module khác.</li>
@@ -63,7 +63,7 @@
 <li><code>Load balancer</code>: hiện thực cân bằng tải ở phía client, các cơ chế có sẵn đã được hiện thực ở <code>Go</code> như: <code>pick first</code>, <code>round robin</code>, <code>weighted round robin</code>, <code>least request</code>,... Giống với <code>resolver</code>, gRPC cũng hỗ trợ người dùng custom logic để hiện thực các thuật toán cân bằng tải phức tạp.</li>
 <li><code>Interceptor</code>: cung cấp khả năng can thiệp vào request trước khi gửi đi.</li>
 </ul>
-<h2><a href="#resolver" aria-hidden="true" class="anchor" id="resolver"></a>Resolver</h2>
+<h2 id="resolver">Resolver</h2>
 <p><code>Resolver</code> về cơ bản là một service discovery, khi client muốn gửi request, nó phải biết được địa chỉ của server. Hiện tại gRPC cung cấp một số cơ chế có sẵn để sử dụng:</p>
 <ul>
 <li><code>pass through</code>: sử dụng địa chỉ server được cung cấp, được sử dụng khi kết trực tiếp đến load balancer hoặc 1 server.</li>
@@ -79,11 +79,11 @@
 <li>Phân tải địa chỉ của servers dựa vào logic được định nghĩa.</li>
 <li>Theo dõi và cập nhật địa chỉ của servers khi có sự thay đổi.</li>
 </ul>
-<h2><a href="#balancer" aria-hidden="true" class="anchor" id="balancer"></a>Balancer</h2>
+<h2 id="balancer">Balancer</h2>
 <p><code>Balancer</code> hiện thực client-side load balancing cho gRPC client, ở phần trước, mình có mô tả về <code>Client connection</code>, gRPC sử dụng <code>virtual connection</code> này để quản lý các connection thực sự đến servers, thông qua đó để quản lý việc phân giải địa chỉ, khởi tạo kết nối, cập nhật trạng thái và <strong>cân bằng tải</strong>.</p>
 <p>Giống như <code>resolver</code>, bên cạnh cung cấp các thuật toán cân bằng tải phổ biến, gRPC cũng cho phép người đăng kí các thuật toán tuỳ chỉnh, quá trình đăng kí và sử dụng giống với <code>resolver</code>.</p>
 <p><img src="img/grpc-balancer.png" alt="grpc-resolver" /></p>
-<h2><a href="#ví-dụ" aria-hidden="true" class="anchor" id="ví-dụ"></a>Ví dụ</h2>
+<h2 id="vi-du">Ví dụ</h2>
 <p>Mình sẽ hiện thực một custom resovler bằng <code>Go</code> để làm rõ hơn phần lý thuyết ở phần trước.</p>
 <ul>
 <li>có 3 gRPC servers chạy ở local.</li>
@@ -158,16 +158,16 @@ func main() {
 </code></pre>
 <p>Kết quả chạy chương trình:</p>
 <p><img src="img/grpc-static-resolver-result.png" alt="grpc-static-resolver-result.png" /></p>
-<h2><a href="#tổng-kết" aria-hidden="true" class="anchor" id="tổng-kết"></a>Tổng kết</h2>
+<h2 id="tong-ket">Tổng kết</h2>
 <p>Thông qua bài viết này, chúng ta đã tìm hiểu về kiến trúc của <code>gRPC client</code>, biết được những thành phần và cách chúng hoạt động và tương tác với nhau:</p>
 <ul>
 <li><code>Resolver</code>: phân giải targer để lấy được địa chỉ các <code>gRPC servers</code>.</li>
 <li><code>Blanacer</code>: cân bằng tải ở phía client.</li>
 </ul>
 <p>điều này sẽ giúp chúng ta sử dụng gRPC dễ dàng hơn, đặt nền tảng để có thể triển khai các mô hình phức tạp hơn ở các bài sau.</p>
-<h2><a href="#mã-nguồn" aria-hidden="true" class="anchor" id="mã-nguồn"></a>Mã nguồn</h2>
+<h2 id="ma-nguon">Mã nguồn</h2>
 <p>Bạn có thể tham khảo và tuỳ chỉnh mã nguồn ở repository <a href="https://github.com/dntam00/grpc-loadbalancing/tree/main/static-resolver">grpc-loadbalancing</a></p>
-<h2><a href="#tham-khảo" aria-hidden="true" class="anchor" id="tham-khảo"></a>Tham khảo</h2>
+<h2 id="tham-khao">Tham khảo</h2>
 <ul>
 <li><a href="https://github.com/grpc/grpc/blob/master/doc/load-balancing.md">Load Balancing in gRPC</a></li>
 <li><a href="https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md">A27: xDS-Based Global Load Balancing</a></li>
