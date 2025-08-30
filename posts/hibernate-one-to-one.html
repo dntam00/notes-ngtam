@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>Mapping 1-1 relationship in hibernate | Linh tinh</title>
+  <title>Mapping 1-1 relationship in Hibernate ORM | Linh tinh</title>
   <meta charset="utf-8">
   <meta http-equiv="content-type" content="text/html;">
   <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
@@ -45,11 +45,18 @@
     <div class="table-of-contents">
         <div class="toc-title">Table of Contents</div>
         <ul class="toc-list">  <li><a href="#context" class="toc-link toc-level-2"><span class="toc-hash">#</span> Context</a></li>
-  <li><a href="#solution" class="toc-link toc-level-2"><span class="toc-hash">#</span> Solution</a></li></ul>
+  <li><a href="#solution" class="toc-link toc-level-2"><span class="toc-hash">#</span> Solution</a></li>
+  <li><a href="#use-case" class="toc-link toc-level-2"><span class="toc-hash">#</span> Use case</a></li>
+  <li><a href="#appendix" class="toc-link toc-level-2"><span class="toc-hash">#</span> Appendix</a></li></ul>
     </div>
     <div class="main">
-      <h1>Mapping 1-1 relationship in hibernate</h1>
+      <h1>Mapping 1-1 relationship in Hibernate ORM</h1>
       <hr />
+<p><em><strong>Update notes:</strong></em></p>
+<ul>
+<li><code>30/08/2025</code>: add use case for 1-1 mapping in RDBMS.</li>
+</ul>
+<hr />
 <h2><a href="#context" aria-hidden="true" class="anchor" id="context"></a>Context</h2>
 <ul>
 <li>Hibernate uses <code>@OneToOne</code> annotation to model 1-1 relationship in RDBMS. When we want to travel through entity
@@ -112,6 +119,18 @@ select q1_0.id,q1_0.quiz_id from quiz_result q1_0 where q1_0.quiz_id=?
 <p>Query log:</p>
 <pre><code class="language-sql">select q1_0.id from quiz q1_0 where q1_0.id=?
 </code></pre>
+<h2><a href="#use-case" aria-hidden="true" class="anchor" id="use-case"></a>Use case</h2>
+<p>With these complex mappings, why on earth would you want to use them? Of course, it does not exist for fun. There are many cases in which one-to-one mappings are useful.</p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Partition_(database)#Vertical_partitioning">Vertical partition</a>: when an entity has many fields, we can split it into multiple tables based on query pattern to improve performance. For example, we have a <code>User</code> entity with many fields, we can split it into <code>User</code> and <code>UserProfile</code> entities. The <code>UserProfile</code> entity will have a 1-1 relationship with the <code>User</code> entity.
+<ul>
+<li>The <code>user_id</code> will be the mapping key.</li>
+<li>These tables may reside in separate physical databases.</li>
+</ul>
+</li>
+<li>Avoid <code>NULLs</code> and subtype discrimination: when an entity has multiple subtypes, for example, we have a <code>Product</code> entity with subtypes <code>Software_Product</code> and <code>Hardware_Product</code>, we can use 1-1 mapping to store the common fields in the <code>Product</code> table and the subtype-specific fields in separate tables.</li>
+</ul>
+<h2><a href="#appendix" aria-hidden="true" class="anchor" id="appendix"></a>Appendix</h2>
 <p>Example source code: <a href="https://github.com/dntam00/learning-spring/tree/master/one-to-one">https://github.com/dntam00/learning-spring/tree/master/one-to-one</a></p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/java.html'>java</a><a class='topic-tag' href='/tags/hibernate.html'>hibernate</a></div>

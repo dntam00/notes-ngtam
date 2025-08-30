@@ -1,5 +1,5 @@
 ---
-title: Mapping 1-1 relationship in hibernate
+title: Mapping 1-1 relationship in Hibernate ORM
 published: true
 date: 2023-01-04 15:43:23
 tags: java, hibernate
@@ -7,6 +7,11 @@ language: en
 description: Hibernate uses @OneToOne annotation to model 1-1 relationship in RDBMS
 image: 
 ---
+***Update notes:***
+- `30/08/2025`: add use case for 1-1 mapping in RDBMS.
+
+----
+
 ## Context
 
 <ul>
@@ -84,5 +89,15 @@ Query log:
 ```sql
 select q1_0.id from quiz q1_0 where q1_0.id=?
 ```
+
+## Use case
+
+With these complex mappings, why on earth would you want to use them? Of course, it does not exist for fun. There are many cases in which one-to-one mappings are useful.
+- [Vertical partition](https://en.wikipedia.org/wiki/Partition_(database)#Vertical_partitioning): when an entity has many fields, we can split it into multiple tables based on query pattern to improve performance. For example, we have a `User` entity with many fields, we can split it into `User` and `UserProfile` entities. The `UserProfile` entity will have a 1-1 relationship with the `User` entity.
+  + The `user_id` will be the mapping key.
+  + These tables may reside in separate physical databases.
+- Avoid `NULLs` and subtype discrimination: when an entity has multiple subtypes, for example, we have a `Product` entity with subtypes `Software_Product` and `Hardware_Product`, we can use 1-1 mapping to store the common fields in the `Product` table and the subtype-specific fields in separate tables.
+
+## Appendix
 
 Example source code: https://github.com/dntam00/learning-spring/tree/master/one-to-one
