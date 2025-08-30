@@ -7,6 +7,11 @@ description: JVM
 image: 
 ---
 
+***Thông tin cập nhật:***
+- `30/08/2025:` Bổ sung các lệnh để theo dõi vùng nhớ của một chương trình Java.
+----
+
+
 Java virtual machine - JVM  - Máy ảo Java, là máy ảo giúp máy tính thực thi các chương trình viết bằng Java hoặc các ngôn ngữ khác có trình biên dịch tạo ra bytecode. Việc tạo ra JVM giúp ngôn ngữ Java có tính linh động, viết một lần thực thi ở nhiều nơi (`Write Once, Run Anywhere`), cũng như ẩn giấu rất nhiều phần thiết kế, hiện thực phức tạp liên quan đến việc lập trình như quản lý bộ nhớ, sự phụ thuộc, tối ưu thực thi,... để lập trình viên có thể tập trung nhiều hơn vào việc phát triển ứng dụng.
 
 ## Tổng quan
@@ -163,6 +168,34 @@ Tiếp theo, hình sau thể hiện mối quan hệ của các vùng nhớ ở t
     + Kiểu object: tham chiếu ở stack, object ở heap.
 - Biến instance của object: cả kiểu nguyên thuỷ và object đều được lưu ở Heap.
 - String pool: ở heap.
+
+***Bắt đầu làm việc với vùng nhớ***
+
+Khi xử lý các vấn đề liên quan đến bộ nhớ của 1 chương trình Java, cần quan tâm đến tất cả vùng nhớ, không chỉ mỗi vùng heap. Các bước khởi đầu để nghiên cứu vùng nhớ của một chương trình Java như sau: 
+- Chạy chương trình ở chế độ cho phép theo dõi bộ nhớ bằng cách thêm tuỳ chọn `-XX:NativeMemoryTracking=detail` (hoặc `summary`) vào lệnh chạy chương trình Java.
+
+```
+java -Xmx65536m -Xms2048m -XX:NativeMemoryTracking=detail -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -jar ./target/HyperAlloc.jar
+```
+- Sử dụng lệnh `jcmd <pid> VM.native_memory summary` để xem các kích thước các vùng nhớ.
+- Đối với thread, xem số lượng thread và kích thước có hợp lý hay không. Như hình trên thì thread có stack, có thể xem kích thước mặc định của stack của OS và thay đổi giá trị mặc định này bằng tuỳ chọn Java.
+
+```
+java -XX:+PrintFlagsFinal -version | grep ThreadStackSize
+
+-Xss2m, -Xss2048k, or -XX:ThreadStackSize=2048
+```
+
+![stack-size-os](img/stack_size.png)
+
+Tuy nhiên, Java có yêu cầu tối thiểu về kích thước stack cho mỗi thread, nếu cấu hình quá nhỏ thì sẽ gây ra lỗi như sau:
+
+```
+java -Xss1K -version
+```
+
+![stack-size-error](img/stack_size_error.png)
+
 
 ### Execute engine
 

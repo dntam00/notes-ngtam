@@ -41,7 +41,12 @@
     <div class="main">
       <p><a href="/">&lt;- Quay về trang chủ</a></p>
       <h1>JVM (ghi chú)</h1>
-      <p>Java virtual machine - JVM  - Máy ảo Java, là máy ảo giúp máy tính thực thi các chương trình viết bằng Java hoặc các ngôn ngữ khác có trình biên dịch tạo ra bytecode. Việc tạo ra JVM giúp ngôn ngữ Java có tính linh động, viết một lần thực thi ở nhiều nơi (<code>Write Once, Run Anywhere</code>), cũng như ẩn giấu rất nhiều phần thiết kế, hiện thực phức tạp liên quan đến việc lập trình như quản lý bộ nhớ, sự phụ thuộc, tối ưu thực thi,... để lập trình viên có thể tập trung nhiều hơn vào việc phát triển ứng dụng.</p>
+      <p><em><strong>Thông tin cập nhật:</strong></em></p>
+<ul>
+<li><code>30/08/2025:</code> Bổ sung các lệnh để theo dõi vùng nhớ của một chương trình Java.</li>
+</ul>
+<hr />
+<p>Java virtual machine - JVM  - Máy ảo Java, là máy ảo giúp máy tính thực thi các chương trình viết bằng Java hoặc các ngôn ngữ khác có trình biên dịch tạo ra bytecode. Việc tạo ra JVM giúp ngôn ngữ Java có tính linh động, viết một lần thực thi ở nhiều nơi (<code>Write Once, Run Anywhere</code>), cũng như ẩn giấu rất nhiều phần thiết kế, hiện thực phức tạp liên quan đến việc lập trình như quản lý bộ nhớ, sự phụ thuộc, tối ưu thực thi,... để lập trình viên có thể tập trung nhiều hơn vào việc phát triển ứng dụng.</p>
 <h2><a href="#tổng-quan" aria-hidden="true" class="anchor" id="tổng-quan"></a>Tổng quan</h2>
 <p>Những gì ngôn ngữ Java cung cấp cho lập trình viên có thể gói gọn ở high-level như hình sau:</p>
 <ul>
@@ -223,6 +228,26 @@ protected Class&lt;?&gt; loadClass(String name, boolean resolve)
 <li>Biến instance của object: cả kiểu nguyên thuỷ và object đều được lưu ở Heap.</li>
 <li>String pool: ở heap.</li>
 </ul>
+<p><em><strong>Bắt đầu làm việc với vùng nhớ</strong></em></p>
+<p>Khi xử lý các vấn đề liên quan đến bộ nhớ của 1 chương trình Java, cần quan tâm đến tất cả vùng nhớ, không chỉ mỗi vùng heap. Các bước khởi đầu để nghiên cứu vùng nhớ của một chương trình Java như sau:</p>
+<ul>
+<li>Chạy chương trình ở chế độ cho phép theo dõi bộ nhớ bằng cách thêm tuỳ chọn <code>-XX:NativeMemoryTracking=detail</code> (hoặc <code>summary</code>) vào lệnh chạy chương trình Java.</li>
+</ul>
+<pre><code>java -Xmx65536m -Xms2048m -XX:NativeMemoryTracking=detail -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -jar ./target/HyperAlloc.jar
+</code></pre>
+<ul>
+<li>Sử dụng lệnh <code>jcmd &lt;pid&gt; VM.native_memory summary</code> để xem các kích thước các vùng nhớ.</li>
+<li>Đối với thread, xem số lượng thread và kích thước có hợp lý hay không. Như hình trên thì thread có stack, có thể xem kích thước mặc định của stack của OS và thay đổi giá trị mặc định này bằng tuỳ chọn Java.</li>
+</ul>
+<pre><code>java -XX:+PrintFlagsFinal -version | grep ThreadStackSize
+
+-Xss2m, -Xss2048k, or -XX:ThreadStackSize=2048
+</code></pre>
+<p><img src="img/stack_size.png" alt="stack-size-os" /></p>
+<p>Tuy nhiên, Java có yêu cầu tối thiểu về kích thước stack cho mỗi thread, nếu cấu hình quá nhỏ thì sẽ gây ra lỗi như sau:</p>
+<pre><code>java -Xss1K -version
+</code></pre>
+<p><img src="img/stack_size_error.png" alt="stack-size-error" /></p>
 <h3><a href="#execute-engine" aria-hidden="true" class="anchor" id="execute-engine"></a>Execute engine</h3>
 <h4><a href="#thực-thi" aria-hidden="true" class="anchor" id="thực-thi"></a>Thực thi</h4>
 <p>JVM cung cấp các loại thực thi sau:</p>
