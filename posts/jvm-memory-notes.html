@@ -1,0 +1,183 @@
+<html>
+
+<head>
+  <title>JVM memory | Linh tinh</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
+  </div>
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+        <div class="toc-title">Mục lục</div>
+        <ul class="toc-list">  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+  <li><a href="#reserved-vs-committed" class="toc-link toc-level-2"><span class="toc-hash">#</span> Reserved vs Committed</a></li>
+  <li><a href="#giai-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
+  <li><a href="#jvm-options" class="toc-link toc-level-2"><span class="toc-hash">#</span> JVM options</a></li>
+  <li><a href="#off-heap-memory" class="toc-link toc-level-2"><span class="toc-hash">#</span> Off-heap memory</a></li>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+    </div>
+    <div class="main">
+      <h1>JVM memory</h1>
+      <h2 id="van-de">Vấn đề</h2>
+<p>Tuần rồi được một đồng nghiệp hỏi về việc service hay bị <code>OOM (Out Of Memory)</code> trên môi trường DEV, vừa hay tháng trước học lý thuyết về JVM nên nay mang vào thực hành thử, trong quá trình làm thì nhận có nhiều thứ bản thân đang hiểu sai hoặc chưa hiểu rõ.</p>
+<p>Một số ngữ cảnh của service:</p>
+<ul>
+<li>Mã nguồn Java 8.</li>
+<li>Sử dụng G1C garbage collector.</li>
+<li>Webserver xài Tomcat truyền thống, webclient xài Webflux với Netty.</li>
+<li>Triển khai trên k8s với sidecar pattern, istio proxy.</li>
+</ul>
+<!-- ![jvm-memory](img/k8s_everywhere.png) -->
+<p>Đầu tiên thì thấy container service bị <code>OOMKilled</code>:</p>
+<ul>
+<li>Pod không bị xoá đi.</li>
+<li>Container bị restart nhiều lần bởi k8s do vượt quá giới hạn bộ nhớ được thiết lập.</li>
+</ul>
+<p>Vào xem memory của container thì đúng là <code>loanh quanh 2GiB</code>, vừa đúng với giá trị giới hạn. Vậy có phải do ứng dụng có vấn đề hay con số 2GiB quá thấp?</p>
+<p>Bước đầu tiên nghĩ tới là heapdump:</p>
+<pre><code>jcmd 1 GC.heap_dump &lt;path&gt;
+</code></pre>
+<p>Điều bất ngờ là kết quả của heapdump chỉ loanh quanh <code>250MB</code>.</p>
+<p><img src="img/jvm_memory_heapdump.png" alt="heapdump" /></p>
+<p>Con số khá nhỏ so với 2GiB, vậy phải tiếp tục sử dụng chế độ theo dõi memory của JVM để nghiên cứu tiếp.
+Khi chạy chương trình, cần thêm tuỳ chọn sau:</p>
+<pre><code>-XX:NativeMemoryTracking=summary
+</code></pre>
+<p>Sau đó, có thể sử dụng lệnh <code>jcmd</code> để lấy thông tin:</p>
+<pre><code>jcmd &lt;pid&gt; VM.native_memory summary scale=MB
+</code></pre>
+<p><img src="img/jvm_memory_native_memory_tracking.png" alt="native_memory_tracking" /></p>
+<p>Thoạt đầu nhìn vào phần <code>Total</code>, thấy con số <code>committed: 2131MB</code> còn lớn hơn cả giới hạn 2GiB của container, thấy cũng hơi lạ, tại vì mình đang vào bên trong container để chạy lệnh mà, nếu lơn hơn thì container đã bị kill và mình không thể truy cập được rồi.</p>
+<p>Ok bắt đầu đi tìm hiểu về các con số trong phần kết quả này, thì thấy JVM có 1 bug liên quan đến NMT (Native Memory Tracking) trên các phiên bản Java 8 cũ:</p>
+<ul>
+<li><a href="https://bugs.openjdk.org/browse/JDK-8191369">https://bugs.openjdk.org/browse/JDK-8191369</a></li>
+</ul>
+<p>Cụ thể là con số <code>committed</code> trong phần <code>stack memory</code> được hiển thị bằng với số <code>reserved</code>. Vậy kết luận đầu tiên là giá trị <code>committed</code> ở phần <code>Total</code> sẽ phải nhỏ hơn số trong hình.</p>
+<h2 id="reserved-vs-committed">Reserved vs Committed</h2>
+<p>Trước khi đi tiếp thì cần hiểu về 2 khái niệm <code>reserved</code> và <code>committed</code> trong quản lý bộ nhớ của JVM:</p>
+<ul>
+<li><code>Reserved memory</code>: kích thước vùng nhớ được đảm bảo bởi OS là sẽ sẵn sàng cung cấp cho JVM nếu được yêu cầu, có thể hiểu là lời hứa :V.</li>
+<li><code>Committed memory</code>: kích thước vùng nhớ thực tế đã được OS cấp phát cho JVM để sử dụng.</li>
+</ul>
+<p>Vậy nên, <code>reserved</code> luôn luôn lớn hơn hoặc bằng <code>committed</code>.</p>
+<p>Trong 2 số trên thì giá trị <code>committed</code> sẽ được k8s sử dụng để so sánh với giới hạn bộ nhớ của container.</p>
+<p><em><strong>Câu hỏi quan trọng:</strong></em> có phải tất cả vùng nhớ trong phần <code>committed</code> đều đang chứa dữ liệu (objects, metadata,...), có thể hiểu là <code>đang được sử dụng</code>?</p>
+<p>Ban đầu thì cũng nghĩ là vậy, cho tới khi hiểu được ý nghĩa của nó và xem lại file <code>heapdump</code> ở trên. Câu trả lời chính xác là không, JVM có thể đánh dấu sở hữu vùng nhớ nhưng không nhất thiết phải cấp phát dữ liệu lên đó.</p>
+<h2 id="giai-phap">Giải pháp</h2>
+<h2 id="jvm-options">JVM options</h2>
+<p>Nhìn vào phần <code>Heap</code> thì thấy giá trị <code>committed</code> bằng với <code>reserved</code> là <code>1Gib</code>, chiếm 50% số giới hạn của container, con số này được cấu hình từ đâu?</p>
+<p>Khi nghiên cứu về process JVM thì có một vài lệnh quan trọng để xem các thông số cấu hình:</p>
+<pre><code>jcmd &lt;pid&gt; VM.flags
+jcmd &lt;pid&gt; VM.command_line
+</code></pre>
+<p>Sau khi chạy 2 lệnh trên thì thấy có một cấu hình liên quan tới Heap, đó là <code>-XX:MaxRAMFraction=2</code>.</p>
+<ul>
+<li><code>MaxRAMFraction</code>: xác định tỷ lệ phần trăm bộ nhớ vật lý tối đa mà JVM có thể sử dụng cho Heap, giá trị mặc định là <code>4</code>, tức là 25% bộ nhớ vật lý.</li>
+</ul>
+<p>Cấu hình này giải thích giá trị <code>reserved</code> của Heap là <code>1Gib</code>, vì giới hạn bộ nhớ của container là <code>2Gib</code>.</p>
+<p>Quay lại với giá trị thật sự sử dụng của <code>Heap</code>, vì chỉ loanh quanh <code>250MB</code> nên nghĩ về phương án đầu tiên là làm yêu cầu JVM trả vùng nhớ về cho OS khi không sử dụng, tìm kiếm trên mạng thì thấy có vài cấu hình như sau:</p>
+<pre><code class="language-text">-XX:MinHeapFreeRatio
+-XX:MaxHeapFreeRatio
+-XX:G1MaxUncommittedCapacity
+</code></pre>
+<p>Tuy nhiên mang vào xài thử thì có option không được hỗ trợ, còn lại thì không hoạt động.</p>
+<p>Cuối cùng nghĩ lại thấy <code>Heap</code> xài ít quá, mình giảm phần <code>reserved</code> của <code>Heap</code> xuống còn <code>512MB</code> bằng cách sử dụng:</p>
+<pre><code>-XX:MaxRAMFraction=4
+</code></pre>
+<p>Và kết quả thì bộ nhớ của toàn ứng dụng đã giảm xuống mức an toàn.</p>
+<ul>
+<li>Bên trái: service container.</li>
+<li>Bên phải: istio-proxy container.</li>
+</ul>
+<p><img src="img/jvm_memory_after_tuning.png" alt="after_tuning" /></p>
+<p>Tuy nhiên, sau vài ngày thì ứng dụng có xu hướng tăng chậm bộ nhớ, mình xem thử lại về native memory tracking thì thấy các phần trong JVM report không khác nhiều lắm, vậy nguyên nhân nằm ở phần khác.</p>
+<h2 id="off-heap-memory">Off-heap memory</h2>
+<p>Thực sự heap chỉ là một phần trong tổng bộ nhớ của JVM và được quản lý trực tiếp bởi JVM, còn một số phần native memory khác không được thể hiện trong báo cáo của JVM, ví dụ như:</p>
+<ul>
+<li>MappedByteBuffer (Mapped files).</li>
+<li>Native libraries allocations (các thư viện C).</li>
+<li>Malloc overhead</li>
+</ul>
+<p>Để theo dõi các phần này thì có thể sử dụng công cụ <code>pmap</code>.</p>
+<p>Nhìn về tổng quan thì tổng bộ nhớ của container sẽ bao gồm các phần sau:</p>
+<pre><code>Total memory = Heap + GC + Metaspace + Code Cache + Symbol tables
+               + Compiler + Other JVM structures + Thread stacks
+               + Direct buffers + Mapped files +
+               + Native libraries allocations + Malloc overhead
+               + ...
+</code></pre>
+<p>Sẽ cần tiếp tục nghiên cứu về phần <code>Off-heap memory</code> này trong các bài sau, vì đây là chủ đề phức tạp, cần phải ôn lại kiến thức quản lý bộ nhớ trong hệ điều hành nữa 😳, điểm danh sơ sơ qua là thấy cần xem thêm về:</p>
+<ul>
+<li>Virtual memory vs Physical memory.</li>
+<li>Memory paging.</li>
+<li>Resident Set Size (RSS).</li>
+<li>Cgroup memory limit.</li>
+</ul>
+<p>Và bash script để múa nữa :)).</p>
+<h2 id="tong-ket">Tổng kết</h2>
+<p>Qua quá trình tìm hiểu này, nhận ra được vấn đề nắm được lý thuyết là cực kì quan trọng, có những thứ nhìn vậy nhưng không phải vậy, ví dụ phần <code>committed</code> memory của stack ở Java 8.</p>
+<p>Hiểu được tổng thể các vùng nhớ này cũng giúp đưa ra quyết định là xin thêm RAM cho service hay là tối ưu lại ứng dụng.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/java.html'>java</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
