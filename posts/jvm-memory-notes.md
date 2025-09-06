@@ -75,9 +75,6 @@ Ban đầu thì cũng nghĩ là vậy, cho tới khi hiểu được ý nghĩa c
 
 ## Giải pháp
 
-
-## JVM options
-
 Nhìn vào phần `Heap` thì thấy giá trị `committed` bằng với `reserved` là `1Gib`, chiếm 50% số giới hạn của container, con số này được cấu hình từ đâu?
 
 Khi nghiên cứu về process JVM thì có một vài lệnh quan trọng để xem các thông số cấu hình:

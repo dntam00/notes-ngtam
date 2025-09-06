@@ -47,7 +47,6 @@
         <ul class="toc-list">  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
   <li><a href="#reserved-vs-committed" class="toc-link toc-level-2"><span class="toc-hash">#</span> Reserved vs Committed</a></li>
   <li><a href="#giai-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
-  <li><a href="#jvm-options" class="toc-link toc-level-2"><span class="toc-hash">#</span> JVM options</a></li>
   <li><a href="#off-heap-memory" class="toc-link toc-level-2"><span class="toc-hash">#</span> Off-heap memory</a></li>
   <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
@@ -99,7 +98,6 @@ Khi chạy chương trình, cần thêm tuỳ chọn sau:</p>
 <p><em><strong>Câu hỏi quan trọng:</strong></em> có phải tất cả vùng nhớ trong phần <code>committed</code> đều đang chứa dữ liệu (objects, metadata,...), có thể hiểu là <code>đang được sử dụng</code>?</p>
 <p>Ban đầu thì cũng nghĩ là vậy, cho tới khi hiểu được ý nghĩa của nó và xem lại file <code>heapdump</code> ở trên. Câu trả lời chính xác là không, JVM có thể đánh dấu sở hữu vùng nhớ nhưng không nhất thiết phải cấp phát dữ liệu lên đó.</p>
 <h2 id="giai-phap">Giải pháp</h2>
-<h2 id="jvm-options">JVM options</h2>
 <p>Nhìn vào phần <code>Heap</code> thì thấy giá trị <code>committed</code> bằng với <code>reserved</code> là <code>1Gib</code>, chiếm 50% số giới hạn của container, con số này được cấu hình từ đâu?</p>
 <p>Khi nghiên cứu về process JVM thì có một vài lệnh quan trọng để xem các thông số cấu hình:</p>
 <pre><code>jcmd &lt;pid&gt; VM.flags
