@@ -48,7 +48,8 @@
   <li><a href="#reserved-vs-committed" class="toc-link toc-level-2"><span class="toc-hash">#</span> Reserved vs Committed</a></li>
   <li><a href="#giai-phap" class="toc-link toc-level-2"><span class="toc-hash">#</span> Giải pháp</a></li>
   <li><a href="#off-heap-memory" class="toc-link toc-level-2"><span class="toc-hash">#</span> Off-heap memory</a></li>
-  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+  <li><a href="#tong-ket" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tổng kết</a></li>
+  <li><a href="#tham-khao" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tham khảo</a></li></ul>
     </div>
     <div class="main">
       <h1>JVM memory</h1>
@@ -150,6 +151,14 @@ jcmd &lt;pid&gt; VM.command_line
 <h2 id="tong-ket">Tổng kết</h2>
 <p>Qua quá trình tìm hiểu này, nhận ra được vấn đề nắm được lý thuyết là cực kì quan trọng, có những thứ nhìn vậy nhưng không phải vậy, ví dụ phần <code>committed</code> memory của stack ở Java 8.</p>
 <p>Hiểu được tổng thể các vùng nhớ này cũng giúp đưa ra quyết định là xin thêm RAM cho service hay là tối ưu lại ứng dụng.</p>
+<p><img src="img/compare-go-java-joke.png" alt="compare-go-java-joke" /></p>
+<h2 id="tham-khao">Tham khảo</h2>
+<ul>
+<li><a href="https://blog.arkey.fr/2020/11/30/off-heap-reconnaissance/">https://blog.arkey.fr/2020/11/30/off-heap-reconnaissance/</a></li>
+<li><a href="https://dzone.com/articles/how-much-memory-does-a-java-thread-take">https://dzone.com/articles/how-much-memory-does-a-java-thread-take</a></li>
+<li><a href="https://www.baeldung.com/linux/resident-set-vs-virtual-memory-size">https://www.baeldung.com/linux/resident-set-vs-virtual-memory-size</a></li>
+<li>ChatGPT, Gemini AI</li>
+</ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/java.html'>java</a></div>
       <!-- <div class="copyright">

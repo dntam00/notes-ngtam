@@ -146,3 +146,12 @@ Và bash script để múa nữa :)).
 Qua quá trình tìm hiểu này, nhận ra được vấn đề nắm được lý thuyết là cực kì quan trọng, có những thứ nhìn vậy nhưng không phải vậy, ví dụ phần `committed` memory của stack ở Java 8. 
 
 Hiểu được tổng thể các vùng nhớ này cũng giúp đưa ra quyết định là xin thêm RAM cho service hay là tối ưu lại ứng dụng.
+
+![compare-go-java-joke](img/compare-go-java-joke.png)
+
+## Tham khảo
+
+- https://blog.arkey.fr/2020/11/30/off-heap-reconnaissance/
+- https://dzone.com/articles/how-much-memory-does-a-java-thread-take
+- https://www.baeldung.com/linux/resident-set-vs-virtual-memory-size
+- ChatGPT, Gemini AI
