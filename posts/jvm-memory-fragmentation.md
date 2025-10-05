@@ -1,5 +1,5 @@
 ---
-title: Phân mảnh vùng nhớ của chương trình JVM
+title: Vấn đề phân mảnh vùng nhớ trong chương trình JVM
 published: true
 date: 2025-09-05 12:24:00
 tags: jvm, java, k8s, linux
