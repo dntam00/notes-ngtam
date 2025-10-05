@@ -120,7 +120,7 @@ Tuy nhiên, sau vài ngày thì ứng dụng có xu hướng tăng chậm bộ n
 Thực sự heap chỉ là một phần trong tổng bộ nhớ của JVM và được quản lý trực tiếp bởi JVM, còn một số phần native memory khác không được thể hiện trong báo cáo của JVM, ví dụ như:
 - MappedByteBuffer (Mapped files).
 - Native libraries allocations (các thư viện C).
-- Malloc overhead
+- Malloc overhead.
 
 Để theo dõi các phần này thì có thể sử dụng công cụ `pmap`.
 
