@@ -1,7 +1,7 @@
 ---
 title: Mô hình 1 thread / 1 request của một web server
 published: true
-date: 2025-02-08 13:36:50
+date: 2026-02-08 13:36:50
 tags: java, tomcat, web, spring
 description: describe thread per request model
 image: 
