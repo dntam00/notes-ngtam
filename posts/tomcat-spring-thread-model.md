@@ -41,7 +41,7 @@ Với việc sử dụng riêng một thread để phát hiện khi nào có req
 
 Mô hình này còn cho phép debug lỗi dễ dàng ở tầng ứng dụng, mỗi request sẽ được xử lý bởi một worker thread, các thông tin về request context sẽ không bị nhầm lẫn, và có thể xem được đầy đủ stacktrace khi có lỗi xảy ra.
 
-Bên cạnh các ưu điểm, mặt tài nguyên của hệ thống cần được phân tích kĩ lưỡng khi sử dụng model này, nếu ở tầng ứng dụng sử dụng các thao tác blocking như kiểm tra dữ liệu, truy vấn database, gọi các service bên thứ 3, thì worker thread sẽ bị chiếm dụng trên toàn bộ thời gian này, có nghĩa là số request được xử lý sẽ bằng số lượng worker thread *tối đa*. Tối đa là bao nhiêu???
+Bên cạnh các ưu điểm, mặt tài nguyên của hệ thống cần được phân tích kĩ lưỡng khi sử dụng model này, nếu ở tầng ứng dụng sử dụng các thao tác blocking như kiểm tra dữ liệu, truy vấn database, gọi các service bên thứ 3, thì worker thread sẽ bị chiếm dụng trên toàn bộ thời gian này, có nghĩa là số request tối đa được xử lý tại một thời điểm sẽ bằng số lượng worker thread *tối đa*. Tối đa là bao nhiêu???
 
 Về lý thuyết, một chương trình có thể tạo ra số lượng threads không giới hạn, nhưng quản lý threads tiêu tốn tài nguyên và nhiều threads dẫn tới context-switch của CPU cao, nếu không cấu hình giới hạn, chương trình có thể bị OOM, rất rủi ro.
 
