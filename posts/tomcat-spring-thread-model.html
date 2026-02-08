@@ -1,0 +1,149 @@
+<html>
+
+<head>
+  <title>Mô hình 1 thread / 1 request của một web server | Linh tinh</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
+  </div>
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+        <div class="toc-title">Mục lục</div>
+        <ul class="toc-list"><li><a href="#thread-per-request-model" class="toc-link toc-level-1"><span class="toc-hash">#</span> Thread per request model</a></li>
+<li><a href="#demo" class="toc-link toc-level-1"><span class="toc-hash">#</span> Demo</a></li>
+<li><a href="#tong-ket" class="toc-link toc-level-1"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
+    </div>
+    <div class="main">
+      <h1>Mô hình 1 thread / 1 request của một web server</h1>
+      <p><em>Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ phía client.</em></p>
+<!-- Với sự phát triển của framework Spring, cụ thể là Spring boot, quá trình phát triển một ứng dụng backend ngày càng tiện lợi, tuy nhiên để bước thêm một bước đến mục tiêu tối ưu hiệu năng, làm ứng dụng đáng tin cậy hơn, xử lý các trường hợp  -->
+<!-- # Apache Tomcat
+
+Apache Tomcat là một web server và servlet container cho các ứng dụng web được viết bằng Java.
+- `web server`: lắng nghe, chờ và chấp nhận các kết nối (connection) từ phía client, trong Tomcat thì phạm vi của web server sẽ nhỏ hơn so với các công cụ khác như Nginx, ví dụ về caching, load balancing, reverse proxy,...
+- `servlet container`: servlet là sự kết hợp của server + applet (ứng dụng nhỏ gọn), trong Java web thì nó là các class liên quan đến nhiệm vụ xử lý các request HTTP, ví dụ GET, POST. Khi hiện thực những class này thì cũng cần tuân theo các đặc tả kĩ thuật như Jakarta Servlet 5.0+,...  -->
+<h1 id="thread-per-request-model">Thread per request model</h1>
+<p>Hiện nay, nhiều web server sử dụng mô hình 1 thread / 1 request để xử lý request từ client.</p>
+<p><img src="img/request-per-thread-model.drawio.png" alt="thread model" /></p>
+<p>Có 2 loại thread với chức năng hoàn toàn khác nhau ở mô hình này:</p>
+<ul>
+<li>I/O thread: lắng nghe trên socket và phát hiện dữ liệu đã sẵn sàng để đọc, tạo task để push vào queue mà worker thread đang lắng nghe và xử lý.
+<ul>
+<li>Tomcat chỉ sử dụng một thread để làm nhiệm vụ này, tham khảo bài viết <a href="https://notes-ngtam.pages.dev/posts/network-io-multiplexing">network-io-multiplexing</a> về kĩ thuật epoll để hiểu thêm cách thức hoạt động ở tầng hệ điều hành.</li>
+</ul>
+</li>
+<li>Worker thread: mỗi khi có task từ queue thì lấy ra để đọc nội dung request từ socket, xử lý logic (validate dữ liệu, tính toán, truy vấn database, gọi đi các service khác,...) và ghi response vào socket lại.</li>
+</ul>
+<p>Có một điểm cần chú ý ở đây là thuật ngữ request sẽ khác với connection, request là các yêu cầu HTTP GET/POST/PUST,... còn connection là TCP connection.</p>
+<p>Hình sau mô tả chi tiết hơn các thành phần trong quá trình xử lý một connection và request.</p>
+<p><img src="img/request_model_sequence_diagram.png" alt="request_model_sequence_diagram" /></p>
+<p><em><strong>Một số phân tích về ưu nhược điểm</strong></em></p>
+<p>Với việc sử dụng riêng một thread để phát hiện khi nào có request sẵn sàng, server sẽ không bị chiếm dụng tài nguyên cho các long-live connection, tức là client có thể mở một TCP connection và gửi nhiều request HTTP trên đó, worker thread chỉ được sử dụng thực sự khi có request.</p>
+<p>Mô hình này còn cho phép debug lỗi dễ dàng ở tầng ứng dụng, mỗi request sẽ được xử lý bởi một worker thread, các thông tin về request context sẽ không bị nhầm lẫn, và có thể xem được đầy đủ stacktrace khi có lỗi xảy ra.</p>
+<p>Bên cạnh các ưu điểm, mặt tài nguyên của hệ thống cần được phân tích kĩ lưỡng khi sử dụng model này, nếu ở tầng ứng dụng sử dụng các thao tác blocking như kiểm tra dữ liệu, truy vấn database, gọi các service bên thứ 3, thì worker thread sẽ bị chiếm dụng trên toàn bộ thời gian này, có nghĩa là số request được xử lý sẽ bằng số lượng worker thread <em>tối đa</em>. Tối đa là bao nhiêu???</p>
+<p>Về lý thuyết, một chương trình có thể tạo ra số lượng threads không giới hạn, nhưng quản lý threads tiêu tốn tài nguyên và nhiều threads dẫn tới context-switch của CPU cao, nếu không cấu hình giới hạn, chương trình có thể bị OOM, rất rủi ro.</p>
+<p>Nếu có cấu hình, con số bao nhiêu là đủ? Tuỳ thuộc vào workload và kết quả benchmark, tất nhiên rồi. Tuy nhiên cần làm rõ thêm hành vi của request một khi không còn worker rảnh rỗi.</p>
+<h1 id="demo">Demo</h1>
+<p>Github link: <a href="https://github.com/dntam00/spring-fw-learning/tree/master/thread-per-request">thread-per-request</a></p>
+<p>Chuơng trình này tạo 1 web server đơn giản Spring và embedded Tomcat:</p>
+<ul>
+<li>Cấu hình số worker thread và task queue nhỏ.
+<ul>
+<li><code>server.tomcat.threads.max=1</code>: cấu hình worker threads size.</li>
+<li><code>server.tomcat.task-queue-capacity=1</code>: cấu hình task queue size.</li>
+</ul>
+</li>
+<li>Mô phỏng thời gian xử lý business bằng việc sleep worker thread.</li>
+<li>Cung cấp api để lấy thống kê số lượng threads hiện tại.</li>
+</ul>
+<p>Hình sau thêm thành phần task queue vào giữa I/O thread và worker thread, khi worker thread pool không còn thread nào rảnh rỗi, những request mới sẽ được thêm vào queue chờ xử lý. Nếu worker thread mất quá nhiều thời gian để xử lý những request, client có thể gặp hiện tượng timeout với các giai đoạn:</p>
+<ul>
+<li>request đang nằm trong task queue, chưa được xử lý bởi worker thread.</li>
+<li>request được xử lý bởi worker thread nhưng không thể trả về response.</li>
+<li>tệ hơn nữa, request đang được xử lý thì chương trình bị OOM.</li>
+</ul>
+<p><img src="img/request_model_sequence_diagram-2.png" alt="request_model_sequence_diagram-with-task-queue" /></p>
+<p>Với <code>worker thread size = 1</code>, api lấy thống kê threads trả về như sau:</p>
+<p><img src="img/thread-stats.png" alt="thread-stats" /></p>
+<ul>
+<li>cần 1 worker thread để xử lý request lấy thống kê threads.</li>
+<li>vì cấu hình worker chỉ có 1 thread nên số thread còn lại đang khả dụng sẽ bằng 0.</li>
+</ul>
+<p>Tiếp tục mô phỏng kiểm tra cách hoạt động của mô hình này bằng request cần thời gian xử lý lâu.</p>
+<ul>
+<li>gọi 1 API mô phỏng request cần 1 phút để xử lý.</li>
+<li>gọi 2 API lấy thống kê threads liên tiếp.</li>
+</ul>
+<p>Với <code>worker thread size = 1</code>, <code>queue size = 1</code> thì request thứ 3 sẽ bị reject, request thứ 2 sẽ phải chờ request thứ nhất xử lý xong.</p>
+<p>Request thứ nhất cần 60s.</p>
+<p><img src="img/slow-request-result.png" alt="slow-request-result" /></p>
+<p>Request thứ hai được đưa vào queue và chỉ được xử lý sau request thứ nhất.</p>
+<p><img src="img/threads-stats-result.png" alt="threads-stats-result" /></p>
+<p>Request thứ ba bị từ chối vì task queue đã đầy.</p>
+<p><img src="img/threads-stats-failed-result.png" alt="threads-stats-failed-result" /></p>
+<h1 id="tong-ket">Tổng kết</h1>
+<p>Bài viết đã trình bày mô hình <code>thread per request</code> của các web server và lấy ví dụ bằng Tomcat + Spring. Việc hiểu rõ mô hình này là một bước quan trọng trong việc hiểu rõ chương trình, là nền tảng cho các công việc benchmark, tối ưu hiệu năng.</p>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/java.html'>java</a><a class='topic-tag' href='/tags/tomcat.html'>tomcat</a><a class='topic-tag' href='/tags/web.html'>web</a><a class='topic-tag' href='/tags/spring.html'>spring</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
