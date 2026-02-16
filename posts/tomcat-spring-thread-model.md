@@ -1,5 +1,5 @@
 ---
-title: Mô hình 1 thread / 1 request của một web server
+title: Khi một Request "chiếm" một Thread
 published: true
 date: 2026-02-08 13:36:50
 tags: java, tomcat, web, spring

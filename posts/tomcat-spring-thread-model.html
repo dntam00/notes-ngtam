@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>Mô hình 1 thread / 1 request của một web server | Linh tinh</title>
+  <title>Khi một Request "chiếm" một Thread | Linh tinh</title>
   <meta charset="utf-8">
   <meta http-equiv="content-type" content="text/html;">
   <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
@@ -49,7 +49,7 @@
 <li><a href="#tong-ket" class="toc-link toc-level-1"><span class="toc-hash">#</span> Tổng kết</a></li></ul>
     </div>
     <div class="main">
-      <h1>Mô hình 1 thread / 1 request của một web server</h1>
+      <h1>Khi một Request "chiếm" một Thread</h1>
       <p><em>Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ phía client.</em></p>
 <!-- Với sự phát triển của framework Spring, cụ thể là Spring boot, quá trình phát triển một ứng dụng backend ngày càng tiện lợi, tuy nhiên để bước thêm một bước đến mục tiêu tối ưu hiệu năng, làm ứng dụng đáng tin cậy hơn, xử lý các trường hợp  -->
 <!-- # Apache Tomcat
