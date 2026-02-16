@@ -76,13 +76,14 @@ Apache Tomcat là một web server và servlet container cho các ứng dụng w
 <p>Với việc sử dụng riêng một thread để phát hiện khi nào có request sẵn sàng, server sẽ không bị chiếm dụng tài nguyên cho các long-live connection, tức là client có thể mở một TCP connection và gửi nhiều request HTTP trên đó, worker thread chỉ được sử dụng thực sự khi có request.</p>
 <p>Mô hình này còn cho phép debug lỗi dễ dàng ở tầng ứng dụng, mỗi request sẽ được xử lý bởi một worker thread, các thông tin về request context sẽ không bị nhầm lẫn, và có thể xem được đầy đủ stacktrace khi có lỗi xảy ra.</p>
 <p>Bên cạnh các ưu điểm, mặt tài nguyên của hệ thống cần được phân tích kĩ lưỡng khi sử dụng model này, nếu ở tầng ứng dụng sử dụng các thao tác blocking như kiểm tra dữ liệu, truy vấn database, gọi các service bên thứ 3, thì worker thread sẽ bị chiếm dụng trên toàn bộ thời gian này, có nghĩa là số request tối đa được xử lý tại một thời điểm sẽ bằng số lượng worker thread <em>tối đa</em>. Tối đa là bao nhiêu???</p>
-<p>Về lý thuyết, một chương trình có thể tạo ra số lượng threads không giới hạn, nhưng quản lý threads tiêu tốn tài nguyên và nhiều threads dẫn tới context-switch của CPU cao, nếu không cấu hình giới hạn, chương trình có thể bị OOM, rất rủi ro.</p>
-<p>Nếu có cấu hình, con số bao nhiêu là đủ? Tuỳ thuộc vào workload và kết quả benchmark, tất nhiên rồi. Tuy nhiên cần làm rõ thêm hành vi của request một khi không còn worker rảnh rỗi.</p>
+<p>Về lý thuyết, một chương trình có thể tạo ra số lượng threads không giới hạn, nhưng việc quản lý threads tiêu tốn tài nguyên và nhiều threads dẫn tới context-switch của CPU cao, nếu không cấu hình giới hạn số lượng threads tối đa, chương trình có thể bị OOM, rất rủi ro.</p>
+<p>Vậy thì, nếu có cấu hình, con số bao nhiêu là đủ? Điều này nói chung chung thì sẽ tuỳ thuộc vào workload của ứng dụng (I/O hay CPU nhiều) và kết quả benchmark thực tế với nhiều kịch bản chịu tải khác nhau.</p>
+<p>Tiếp theo là phần chạy chương trình mẫu để hiểu được hành vi của request một khi không còn worker thread rảnh rỗi trong pool.</p>
 <h1 id="demo">Demo</h1>
 <p>Github link: <a href="https://github.com/dntam00/spring-fw-learning/tree/master/thread-per-request">thread-per-request</a></p>
 <p>Chuơng trình này tạo 1 web server đơn giản Spring và embedded Tomcat:</p>
 <ul>
-<li>Cấu hình số worker thread và task queue nhỏ.
+<li>Cấu hình số worker thread và task queue nhỏ để dễ dàng kiểm thử trên từng lần gọi API.
 <ul>
 <li><code>server.tomcat.threads.max=1</code>: cấu hình worker threads size.</li>
 <li><code>server.tomcat.task-queue-capacity=1</code>: cấu hình task queue size.</li>
@@ -91,7 +92,7 @@ Apache Tomcat là một web server và servlet container cho các ứng dụng w
 <li>Mô phỏng thời gian xử lý business bằng việc sleep worker thread.</li>
 <li>Cung cấp api để lấy thống kê số lượng threads hiện tại.</li>
 </ul>
-<p>Hình sau thêm thành phần task queue vào giữa I/O thread và worker thread, khi worker thread pool không còn thread nào rảnh rỗi, những request mới sẽ được thêm vào queue chờ xử lý. Nếu worker thread mất quá nhiều thời gian để xử lý những request, client có thể gặp hiện tượng timeout với các giai đoạn:</p>
+<p>Hình sau thêm thành phần task queue vào giữa I/O thread và worker thread, khi worker thread pool không còn thread nào rảnh rỗi, những request mới sẽ được thêm vào task queue để chờ xử lý. Nếu worker thread mất quá nhiều thời gian để xử lý những request (có thể chương trình cần xử lý logic phức tạp, truy vấn database hay gọi API đến các service khác nhiều,...), số lượng task trong task queue sẽ tăng dần lên, client có thể gặp hiện tượng timeout với các giai đoạn sau của 1 request:</p>
 <ul>
 <li>request đang nằm trong task queue, chưa được xử lý bởi worker thread.</li>
 <li>request được xử lý bởi worker thread nhưng không thể trả về response.</li>
@@ -102,9 +103,9 @@ Apache Tomcat là một web server và servlet container cho các ứng dụng w
 <p><img src="img/thread-stats.png" alt="thread-stats" /></p>
 <ul>
 <li>cần 1 worker thread để xử lý request lấy thống kê threads.</li>
-<li>vì cấu hình worker chỉ có 1 thread nên số thread còn lại đang khả dụng sẽ bằng 0.</li>
+<li>vì cấu hình worker chỉ có 1 thread nên số thread còn lại đang khả dụng trong pool sẽ bằng 0, lượt gọi API này chứng minh cấu hình <code>worker thread size</code> đang hoạt động đúng như mong muốn.</li>
 </ul>
-<p>Tiếp tục mô phỏng kiểm tra cách hoạt động của mô hình này bằng request cần thời gian xử lý lâu.</p>
+<p>Tiếp tục kiểm tra cách hoạt động của mô hình này bằng việc mô phỏng request cần thời gian xử lý lâu.</p>
 <ul>
 <li>gọi 1 API mô phỏng request cần 1 phút để xử lý.</li>
 <li>gọi 2 API lấy thống kê threads liên tiếp.</li>
@@ -116,6 +117,7 @@ Apache Tomcat là một web server và servlet container cho các ứng dụng w
 <p><img src="img/threads-stats-result.png" alt="threads-stats-result" /></p>
 <p>Request thứ ba bị từ chối vì task queue đã đầy.</p>
 <p><img src="img/threads-stats-failed-result.png" alt="threads-stats-failed-result" /></p>
+<p>Lần kiểm tra này chứng minh sự hoạt động của task queue với vai trò là buffer task khi mà tất cả threads trong worker đều bận.</p>
 <h1 id="tong-ket">Tổng kết</h1>
 <p>Bài viết đã trình bày mô hình <code>thread per request</code> của các web server và lấy ví dụ bằng Tomcat + Spring. Việc hiểu rõ mô hình này là một bước quan trọng trong việc hiểu rõ chương trình, là nền tảng cho các công việc benchmark, tối ưu hiệu năng.</p>
 
