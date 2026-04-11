@@ -47,7 +47,9 @@
         <ul class="toc-list">  <li><a href="#synchronous-asynchronous-blocking-non-blocking" class="toc-link toc-level-2"><span class="toc-hash">#</span> Synchronous / Asynchronous / Blocking  / Non blocking</a></li>
     <li><a href="#synchronous-asynchronous" class="toc-link toc-level-3"><span class="toc-hash">#</span> Synchronous / Asynchronous</a></li>
       <li><a href="#synchronous" class="toc-link toc-level-4"><span class="toc-hash">#</span> Synchronous</a></li>
-      <li><a href="#asynchronous" class="toc-link toc-level-4"><span class="toc-hash">#</span> Asynchronous</a></li></ul>
+      <li><a href="#asynchronous" class="toc-link toc-level-4"><span class="toc-hash">#</span> Asynchronous</a></li>
+    <li><a href="#blocking-non-blocking" class="toc-link toc-level-3"><span class="toc-hash">#</span> Blocking / Non blocking</a></li>
+    <li><a href="#su-ket-hop" class="toc-link toc-level-3"><span class="toc-hash">#</span> Sự kết hợp</a></li></ul>
     </div>
     <div class="main">
       <h1>Khái niệm trong lập trình / thiết kế hệ thống</h1>
@@ -91,6 +93,29 @@
 <li>một số cơ chế bên gửi nhận response: bên gửi lắng nghe vào queue vào nhận response.</li>
 </ul>
 </li>
+</ul>
+</li>
+</ul>
+<h3 id="blocking-non-blocking">Blocking / Non blocking</h3>
+<p>Khi một thread/process cần thực hiện tác vụ I/O, trong lúc đợi kết quả, nó có một vài sự lựa chọn:</p>
+<ul>
+<li>vào trạng thái đợi, không làm gì cả, có nghĩa là bị blocked.</li>
+<li>lấy task khác để thực hiện.</li>
+<li>định kì kiểm tra kết quả, không bị blocked lắm nhưng cũng hơi vô nghĩa.</li>
+</ul>
+<h3 id="su-ket-hop">Sự kết hợp</h3>
+<p>Cơ bản thì chúng ta có thể kết hợp các khái niệm trên để cho ra các mô hình sau:</p>
+<ul>
+<li><code>Synchronous + Blocking</code>: mặc định và phổ biến, khi một thread truy vấn database, nó cần đợi kết quả, trong khi đợi thì nó cũng bị blocked, không làm được gì khác.
+<ul>
+<li>Ví dụ: Tomcat webserver ở cấu hình mặc định.</li>
+</ul>
+</li>
+<li><code>Asynchronous + Blocking</code>: bạn để thread khác task, bạn không quan tâm task đó xong hay không, bạn đi làm việc khác, nhưng khi thread làm việc đó thì nó cũng sẽ bị blocked.</li>
+<li><code>Synchronous + Non-blocking</code>: ít phổ biến hơn, bạn cần kết quả để làm việc khác, thread không bị blocked, tuy nhiên nó cũng phải truy vấn liên tục để lấy kết quả I/O.</li>
+<li><code>Asynchronous + Non-blocking</code>: bạn để thread làm task, khi thread làm task thì cũng không bị blocked bởi I/O, khi nào có kết quả thì lấy kết quả rồi làm tiếp (ở chỗ này mình chưa đề cập đến I/O của hệ điều hành).
+<ul>
+<li>Ví dụ: Project reactor, NodeJS event loop.</li>
 </ul>
 </li>
 </ul>

@@ -43,3 +43,21 @@ Khi gọi *bạn* để thực hiện một công việc:
 		- một số cơ chế bên gửi nhận response: định kì gửi request để kiểm tra kết quả, bên nhận gửi event theo dạng push về (websocket/SEE), hoặc webhook.
 	- messaging: bên gửi gửi message đến một hệ thống queue, bên nhận lắng nghe vào queue và tiêu thụ message.
 		- một số cơ chế bên gửi nhận response: bên gửi lắng nghe vào queue vào nhận response.
+
+### Blocking / Non blocking
+
+Khi một thread/process cần thực hiện tác vụ I/O, trong lúc đợi kết quả, nó có một vài sự lựa chọn:
+- vào trạng thái đợi, không làm gì cả, có nghĩa là bị blocked.
+- lấy task khác để thực hiện.
+- định kì kiểm tra kết quả, không bị blocked lắm nhưng cũng hơi vô nghĩa.
+
+### Sự kết hợp
+
+Cơ bản thì chúng ta có thể kết hợp các khái niệm trên để cho ra các mô hình sau:
+
+- `Synchronous + Blocking`: mặc định và phổ biến, khi một thread truy vấn database, nó cần đợi kết quả, trong khi đợi thì nó cũng bị blocked, không làm được gì khác.
+	- Ví dụ: Tomcat webserver ở cấu hình mặc định.
+- `Asynchronous + Blocking`: bạn để thread khác task, bạn không quan tâm task đó xong hay không, bạn đi làm việc khác, nhưng khi thread làm việc đó thì nó cũng sẽ bị blocked.
+- `Synchronous + Non-blocking`: ít phổ biến hơn, bạn cần kết quả để làm việc khác, thread không bị blocked, tuy nhiên nó cũng phải truy vấn liên tục để lấy kết quả I/O.
+- `Asynchronous + Non-blocking`: bạn để thread làm task, khi thread làm task thì cũng không bị blocked bởi I/O, khi nào có kết quả thì lấy kết quả rồi làm tiếp (ở chỗ này mình chưa đề cập đến I/O của hệ điều hành).
+	- Ví dụ: Project reactor, NodeJS event loop.
