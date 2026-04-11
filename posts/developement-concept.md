@@ -59,5 +59,5 @@ Cơ bản thì chúng ta có thể kết hợp các khái niệm trên để cho
 	- Ví dụ: Tomcat webserver ở cấu hình mặc định.
 - `Asynchronous + Blocking`: bạn để thread khác task, bạn không quan tâm task đó xong hay không, bạn đi làm việc khác, nhưng khi thread làm việc đó thì nó cũng sẽ bị blocked.
 - `Synchronous + Non-blocking`: ít phổ biến hơn, bạn cần kết quả để làm việc khác, thread không bị blocked, tuy nhiên nó cũng phải truy vấn liên tục để lấy kết quả I/O.
-- `Asynchronous + Non-blocking`: bạn để thread làm task, khi thread làm task thì cũng không bị blocked bởi I/O, khi nào có kết quả thì lấy kết quả rồi làm tiếp (ở chỗ này mình chưa đề cập đến I/O của hệ điều hành).
+- `Asynchronous + Non-blocking`: bạn để thread làm task, khi thread làm task thì cũng không bị blocked, khi nào có kết quả thì nó lấy kết quả rồi thực thi tiếp (callback) (ở chỗ này mình chưa đề cập đến I/O của hệ điều hành).
 	- Ví dụ: Project reactor, NodeJS event loop.
