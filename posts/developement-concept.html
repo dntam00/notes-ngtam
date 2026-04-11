@@ -1,0 +1,125 @@
+<html>
+
+<head>
+  <title>Khái niệm trong lập trình / thiết kế hệ thống | Linh tinh</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html;">
+  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="theme-color" content="#ffffff">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
+    rel="stylesheet">
+  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
+  <link href="/css/theme.css" rel="stylesheet" type="text/css">
+  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
+  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
+  <link rel="stylesheet" href="../css/fontello.css">
+  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
+  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
+  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
+  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
+  <script src="../js/highlight.min.js"></script>
+  <script src="../js/autosizing.js"></script>
+  <script src="../js/fetch.js"></script>
+  <script src="../js/toc.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    hljs.highlightAll();
+  </script>
+</head>
+
+<body>
+  <div class="header">
+    <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
+  </div>
+  <div class="container has-toc navigation-box">
+            <p><a href="/">&larr; Quay về trang chủ</a></p>
+        </div>
+  <div class="container has-toc">
+    <div class="table-of-contents">
+        <div class="toc-title">Mục lục</div>
+        <ul class="toc-list">  <li><a href="#synchronous-asynchronous-blocking-non-blocking" class="toc-link toc-level-2"><span class="toc-hash">#</span> Synchronous / Asynchronous / Blocking  / Non blocking</a></li>
+    <li><a href="#synchronous-asynchronous" class="toc-link toc-level-3"><span class="toc-hash">#</span> Synchronous / Asynchronous</a></li>
+      <li><a href="#synchronous" class="toc-link toc-level-4"><span class="toc-hash">#</span> Synchronous</a></li>
+      <li><a href="#asynchronous" class="toc-link toc-level-4"><span class="toc-hash">#</span> Asynchronous</a></li></ul>
+    </div>
+    <div class="main">
+      <h1>Khái niệm trong lập trình / thiết kế hệ thống</h1>
+      <p>Nhiều năm qua trong quá trình làm nghề lập trình, có những từ khoá mà cho dù có tìm kiếm, đọc rồi suy nghĩ bao nhiêu lần, mình vẫn thấy không thực sự hiểu rõ nó ở lần gặp lại tiếp theo. Vậy nên lần này mình tạo một bài viết để gom những cái này lại, tiện có chỗ để tra cứu.</p>
+<h2 id="synchronous-asynchronous-blocking-non-blocking">Synchronous / Asynchronous / Blocking  / Non blocking</h2>
+<p>Một trong những từ khoá gây mơ hồ nhất đối với mình, sau khi tra cứu nhiều nguồn, mình đồng ý với cách hiểu hai cặp từ khoá này theo những mục đích sử dụng khác nhau.</p>
+<ul>
+<li><code>Synchronous/Asynchronous</code>: khi tôi cần bạn làm một công việc, khi nào tôi có thể nhận được kết quả? <code>tôi và bạn</code> ở đây có thể được biểu diễn ở nhiều mức độ khác nhau: thread gọi hàm trong code, service A gọi service B, frontend gọi backend.</li>
+<li><code>Blocking/Non blocking</code>: hành vi của tài nguyên tính toán khi công việc đang được thực hiện, để dễ phân biệt thì mình tự giới hạn trong ngữ cảnh thread/process của hệ điều hành, vì cơ bản nó là thứ tiêu biểu nhất, và khi ở trong giới hạn này thì nó sẽ đi kèm từ <code>I/O</code> vào.</li>
+</ul>
+<h3 id="synchronous-asynchronous">Synchronous / Asynchronous</h3>
+<p>Khi gọi <em>bạn</em> để thực hiện một công việc:</p>
+<ul>
+<li>Synchronous: tôi cần chờ kết quả từ <em>bạn</em> để có thể làm việc khác.</li>
+<li>Asynchronous: tôi không cần chờ kết quả từ <em>bạn</em> mà có thể chuyển qua làm việc khác luôn, rồi lấy kết quả sau đó.</li>
+</ul>
+<p><em><strong>Với mình thì đây là một vấn đề thuộc về việc thiết kế kiến trúc hệ thống.</strong></em></p>
+<p><img src="img/synchronous-asynchronous-communication.png" alt="synchronous-asynchronous-communication" /></p>
+<p>(Ảnh được lấy từ khoá học <code>System Design for Interviews and Beyond</code> của bác <code>Mikhail Smarshchok</code>)</p>
+<h4 id="synchronous">Synchronous</h4>
+<ul>
+<li>Ở mức code: gọi tác dụng database, đợi lấy kết quả rồi mới xử lý việc khác.</li>
+<li>Ở mức service: gọi API, đợi lấy kết quả rồi mới xử lý việc khác.</li>
+</ul>
+<h4 id="asynchronous">Asynchronous</h4>
+<ul>
+<li>Ở mức code:
+<ul>
+<li>Dùng callback, Future, CompletableFuture (Java), async/await (JS, C#, Python) hoặc thread pool + queue.</li>
+</ul>
+</li>
+<li>Ở mức service:
+<ul>
+<li>request-response: bên nhận có thể nhận request, phản hồi tôi đã nhận request rồi, tôi sẽ xử lý sau.
+<ul>
+<li>một số cơ chế bên gửi nhận response: định kì gửi request để kiểm tra kết quả, bên nhận gửi event theo dạng push về (websocket/SEE), hoặc webhook.</li>
+</ul>
+</li>
+<li>messaging: bên gửi gửi message đến một hệ thống queue, bên nhận lắng nghe vào queue và tiêu thụ message.
+<ul>
+<li>một số cơ chế bên gửi nhận response: bên gửi lắng nghe vào queue vào nhận response.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/software.html'>software</a><a class='topic-tag' href='/tags/concept.html'>concept</a></div>
+      <!-- <div class="copyright">
+                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
+                </div> -->
+    </div>
+  </div>
+  <div class="footer">
+    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
+    <div class="social">
+      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
+      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
+    </div>
+  </div>
+  <script type="text/javascript" async=""
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+  <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [['$','$'], ['\\(','\\)']],
+            skipTags: ["script","noscript","style","textarea", "code"],
+            ignoreClass: ["comment", "comment-list"]
+          }
+        });
+  </script>
+</body>
+
+</html>
