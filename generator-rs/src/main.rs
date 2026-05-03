@@ -347,13 +347,19 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             } else {
                 ""
             };
+            let desc_html = if p.description.is_empty() {
+                String::new()
+            } else {
+                format!("<p class='home-item-desc'>{}</p>", p.description)
+            };
             format!(
                 "<div class='home-list-item'>\
-                  <div class='home-item-tags'>{}{}</div>\
-                  <a href='/posts/{}' class='home-item-title'>{}</a>\
                   <span class='home-date-indicator'>{}</span>\
+                  <a href='/posts/{}' class='home-item-title'>{}</a>\
+                  {}\
+                  <div class='home-item-tags'>{}{}</div>\
                 </div>",
-                tag_badges, guest_badge, file_name, p.title, post_date_text
+                post_date_text, file_name, p.title, desc_html, tag_badges, guest_badge
             )
         }).collect();
         let markdown = format!("<div class='posts-grid'>{}</div>", html.join("\n"));
