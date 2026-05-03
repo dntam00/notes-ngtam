@@ -338,15 +338,25 @@ fn generate_index_page(posts: &Vec<Metadata>) {
             let file_name = p.output_file.file_name().unwrap().to_str().unwrap();
             let post_date = Utc.datetime_from_str(&p.date, TIME_FORMAT).unwrap();
             let post_date_text = post_date.format(&date_format);
-            let tag_list = &p.tags.join(", ");
-            let guest_tag = if p.published.eq("guest") {
-                "<span class='guest-post'>Guest Post</span>"
+            let tag_badges: String = p.tags.iter()
+                .map(|t| format!("<a href='/tags/{}.html' class='home-tag'>{}</a>", t, t))
+                .collect::<Vec<_>>()
+                .join("");
+            let guest_badge = if p.published.eq("guest") {
+                "<span class='home-tag guest-badge'>Guest</span>"
             } else {
                 ""
             };
-            format!("<div class='home-list-item'><span class='home-date-indicator'>{}</span>{}{}<br/><a href='/posts/{}'>{}</a></div>", post_date_text, guest_tag, tag_list, file_name, p.title)
+            format!(
+                "<div class='home-list-item'>\
+                  <div class='home-item-tags'>{}{}</div>\
+                  <a href='/posts/{}' class='home-item-title'>{}</a>\
+                  <span class='home-date-indicator'>{}</span>\
+                </div>",
+                tag_badges, guest_badge, file_name, p.title, post_date_text
+            )
         }).collect();
-        let markdown = html.join("\n");
+        let markdown = format!("<div class='posts-grid'>{}</div>", html.join("\n"));
         let mut post = Metadata {
             title: "Index".to_string(),
             published: format!("true"),
