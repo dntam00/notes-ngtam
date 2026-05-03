@@ -27,7 +27,10 @@ const TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 #[derive(Debug, Clone, PartialEq)]
 struct Article {
     title: String,
-    url: String
+    url: String,
+    date: String,
+    tags: Vec<String>,
+    description: String,
 }
 
 #[derive(Debug)]
@@ -381,26 +384,50 @@ fn generate_index_page(posts: &Vec<Metadata>) {
     }
 }
 
+fn articles_to_grid_html(articles: &[Article]) -> String {
+    let date_format = env::var("DATE_FORMAT").unwrap_or("%d-%m-%Y".to_string());
+    let items: Vec<String> = articles.iter().map(|a| {
+        let post_date = Utc.datetime_from_str(&a.date, TIME_FORMAT).unwrap_or_default();
+        let post_date_text = post_date.format(&date_format);
+        let tag_badges: String = a.tags.iter()
+            .map(|t| format!("<a href='/tags/{}.html' class='home-tag'>{}</a>", t, t))
+            .collect::<Vec<_>>()
+            .join("");
+        let desc_html = if a.description.is_empty() {
+            String::new()
+        } else {
+            format!("<p class='home-item-desc'>{}</p>", a.description)
+        };
+        format!(
+            "<div class='home-list-item'>\
+              <span class='home-date-indicator'>{}</span>\
+              <a href='/posts/{}' class='home-item-title'>{}</a>\
+              {}\
+              <div class='home-item-tags'>{}</div>\
+            </div>",
+            post_date_text, a.url, a.title, desc_html, tag_badges
+        )
+    }).collect();
+    format!("<div class='posts-grid'>{}</div>", items.join("\n"))
+}
+
 fn generate_tags_page(tags: &HashMap<String, Vec<Article>>) {
-    //dotenv().ok();
     if let Ok(template) = load_template("tags") {
         for (key, value) in tags.into_iter() {
-            println!("{} - {:?}", key, value);
-            let post_list: Vec<String> = value.into_iter().map(|a| format!("- [{}](/posts/{})", a.title, a.url)).collect();
-            let markdown = post_list.join("\n");
-            let tags_except_key: Vec<String> = tags.keys().into_iter().filter(|k| *k != key).map(|k| format!("{}", k)).collect();
+            let content_html = articles_to_grid_html(value);
+            let other_tags: Vec<String> = tags.keys().filter(|k| *k != key).cloned().collect();
             let post = Metadata {
-                title: format!("{}", &key),
-                published: format!("true"),
+                title: key.clone(),
+                published: "true".to_string(),
                 date: "".to_string(),
                 description: "".to_string(),
                 image: "".to_string(),
-                language: format!("en"),
-                tags: Vec::from(tags_except_key),
-                markdown: markdown,
-                output_file: PathBuf::from(&format!("./tags/{}.html", &key)),
-                output_html: format!(""),
-                toc_html: format!("")
+                language: "en".to_string(),
+                tags: other_tags,
+                markdown: content_html,
+                output_file: PathBuf::from(format!("./tags/{}.html", key)),
+                output_html: String::new(),
+                toc_html: String::new(),
             };
             let output_html = apply_template(&template, &post, "Other ", None);
             let _ = save_as_html(&output_html, &post.output_file);
@@ -497,8 +524,11 @@ fn main() {
                                 let tag_posts = shared.tags.get_mut(&format!("{}", tag)).unwrap();
                                 tag_posts.push(
                                     Article {
-                                        title: format!("{}", &post.title),
-                                        url: format!("{}", post.output_file.file_name().unwrap().to_str().unwrap())
+                                        title: post.title.clone(),
+                                        url: post.output_file.file_name().unwrap().to_str().unwrap().to_string(),
+                                        date: post.date.clone(),
+                                        tags: post.tags.clone(),
+                                        description: post.description.clone(),
                                     }
                                 );
                             }
@@ -549,14 +579,143 @@ fn main() {
                     }
                 }
                 router!(request,
+                    (GET) (/) => {
+                        if let Ok(template) = load_template("index") {
+                            let date_format = env::var("DATE_FORMAT").unwrap_or("%d-%m-%Y".to_string());
+                            let mut posts: Vec<Metadata> = vec![];
+                            if let Ok(paths) = fs::read_dir("./posts") {
+                                for entry in paths.flatten() {
+                                    let path = entry.path();
+                                    if path.extension().map_or(false, |e| e == "md") {
+                                        let meta = parse_metadata(&path);
+                                        if post_can_be_published(&meta.published) {
+                                            posts.push(meta);
+                                        }
+                                    }
+                                }
+                            }
+                            posts.sort_by(|a, b| {
+                                let ta = Utc.datetime_from_str(&a.date, TIME_FORMAT).unwrap_or_default();
+                                let tb = Utc.datetime_from_str(&b.date, TIME_FORMAT).unwrap_or_default();
+                                tb.cmp(&ta)
+                            });
+                            let html: Vec<String> = posts.iter().map(|p| {
+                                let file_name = p.output_file.file_name().unwrap().to_str().unwrap();
+                                let post_date = Utc.datetime_from_str(&p.date, TIME_FORMAT).unwrap_or_default();
+                                let post_date_text = post_date.format(&date_format);
+                                let tag_badges: String = p.tags.iter()
+                                    .map(|t| format!("<a href='/tags/{}.html' class='home-tag'>{}</a>", t, t))
+                                    .collect::<Vec<_>>().join("");
+                                let desc_html = if p.description.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!("<p class='home-item-desc'>{}</p>", p.description)
+                                };
+                                format!(
+                                    "<div class='home-list-item'>\
+                                      <span class='home-date-indicator'>{}</span>\
+                                      <a href='/posts/{}' class='home-item-title'>{}</a>\
+                                      {}\
+                                      <div class='home-item-tags'>{}</div>\
+                                    </div>",
+                                    post_date_text, file_name, p.title, desc_html, tag_badges
+                                )
+                            }).collect();
+                            let markdown = format!("<div class='posts-grid'>{}</div>", html.join("\n"));
+                            let index_post = Metadata {
+                                title: "Index".to_string(),
+                                published: "true".to_string(),
+                                date: "".to_string(),
+                                description: "".to_string(),
+                                image: "".to_string(),
+                                language: "en".to_string(),
+                                tags: vec![],
+                                markdown,
+                                output_file: PathBuf::from("./index.html"),
+                                output_html: String::new(),
+                                toc_html: String::new(),
+                            };
+                            let output_html = apply_template(&template, &index_post, "", None);
+                            return rouille::Response::html(output_html);
+                        }
+                        rouille::Response::empty_404()
+                    },
+
                     (GET) (/view/{file_name: String}) => {
                         if let Ok(template) = load_template("preview") {
-                            let mut shared = Shared { tags: HashMap::new() };
+                            let shared = Shared { tags: HashMap::new() };
                             let path = PathBuf::from(format!("./posts/{}.md", file_name));
                             let abs_path = fs::canonicalize(&path).unwrap();
                             if let Some(post) = parse_post(&template, &shared, &PathBuf::from(abs_path), true) {
                                 let output = post.output_html.replace("\"img", "\"/posts/img").to_string();
-                                return rouille::Response::html(output); 
+                                return rouille::Response::html(output);
+                            }
+                        }
+                        rouille::Response::empty_404()
+                    },
+
+                    (GET) (/posts/{file_name: String}) => {
+                        if let Ok(template) = load_template("posts") {
+                            let shared = Shared { tags: HashMap::new() };
+                            let md_name = file_name.replace(".html", "");
+                            let path = PathBuf::from(format!("./posts/{}.md", md_name));
+                            if let Ok(abs_path) = fs::canonicalize(&path) {
+                                if let Some(post) = parse_post(&template, &shared, &abs_path, true) {
+                                    return rouille::Response::html(post.output_html);
+                                }
+                            }
+                        }
+                        rouille::Response::empty_404()
+                    },
+
+                    (GET) (/tags/{tag_name: String}) => {
+                        if let Ok(template) = load_template("tags") {
+                            let mut all_tags: HashMap<String, Vec<Article>> = HashMap::new();
+                            if let Ok(paths) = fs::read_dir("./posts") {
+                                for entry in paths.flatten() {
+                                    let path = entry.path();
+                                    if path.extension().map_or(false, |e| e == "md") {
+                                        let meta = parse_metadata(&path);
+                                        if post_can_be_published(&meta.published) {
+                                            let html_name = path.file_name().unwrap()
+                                                .to_str().unwrap().replace(".md", ".html");
+                                            for tag in &meta.tags {
+                                                all_tags.entry(tag.clone())
+                                                    .or_insert_with(Vec::new)
+                                                    .push(Article {
+                                                        title: meta.title.clone(),
+                                                        url: html_name.clone(),
+                                                        date: meta.date.clone(),
+                                                        tags: meta.tags.clone(),
+                                                        description: meta.description.clone(),
+                                                    });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            let clean_tag = tag_name.replace(".html", "");
+                            if let Some(articles) = all_tags.get(&clean_tag) {
+                                let content_html = articles_to_grid_html(articles);
+                                let other_tags: Vec<String> = all_tags.keys()
+                                    .filter(|k| **k != clean_tag)
+                                    .cloned()
+                                    .collect();
+                                let post = Metadata {
+                                    title: clean_tag.clone(),
+                                    published: "true".to_string(),
+                                    date: "".to_string(),
+                                    description: "".to_string(),
+                                    image: "".to_string(),
+                                    language: "en".to_string(),
+                                    tags: other_tags,
+                                    markdown: content_html,
+                                    output_file: PathBuf::from(format!("./tags/{}.html", clean_tag)),
+                                    output_html: String::new(),
+                                    toc_html: String::new(),
+                                };
+                                let output_html = apply_template(&template, &post, "Other ", None);
+                                return rouille::Response::html(output_html);
                             }
                         }
                         rouille::Response::empty_404()

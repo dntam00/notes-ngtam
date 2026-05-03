@@ -475,8 +475,8 @@ body.index-page main {
 }
 .index-header {
   padding: 3.5rem 0 2.5rem;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 2.5rem;
+  /* border-bottom: 1px solid var(--rule); */
+  /* margin-bottom: 2.5rem; */
   display: flex;
   align-items: center;
   gap: 1.25rem;
@@ -500,6 +500,20 @@ body.index-page main {
   font-family: var(--sans);
   font-size: 13.5px;
   color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.section-label {
+  /* font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  margin-bottom: 1rem; */
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  color: var(--ink);
   line-height: 1.5;
 }
 
@@ -536,7 +550,8 @@ body.index-page main {
   line-height: 1.45;
   transition: color 0.15s;
 }
-.home-item-title:hover { color: var(--accent); }
+.prose .home-item-title { color: var(--ink); text-decoration: none; }
+.home-item-title:hover, .prose .home-item-title:hover { color: var(--accent); }
 
 /* Description */
 .home-item-desc {
@@ -570,7 +585,8 @@ body.index-page main {
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
-.home-tag:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.prose .home-tag { color: var(--accent); text-decoration: none; }
+.home-tag:hover, .prose .home-tag:hover { background: var(--accent); color: white; border-color: var(--accent); }
 .guest-badge {
   background: var(--paper-3);
   color: var(--ink-3);
