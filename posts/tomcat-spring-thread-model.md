@@ -1,5 +1,5 @@
 ---
-title: Khi một Request "chiếm" một Thread
+title: Mô hình web server 1 thread / 1 request
 published: true
 date: 2026-02-08 13:36:50
 tags: java, tomcat, web, spring
@@ -7,7 +7,7 @@ description: describe thread per request model
 image: 
 ---
 
-*Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ phía client.*
+*Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ client.*
 
 <!-- Với sự phát triển của framework Spring, cụ thể là Spring boot, quá trình phát triển một ứng dụng backend ngày càng tiện lợi, tuy nhiên để bước thêm một bước đến mục tiêu tối ưu hiệu năng, làm ứng dụng đáng tin cậy hơn, xử lý các trường hợp  -->
 
@@ -17,8 +17,11 @@ Apache Tomcat là một web server và servlet container cho các ứng dụng w
 - `web server`: lắng nghe, chờ và chấp nhận các kết nối (connection) từ phía client, trong Tomcat thì phạm vi của web server sẽ nhỏ hơn so với các công cụ khác như Nginx, ví dụ về caching, load balancing, reverse proxy,...
 - `servlet container`: servlet là sự kết hợp của server + applet (ứng dụng nhỏ gọn), trong Java web thì nó là các class liên quan đến nhiệm vụ xử lý các request HTTP, ví dụ GET, POST. Khi hiện thực những class này thì cũng cần tuân theo các đặc tả kĩ thuật như Jakarta Servlet 5.0+,...  -->
 
+# Vòng đời của một request
 
-# Thread per request model
+Client khởi tạo kết nối TCP -> Gửi request -> Server đọc request (header & body) -> Routing & Xử lý middleware -> Xử lý logic trong ứng dụng -> Viết lại response -> Keep alive hoặc đóng kết nối TCP.
+
+# Mô hình 1 thread / 1 request
 
 Hiện nay, nhiều web server sử dụng mô hình 1 thread / 1 request để xử lý request từ client.
 
