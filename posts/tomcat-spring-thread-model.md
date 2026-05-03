@@ -3,11 +3,9 @@ title: Mô hình web server 1 thread / 1 request
 published: true
 date: 2026-02-08 13:36:50
 tags: java, tomcat, web, spring
-description: describe thread per request model
+description: Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ client.
 image: 
 ---
-
-*Bài viết này giải thích mô hình thread / request của một web server, lấy ví dụ trên Apache Tomcat và Spring framework để giải thích cách một web server xử lý request từ client.*
 
 <!-- Với sự phát triển của framework Spring, cụ thể là Spring boot, quá trình phát triển một ứng dụng backend ngày càng tiện lợi, tuy nhiên để bước thêm một bước đến mục tiêu tối ưu hiệu năng, làm ứng dụng đáng tin cậy hơn, xử lý các trường hợp  -->
 

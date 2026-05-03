@@ -3,7 +3,7 @@ title: Application version in Go
 published: true
 date: 2024-09-22 20:07:00
 tags: go, git
-description: Application version in Go
+description:
 image: 
 ---
 

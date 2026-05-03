@@ -1,55 +1,48 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <title>Redis transaction note | Linh tinh</title>
-  <meta charset="utf-8">
-  <meta http-equiv="content-type" content="text/html;">
-  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redis transaction note | notes.dev</title>
   <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
-  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
-  <link rel="manifest" href="../manifest.json">
-  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
-  <meta name="theme-color" content="#ffffff">
-  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
-    rel="stylesheet">
-  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
-  <link href="/css/theme.css" rel="stylesheet" type="text/css">
-  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
-  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
-  <link rel="stylesheet" href="../css/fontello.css">
-  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
-  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
-  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
-  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
-  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
-  <script src="../js/highlight.min.js"></script>
-  <script src="../js/autosizing.js"></script>
-  <script src="../js/fetch.js"></script>
-  <script src="../js/toc.js"></script>
-  <script>
-    hljs.initHighlightingOnLoad();
-    hljs.highlightAll();
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link href="/css/new-theme.css" rel="stylesheet" type="text/css">
+  <script src="/js/highlight.min.js"></script>
+  <script src="/js/toc.js"></script>
+  <script>hljs.highlightAll();</script>
 </head>
-
 <body>
-  <div class="header">
-    <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="site-name">notes<span>.</span>dev</a>
+    <nav>
+      <a href="/">Bài viết</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
   </div>
-  <div class="container has-toc navigation-box">
-            <p><a href="/">&larr; Quay về trang chủ</a></p>
-        </div>
-  <div class="container has-toc">
-    <div class="table-of-contents">
-        <div class="toc-title">Mục lục</div>
-        <ul class="toc-list">  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
-  <li><a href="#redis-transaction" class="toc-link toc-level-2"><span class="toc-hash">#</span> Redis transaction</a></li>
-    <li><a href="#watch" class="toc-link toc-level-3"><span class="toc-hash">#</span> WATCH</a></li></ul>
+</header>
+
+<main>
+  <article>
+    <div class="post-meta">
+      <span class="tag">redis</span>
+      <span class="sep">·</span>
+      <span>22 tháng 6, 2024</span>
+      <span class="sep">·</span>
+      <span>6 phút đọc</span>
     </div>
-    <div class="main">
-      <h1>Redis transaction note</h1>
+
+    <h1 class="post-title">Redis transaction note</h1>
+    <p class="post-subtitle">Problem I've met with redis transaction</p>
+
+    <hr class="post-divider">
+
+    <div class="prose">
       <h2 id="van-de">Vấn đề</h2>
 <p>Có 1 API trả ra quá nhiều lỗi internal server error, mình kiểm tra thì thấy client go của redis hiển thị lỗi nil message, tìm hiểu sâu hơn thì thấy có vẻ như transaction không được thực thi, sau khi đọc lý thuyết lại thì thấy có vài trường hợp transaction không được thực thi và mình cố chứng minh điều đó nhưng ban đầu không được, mang lên github hỏi (<a href="https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180">https://github.com/redis/rueidis/discussions/571#discussioncomment-9784180</a>), và 1 tuần sau may mắn mình đã tìm ra vấn đề.</p>
 <h2 id="redis-transaction">Redis transaction</h2>
@@ -115,30 +108,37 @@ transactions.</p>
 <p>→ Vì vậy, chỉ cần <code>UNWATCH</code> những key đã được <code>WATCH</code> nếu chúng ta không gọi <code>EXEC</code> .</p>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/redis.html'>redis</a></div>
-      <!-- <div class="copyright">
-                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
-                </div> -->
     </div>
-  </div>
-  <div class="footer">
-    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
-    <div class="social">
-      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
-      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
-    </div>
-  </div>
-  <script type="text/javascript" async=""
-    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
-    </script>
-  <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-          tex2jax: {
-            inlineMath: [['$','$'], ['\\(','\\)']],
-            skipTags: ["script","noscript","style","textarea", "code"],
-            ignoreClass: ["comment", "comment-list"]
-          }
-        });
-  </script>
-</body>
+  </article>
 
+  <aside>
+    <div class="toc-label">MỤC LỤC</div>
+    <ul class="toc-list">  <li><a href="#van-de" class="toc-link toc-level-2"><span class="toc-hash">#</span> Vấn đề</a></li>
+  <li><a href="#redis-transaction" class="toc-link toc-level-2"><span class="toc-hash">#</span> Redis transaction</a></li>
+    <li><a href="#watch" class="toc-link toc-level-3"><span class="toc-hash">#</span> WATCH</a></li></ul>
+  </aside>
+</main>
+
+<footer>
+  Viết bằng Rust · Được tạo từ Markdown · © 2026
+  <div class="social">
+    <a target="_blank" href="https://github.com/dntam00">GitHub</a>
+    <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/">LinkedIn</a>
+  </div>
+</footer>
+
+<script type="text/javascript" async=""
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      skipTags: ["script","noscript","style","textarea","code"],
+      ignoreClass: ["comment","comment-list"]
+    }
+  });
+</script>
+
+</body>
 </html>

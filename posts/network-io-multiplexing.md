@@ -3,7 +3,7 @@ title: Networking (1) I/O multiplexing
 published: true
 date: 2024-01-27 02:21:23
 tags: golang, networking
-description: Something about I/O multiplexing model
+description:
 image: 
 ---
 

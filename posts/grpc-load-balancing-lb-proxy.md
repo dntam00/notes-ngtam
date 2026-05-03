@@ -3,7 +3,7 @@ title: gRPC Load balancing (3) - LB as Proxy
 published: true
 date: 2024-12-22 20:28:00
 tags: networking, gRPC
-description: Analyze gRPC load balancing technique
+description: Bài viết phân tích kĩ thuật cân bằng tải gRPC.
 image: 
 ---
 

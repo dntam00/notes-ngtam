@@ -1,58 +1,48 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <title>Bytecode (ghi chú) | Linh tinh</title>
-  <meta charset="utf-8">
-  <meta http-equiv="content-type" content="text/html;">
-  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bytecode (ghi chú) | notes.dev</title>
   <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
-  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
-  <link rel="manifest" href="../manifest.json">
-  <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
-  <meta name="theme-color" content="#ffffff">
-  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
-    rel="stylesheet">
-  <!-- <link href="../css/theme.css?t=" rel="stylesheet" type="text/css"> -->
-  <link href="/css/theme.css" rel="stylesheet" type="text/css">
-  <!-- <link href="/css/gruvbox-dark.css" rel="stylesheet" type="text/css"> -->
-  <link rel="stylesheet" href="../css/highlight/tomorrow.css">
-  <link rel="stylesheet" href="../css/fontello.css">
-  <link rel="stylesheet" href="../emoji/css/emoji.dist.css">
-  <link rel="stylesheet" href="../emoji/css/emojione.min.css">
-  <link rel="stylesheet" href="../emoji/css/messenger.min.css">
-  <link rel="stylesheet" href="../emoji/css/thinking.ext.css">
-  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css"> -->
-  <script src="../js/highlight.min.js"></script>
-  <script src="../js/autosizing.js"></script>
-  <script src="../js/fetch.js"></script>
-  <script src="../js/toc.js"></script>
-  <script>
-    hljs.initHighlightingOnLoad();
-    hljs.highlightAll();
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link href="/css/new-theme.css" rel="stylesheet" type="text/css">
+  <script src="/js/highlight.min.js"></script>
+  <script src="/js/toc.js"></script>
+  <script>hljs.highlightAll();</script>
 </head>
-
 <body>
-  <div class="header">
-    <a href="/"><span class="avatar"></span><span class="header-link">Linh tinh</span></a>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="site-name">notes<span>.</span>dev</a>
+    <nav>
+      <a href="/">Bài viết</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
   </div>
-  <div class="container has-toc navigation-box">
-            <p><a href="/">&larr; Quay về trang chủ</a></p>
-        </div>
-  <div class="container has-toc">
-    <div class="table-of-contents">
-        <div class="toc-title">Mục lục</div>
-        <ul class="toc-list">  <li><a href="#class-file" class="toc-link toc-level-2"><span class="toc-hash">#</span> .class file</a></li>
-  <li><a href="#cau-truc-file-class" class="toc-link toc-level-2"><span class="toc-hash">#</span> Cấu trúc file .class</a></li>
-    <li><a href="#descriptor" class="toc-link toc-level-3"><span class="toc-hash">#</span> Descriptor</a></li>
-    <li><a href="#tap-chi-dan" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tập chỉ dẫn</a></li>
-  <li><a href="#thao-thac-bytecode" class="toc-link toc-level-2"><span class="toc-hash">#</span> Thao thác bytecode</a></li>
-  <li><a href="#references" class="toc-link toc-level-2"><span class="toc-hash">#</span> References</a></li></ul>
+</header>
+
+<main>
+  <article>
+    <div class="post-meta">
+      <span class="tag">jvm</span>
+      <span class="sep">·</span>
+      <span>14 tháng 7, 2025</span>
+      <span class="sep">·</span>
+      <span>6 phút đọc</span>
     </div>
-    <div class="main">
-      <h1>Bytecode (ghi chú)</h1>
+
+    <h1 class="post-title">Bytecode (ghi chú)</h1>
+    <p class="post-subtitle">JVM bytecode</p>
+
+    <hr class="post-divider">
+
+    <div class="prose">
       <p>Bytecode là mã trung gian được tạo ra bởi trình biên dịch (compiler), ngôn ngữ nguồn không nhất thiết là Java, nó không phải là mã máy (machine code) được sử dụng bởi JVM thông qua quá trình thông dịch (interpretation), Just-In-Time (JIT), hoặc Ahead-Of-Time (AOT).</p>
 <p><img src="img/java-bytecode-jit.png" alt="java-bytecode-jit" /></p>
 <h2 id="class-file">.class file</h2>
@@ -260,30 +250,40 @@ public class HelloWorld {
 </ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/jvm.html'>jvm</a><a class='topic-tag' href='/tags/compiler.html'>compiler</a><a class='topic-tag' href='/tags/java.html'>java</a></div>
-      <!-- <div class="copyright">
-                Bạn được toàn quyền chia sẻ, trích dẫn hoặc copy, post lại, nhưng vui lòng ghi rõ nguồn, tác giả và không làm thay đổi nội dung bài viết. Nếu không làm vậy, thì OK, cũng ko sao, sẽ có thiên lôi thay ta dòm ngó nhà ngươi. 😈
-                </div> -->
     </div>
-  </div>
-  <div class="footer">
-    <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
-    <div class="social">
-      <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
-      <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
-    </div>
-  </div>
-  <script type="text/javascript" async=""
-    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
-    </script>
-  <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-          tex2jax: {
-            inlineMath: [['$','$'], ['\\(','\\)']],
-            skipTags: ["script","noscript","style","textarea", "code"],
-            ignoreClass: ["comment", "comment-list"]
-          }
-        });
-  </script>
-</body>
+  </article>
 
+  <aside>
+    <div class="toc-label">MỤC LỤC</div>
+    <ul class="toc-list">  <li><a href="#class-file" class="toc-link toc-level-2"><span class="toc-hash">#</span> .class file</a></li>
+  <li><a href="#cau-truc-file-class" class="toc-link toc-level-2"><span class="toc-hash">#</span> Cấu trúc file .class</a></li>
+    <li><a href="#descriptor" class="toc-link toc-level-3"><span class="toc-hash">#</span> Descriptor</a></li>
+    <li><a href="#tap-chi-dan" class="toc-link toc-level-3"><span class="toc-hash">#</span> Tập chỉ dẫn</a></li>
+  <li><a href="#thao-thac-bytecode" class="toc-link toc-level-2"><span class="toc-hash">#</span> Thao thác bytecode</a></li>
+  <li><a href="#references" class="toc-link toc-level-2"><span class="toc-hash">#</span> References</a></li></ul>
+  </aside>
+</main>
+
+<footer>
+  Viết bằng Rust · Được tạo từ Markdown · © 2026
+  <div class="social">
+    <a target="_blank" href="https://github.com/dntam00">GitHub</a>
+    <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/">LinkedIn</a>
+  </div>
+</footer>
+
+<script type="text/javascript" async=""
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      skipTags: ["script","noscript","style","textarea","code"],
+      ignoreClass: ["comment","comment-list"]
+    }
+  });
+</script>
+
+</body>
 </html>

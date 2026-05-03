@@ -3,7 +3,7 @@ title: JVM (ghi chú)
 published: true
 date: 2025-07-12 12:24:00
 tags: jvm, compiler, java
-description: JVM
+description:
 image: 
 ---
 

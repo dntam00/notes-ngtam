@@ -122,6 +122,21 @@ fn generate_meta(post: &Metadata) -> String {
     format!("<meta property='og:image' content='{}'>", img)
 }
 
+fn calculate_reading_time(markdown: &str) -> u32 {
+    let word_count = markdown.split_whitespace().count();
+    ((word_count as f32 / 200.0).ceil() as u32).max(1)
+}
+
+fn format_post_date(date: &str) -> String {
+    if date.is_empty() {
+        return String::new();
+    }
+    match Utc.datetime_from_str(date, TIME_FORMAT) {
+        Ok(dt) => format!("{} tháng {}, {}", dt.day(), dt.month(), dt.year()),
+        Err(_) => date.to_string(),
+    }
+}
+
 fn get_toc_title(language: &str) -> &'static str {
     println!("Getting TOC title for language: {}", language);
     match language.to_lowercase().as_str() {
@@ -223,12 +238,25 @@ fn apply_template(template: &str, post: &Metadata, tag_text: &str, related_posts
     let parsed_html = markdown_to_html(&post.markdown, &options);
     let parsed = add_heading_ids(&parsed_html); // Add IDs to headings
     let file_name = post.output_file.file_name().unwrap().to_str().unwrap();
+    let subtitle_html = if post.description.is_empty() {
+        String::new()
+    } else {
+        format!("<p class=\"post-subtitle\">{}</p>", post.description)
+    };
+    let reading_time = format!("{} phút đọc", calculate_reading_time(&post.markdown));
+    let tag_badge = post.tags.first().cloned().unwrap_or_default();
+    let post_date = format_post_date(&post.date);
+
     let html =
         &template
         .replace("{%content%}", &parsed)
         .replace("{%title%}", &post.title)
         .replace("{%meta%}", &generate_meta(&post))
         .replace("{%hash%}", "")
+        .replace("{%subtitle%}", &subtitle_html)
+        .replace("{%reading_time%}", &reading_time)
+        .replace("{%tag_badge%}", &tag_badge)
+        .replace("{%post_date%}", &post_date)
         .replace("{%tags%}", &generate_tags(tag_text, &post.tags))
         .replace("{%related%}", &generate_related_post(related_posts, &post.tags, (&post.title).to_string()))
         .replace("{%postslug%}", &file_name.replace(".html", ""))

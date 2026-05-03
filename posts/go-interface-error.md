@@ -3,7 +3,7 @@ title: Error checking in Golang
 published: true
 date: 2024-09-29 14:54:00
 tags: go, coding
-description: Error check in Golang
+description:
 image: 
 ---
 

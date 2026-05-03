@@ -3,7 +3,7 @@ title: gRPC Load balancing (4) - Service mesh
 published: true
 date: 2024-12-26 00:17:00
 tags: networking, gRPC
-description: Analyze gRPC load balancing technique
+description: Bài viết phân tích kĩ thuật cân bằng tải gRPC.
 image: 
 ---
 

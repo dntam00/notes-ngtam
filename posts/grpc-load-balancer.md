@@ -3,7 +3,7 @@ title: gRPC Load balancing (1)
 published: true
 date: 2024-12-08 14:18:00
 tags: networking, gRPC
-description: Analyze gRPC load balancing technique
+description: Bài viết phân tích kĩ thuật cân bằng tải gRPC.
 image: 
 ---
 

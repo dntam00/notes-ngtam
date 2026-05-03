@@ -3,7 +3,7 @@ title: Vấn đề phân mảnh vùng nhớ trong chương trình JVM
 published: true
 date: 2025-09-05 12:24:00
 tags: jvm, java, k8s, linux
-description: JVM Memory (2)
+description:
 image: 
 ---
 

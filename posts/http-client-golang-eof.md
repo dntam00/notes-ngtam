@@ -3,7 +3,7 @@ title: Pooling HTTP client
 published: true
 date: 2024-11-15 23:40:00
 tags: http, tcp, networking, golang
-description: Understand HTTP Client in Golang
+description:
 image: 
 ---
 

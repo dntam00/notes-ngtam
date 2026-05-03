@@ -4,7 +4,7 @@ published: true
 date: 2023-01-04 15:43:23
 tags: java, hibernate
 language: en
-description: Hibernate uses @OneToOne annotation to model 1-1 relationship in RDBMS
+description: Analyze how Hibernate uses @OneToOne annotation to model 1-1 relationship in RDBMS
 image: 
 ---
 ***Update notes:***

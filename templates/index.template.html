@@ -1,54 +1,45 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <title>Linh tinh</title>
-  <meta charset="utf-8">
-  <meta http-equiv="content-type" content="text/html;">
-  <meta name=viewport content="initial-scale=1.0 maximum-scale=1.0">
-  <link href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&amp;subset=latin-ext,vietnamese"
-    rel="stylesheet">
-  <link href="css/theme.css" rel="stylesheet" type="text/css">
-  <link rel="stylesheet" href="emoji/css/messenger.min.css">
-  <link rel="stylesheet" href="css/highlight/tomorrow-night.css">
-  <link rel="stylesheet" href="css/fontello.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>notes.dev</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-  <meta name="theme-color" content="#ffffff">
+  <link href="css/new-theme.css" rel="stylesheet" type="text/css">
 </head>
+<body class="index-page">
 
-<body class="index">
-  <header id="user_top" class="cf ">
-    <!-- <figure id="user_logo" class="active"><a href="https://thefullsnack.com">Melancholy</a></figure> -->
-    <figure id="user_logo" class="active"><a href=""></a></figure>
-    <h2><a href="">Linh tinh</a></h2>
-    <h4><span class="name_head">by</span> Ngoc Tam</h4>
-    <!-- <h3>Linh tinh xD</h3> -->
-    <div class="searchbox">
-      <div class="search">
-        <form action="https://www.google.com/search" method="get">
-          <input type="text" name="q" placeholder="Bạn muốn tìm gì?" />
-          <input type="hidden" name="as_sitesearch" value="thefullsnack.com">
-        </form>
-      </div>
-    </div>
-  </header>
-  <div class="container">
-    <div class="main">
-      {%content%}
-    </div>
+<header>
+  <div class="header-inner">
+    <a href="/" class="site-name">notes<span>.</span>dev</a>
+    <nav>
+      <a href="/">Bài viết</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
+  </div>
+</header>
 
-    <div id="fb-root"></div>
+<main>
+  <article>
+    <div class="index-header">
+      <h1>Linh tinh</h1>
+      <p>by Ngoc Tam — ghi chú về hệ thống, lập trình và những thứ linh tinh khác.</p>
+    </div>
+    {%content%}
+  </article>
+</main>
+
+<footer>
+  Viết bằng Rust · Được tạo từ Markdown · © 2026
+  <div class="social">
+    <a target="_blank" href="https://github.com/dntam00">GitHub</a>
+    <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/">LinkedIn</a>
   </div>
-  <div class="footer">
-      <p>Created with <i class="em em-coffee"></i> <a href="http://github.com/huytd/ristretto-rs">ristretto.rs</a></p>
-      <div class="social">
-        <a target="_blank" href="https://github.com/dntam00"><i class="icon-github-squared"></i></a>
-        <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/"><i class="icon-linkedin-squared"></i></a>
-      </div>
-  </div>
+</footer>
+
 </body>
-
 </html>

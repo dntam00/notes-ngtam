@@ -4,7 +4,7 @@ published: true
 date: 2024-08-06 22:06:00
 tags: tcp, networking
 language: en
-description: Some thought about doing health check using tcp connection
+description:
 image: 
 ---
 

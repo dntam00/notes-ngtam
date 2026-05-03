@@ -3,7 +3,7 @@ title: Những thứ linh tinh
 published: true
 date: 2024-07-14 02:07:00
 tags: hue, linhtinh
-description: Những thứ linh tinh
+description:
 image: 
 ---
 ![Khiem-lang-1](img/khiem-lang-1.jpg)

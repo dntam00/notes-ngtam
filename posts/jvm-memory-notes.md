@@ -3,7 +3,7 @@ title: JVM memory
 published: true
 date: 2025-09-05 12:24:00
 tags: jvm, java
-description: JVM Memory
+description:
 image: 
 ---
 

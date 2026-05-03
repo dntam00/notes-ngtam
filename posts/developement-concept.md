@@ -3,7 +3,7 @@ title: Khái niệm trong lập trình / thiết kế hệ thống
 published: true
 date: 2026-04-11 15:54:00
 tags: software, concept
-description: Software development concept
+description:
 image: 
 ---
 

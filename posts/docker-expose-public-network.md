@@ -3,7 +3,7 @@ title: Docker expose and publish command
 published: true
 date: 2023-10-07 10:36:00
 tags: docker
-description: Explain docker expose and publish command
+description:
 image: 
 ---
 

@@ -3,7 +3,7 @@ title: Async annotation in Spring
 published: true
 date: 2024-04-30 14:30:00
 tags: spring
-description: Explain how async annotation in Spring works
+description:
 image: 
 ---
 

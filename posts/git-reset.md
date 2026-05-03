@@ -3,7 +3,7 @@ title: Git command: git reset
 published: true
 date: 2023-09-04 23:07:00
 tags: git
-description: Explain and usage of git reset command
+description:
 language: en
 image: 
 ---
