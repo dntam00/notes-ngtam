@@ -10,9 +10,9 @@ image:
 
 ## Tuần 20 / 2026
 
-***Trển khai (rollout deployment) cho nhiều service mất nhiều thời gian một cách bất thường.***
+***Trển khai (rollout deployment) cho nhiều services mất nhiều thời gian một cách bất thường.***
 
-Ngữ cảnh: Thay đổi cấu hình và triển khai nhiều service một lần, nhiều pods của các service này sử dụng một storage chung (NFS) thông qua 1 PVC/PV. Quá trình này mất thời gian một cách rất bất thường, về ngủ 1 đêm hôm sau lên thì thấy ok :)).
+Ngữ cảnh: Thay đổi cấu hình và triển khai nhiều services một lần, nhiều pods của các service này sử dụng một storage chung (NFS) thông qua 1 PVC/PV. Quá trình này mất thời gian một cách rất bất thường, về ngủ 1 đêm hôm sau lên thì thấy ok :)).
 - ~ 37 pods bị kẹt ở trạng thái `ContainerCreating` trên nhiều worker node.
 - 3 pods bị kẹt ở trạng thái `Terminating`.
 - Các pod bị kẹt có lỗi `kubelet - unable to attach or mount volumes`.
@@ -31,7 +31,7 @@ E0510 11.07.33.180515 ... lchown ... mount/e7/4b83: operation not permitted
 
 ![kubelet-nfs-mount](img/kubelet-nfs-mount.png)
 
-Vì có `fsGroup` trong phần cấu hình của k8s, kubelet cần chạy lệnh `chown` trên tất cả các folder/file trên NFS server thuộc mount path để lấy quyền về cho pod này, quá trình này cần chạy xong (theo phong cách đồng bộ (synchronous)), có hết kết quả thì kubelet mới gọi CRI để chạy container được, mục đích là để đảm bảo khi pod chạy lên sẽ sử dụng được filesystem trên NFS ngay. Do đó, thông tin này giải đáp được vấn đề có nhiều pod bị kẹt ở 1 trạng thái rất lâu.
+Vì có `fsGroup` trong phần cấu hình của k8s, kubelet cần chạy lệnh `chown` trên tất cả các folder/file trên NFS server thuộc mount path để lấy quyền về cho pod này, quá trình này cần chạy xong (theo phong cách đồng bộ (synchronous)), xong rồi thì kubelet mới gọi CRI để khởi tạo các containers trong pod đó được, làm vậy để đảm bảo khi các containers trong pod chạy lên thì sử dụng được filesystem trên NFS ngay. Do đó, thông tin này giải đáp được vấn đề có nhiều pod bị kẹt ở 1 trạng thái rất lâu.
 
 Tiếp theo, thông tin `lchown ... mount/e7/3070: operation not permitted` cho thấy kubelet không lấy quyền trên folder/file của NFS được, tuy nhiên sau khi thử trên tất cả các files thì pod vẫn chạy được, vẫn ghi/đọc trên NFS được, chứng tỏ việc sử dụng cấu hình `fsGroup` là vô nghĩa, mà còn tốn thêm một đống tài nguyên và thời gian để chờ triển khai 😑. Nguyên nhân của việc này là do bên team infra muốn an toàn, họ cung cấp NFS mount với chế độ `root squash`, vai trò root của client sẽ được chuyển thành nobody/nogroup khi đọc/ghi file trên NFS, tránh việc client có quyền root trên NFS server.
 
@@ -43,7 +43,7 @@ Lúc nãy sẽ có 2 mức độ giải quyết:
 
 Qua việc này, lại một lần nữa thấm thía việc hiểu hệ thống, flow tương tác giữa các thành phần của hệ thống trong việc xử lý lỗi.
 - Giảm thời gian xác định nguồn gốc lỗi, từ ngày có AI, việc hiểu các hệ thống không phải mình phát triển (các opensource) đã dễ thở hơn rất nhiều.
-- Luôn luôn tự kiểm tra cặn kẽ vấn đề nếu thấy có điều bất thường, hoặc giải thích hoặc xử lý nó. Cách nghĩ này mình cũng đã nghe từ một anh đồng nghiệp mình rất ngưỡng mộ, hôm đi nhậu chia tay tiễn ảnh ra Thủ Đô (nói đến đây lại nhớ ông anh và thời gian làm việc chung với ổng quá :)) ).
+- Luôn tự kiểm tra cặn kẽ vấn đề nếu thấy có điều bất thường, hoặc giải thích hoặc xử lý nó. Cách nghĩ này mình cũng được nghe từ một anh đồng nghiệp mà mình rất quý lúc ở quán nhậu để chia tay ảnh (nói đến đây lại nhớ ông anh và thời gian làm việc chung quá :)) ).
 
 
 ## Tuần 21 / 2026
