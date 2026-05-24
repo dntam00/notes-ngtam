@@ -48,7 +48,7 @@ Qua việc này, lại một lần nữa thấm thía việc hiểu hệ thống
 
 ## Tuần 21 / 2026
 
-***Một vài vấn đề / công cụ cần quan tâm khi thực hiện migrate hệ thống***
+***Một vài vấn đề / công cụ cần quan tâm khi nâng cấp hệ thống***
 
 - Dựa vào compiler để kiểm tra lỗi cú pháp, dựa vào testcase để kiểm tra nghiệp vụ, nếu có thời gian hãy hiểu hệ thống về cả mặt kĩ thuật, nghiệp vụ thật kĩ.
 - Dựa vào các công cụ quản lý phụ thuộc để kiểm tra việc xóa code cũ đã hoàn thành hay chưa, xóa một module cũ đi mà hệ thống build lỗi thì code vẫn chưa được xóa hết.
