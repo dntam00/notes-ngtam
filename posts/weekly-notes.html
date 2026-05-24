@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ghi chú công việc kĩ thuật | notes.dev</title>
+  <title>Ghi chú công việc hàng tuần | notes.dev</title>
   <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
@@ -34,10 +34,10 @@
       <span class="sep">·</span>
       <span>16 tháng 5, 2026</span>
       <span class="sep">·</span>
-      <span>4 phút đọc</span>
+      <span>5 phút đọc</span>
     </div>
 
-    <h1 class="post-title">Ghi chú công việc kĩ thuật</h1>
+    <h1 class="post-title">Ghi chú công việc hàng tuần</h1>
     <p class="post-subtitle">Một vài ghi chú để sau này đọc lại</p>
 
     <hr class="post-divider">
@@ -72,6 +72,17 @@ E0510 11.07.33.180515 ... lchown ... mount/e7/4b83: operation not permitted
 <li>Giảm thời gian xác định nguồn gốc lỗi, từ ngày có AI, việc hiểu các hệ thống không phải mình phát triển (các opensource) đã dễ thở hơn rất nhiều.</li>
 <li>Luôn luôn tự kiểm tra cặn kẽ vấn đề nếu thấy có điều bất thường, hoặc giải thích hoặc xử lý nó. Cách nghĩ này mình cũng đã nghe từ một anh đồng nghiệp mình rất ngưỡng mộ, hôm đi nhậu chia tay tiễn ảnh ra Thủ Đô (nói đến đây lại nhớ ông anh và thời gian làm việc chung với ổng quá :)) ).</li>
 </ul>
+<h2 id="tuan-21-2026">Tuần 21 / 2026</h2>
+<p><em><strong>Một vài vấn đề / công cụ cần quan tâm khi thực hiện migrate hệ thống</strong></em></p>
+<ul>
+<li>Dựa vào compiler để kiểm tra lỗi cú pháp, dựa vào testcase để kiểm tra nghiệp vụ, nếu có thời gian hãy hiểu hệ thống về cả mặt kĩ thuật, nghiệp vụ thật kĩ.</li>
+<li>Dựa vào các công cụ quản lý phụ thuộc để kiểm tra việc xóa code cũ đã hoàn thành hay chưa, xóa một module cũ đi mà hệ thống build lỗi thì code vẫn chưa được xóa hết.</li>
+<li>Khi triển khai, phải làm rõ được công việc này ảnh hưởng đến các bên đang sử dụng hệ thống như thế nào, có tương thích ngược hay không (backward-compatible).</li>
+<li>Nếu migrate database, cần xác định được mức độ ảnh hưởng nếu xảy ra gián đoạn.</li>
+<li>Khi export/import database, cần kiểm tra tính toàn vẹn dữ liệu.</li>
+<li>Cần chuẩn bị các kịch bản để có thể rollback hệ thống nếu xảy ra sự cố.</li>
+<li>Cần chuẩn bị các kịch bản kiểm thử, checklist hoàn thành công việc.</li>
+</ul>
 
       <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/notes.html'>notes</a></div>
     </div>
@@ -79,7 +90,8 @@ E0510 11.07.33.180515 ... lchown ... mount/e7/4b83: operation not permitted
 
   <aside>
     <div class="toc-label">MỤC LỤC</div>
-    <ul class="toc-list">  <li><a href="#tuan-20-2026" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tuần 20 / 2026</a></li></ul>
+    <ul class="toc-list">  <li><a href="#tuan-20-2026" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tuần 20 / 2026</a></li>
+  <li><a href="#tuan-21-2026" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tuần 21 / 2026</a></li></ul>
   </aside>
 </main>
 
