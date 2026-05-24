@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghi chú công việc kĩ thuật | notes.dev</title>
+  <meta property='og:image' content='https://melancholy.com/img/default.jpg'>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link href="/css/new-theme.css" rel="stylesheet" type="text/css">
+  <script src="/js/highlight.min.js"></script>
+  <script src="/js/toc.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="site-name">notes<span>.</span>dev</a>
+    <nav>
+      <a href="/">Bài viết</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <article>
+    <div class="post-meta">
+      <span class="tag">notes</span>
+      <span class="sep">·</span>
+      <span>16 tháng 5, 2026</span>
+      <span class="sep">·</span>
+      <span>4 phút đọc</span>
+    </div>
+
+    <h1 class="post-title">Ghi chú công việc kĩ thuật</h1>
+    <p class="post-subtitle">Một vài ghi chú để sau này đọc lại</p>
+
+    <hr class="post-divider">
+
+    <div class="prose">
+      <h2 id="tuan-20-2026">Tuần 20 / 2026</h2>
+<p><em><strong>Trển khai (rollout deployment) cho nhiều service mất nhiều thời gian một cách bất thường.</strong></em></p>
+<p>Ngữ cảnh: Thay đổi cấu hình và triển khai nhiều service một lần, nhiều pods của các service này sử dụng một storage chung (NFS) thông qua 1 PVC/PV. Quá trình này mất thời gian một cách rất bất thường, về ngủ 1 đêm hôm sau lên thì thấy ok :)).</p>
+<ul>
+<li>~ 37 pods bị kẹt ở trạng thái <code>ContainerCreating</code> trên nhiều worker node.</li>
+<li>3 pods bị kẹt ở trạng thái <code>Terminating</code>.</li>
+<li>Các pod bị kẹt có lỗi <code>kubelet - unable to attach or mount volumes</code>.</li>
+<li>Log của NFS CSI driver chạy trên từng worker node (daemonset) không có gì bất thường, hoàn toàn là log info thành công.</li>
+</ul>
+<p>Các thông tin trên đều được thu thập bằng công cụ <code>kubectl</code>, truy cập từ bên ngoài k8s cluster, chỉ có một điểm bất thường là log lỗi <code>unable to attach or mount volumes</code> từ <code>kubelet</code> chạy trong các worker node, như vậy cần truy cập worker node để xem log của kubelet bằng systemd của Linux (k8s cluster này team đang quản lý hơi thủ công quá :)), đẹp hơn thì cần có log agent để thu thập và đẩy ra hệ thống khác để index và query).</p>
+<pre><code>E0510 11.07.33.180515 ... lchown ... mount/e7/3070: operation not permitted
+E0510 11.07.33.180515 ... lchown ... mount/e7/4b83: operation not permitted
+</code></pre>
+<p>Đếm qua thì thấy có hơn 3 triệu dòng log kiểu này, chứng tỏ kubelet đang bị làm một hành động nhiều lần và bị lỗi, có vẻ quá trình này là quá trình blocking nên kubelet không có thời gian làm gì khác.</p>
+<p>Đến đây thì cũng hòm hòm được nguyên nhân các pod bị kẹt ở một trạng thái rồi, tiếp theo là sử dụng ChatGPT, Gemini, Claude Chat để hiểu được toàn bộ luồng tổng quát của việc triển khai 1 pod cần mount NFS với các thông số cấu hình của dự án hiện tại.</p>
+<p><img src="img/kubelet-nfs-mount.png" alt="kubelet-nfs-mount" /></p>
+<p>Vì có <code>fsGroup</code> trong phần cấu hình của k8s, kubelet cần chạy lệnh <code>chown</code> trên tất cả các folder/file trên NFS server thuộc mount path để lấy quyền về cho pod này, quá trình này cần chạy xong (theo phong cách đồng bộ (synchronous)), có hết kết quả thì kubelet mới gọi CRI để chạy container được, mục đích là để đảm bảo khi pod chạy lên sẽ sử dụng được filesystem trên NFS ngay. Do đó, thông tin này giải đáp được vấn đề có nhiều pod bị kẹt ở 1 trạng thái rất lâu.</p>
+<p>Tiếp theo, thông tin <code>lchown ... mount/e7/3070: operation not permitted</code> cho thấy kubelet không lấy quyền trên folder/file của NFS được, tuy nhiên sau khi thử trên tất cả các files thì pod vẫn chạy được, vẫn ghi/đọc trên NFS được, chứng tỏ việc sử dụng cấu hình <code>fsGroup</code> là vô nghĩa, mà còn tốn thêm một đống tài nguyên và thời gian để chờ triển khai 😑. Nguyên nhân của việc này là do bên team infra muốn an toàn, họ cung cấp NFS mount với chế độ <code>root squash</code>, vai trò root của client sẽ được chuyển thành nobody/nogroup khi đọc/ghi file trên NFS, tránh việc client có quyền root trên NFS server.</p>
+<p>Để an tâm hơn thì mình đã dựng một NFS server trên k8s cluster local để kiểm thử, và hoàn toàn xác thực các lý do trên.</p>
+<p>Lúc nãy sẽ có 2 mức độ giải quyết:</p>
+<ul>
+<li>Nhanh: không sử dụng <code>fsGroup</code> nữa, vẫn giữ quyền root cho các pod.</li>
+<li>Tốt: nghiên cứu không sử dụng quyền root khi triển khai, migrate các file trên NFS sang quyền sở hữu của user khác.</li>
+</ul>
+<p>Qua việc này, lại một lần nữa thấm thía việc hiểu hệ thống, flow tương tác giữa các thành phần của hệ thống trong việc xử lý lỗi.</p>
+<ul>
+<li>Giảm thời gian xác định nguồn gốc lỗi, từ ngày có AI, việc hiểu các hệ thống không phải mình phát triển (các opensource) đã dễ thở hơn rất nhiều.</li>
+<li>Luôn luôn tự kiểm tra cặn kẽ vấn đề nếu thấy có điều bất thường, hoặc giải thích hoặc xử lý nó. Cách nghĩ này mình cũng đã nghe từ một anh đồng nghiệp mình rất ngưỡng mộ, hôm đi nhậu chia tay tiễn ảnh ra Thủ Đô (nói đến đây lại nhớ ông anh và thời gian làm việc chung với ổng quá :)) ).</li>
+</ul>
+
+      <div class='other-tags'><b>Tags:</b> <a class='topic-tag' href='/tags/notes.html'>notes</a></div>
+    </div>
+  </article>
+
+  <aside>
+    <div class="toc-label">MỤC LỤC</div>
+    <ul class="toc-list">  <li><a href="#tuan-20-2026" class="toc-link toc-level-2"><span class="toc-hash">#</span> Tuần 20 / 2026</a></li></ul>
+  </aside>
+</main>
+
+<footer>
+  Viết bằng Rust · Được tạo từ Markdown · © 2026
+  <div class="social">
+    <a target="_blank" href="https://github.com/dntam00">GitHub</a>
+    <a target="_blank" href="https://www.linkedin.com/in/dang-ngoc-tam/">LinkedIn</a>
+  </div>
+</footer>
+
+<script type="text/javascript" async=""
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      skipTags: ["script","noscript","style","textarea","code"],
+      ignoreClass: ["comment","comment-list"]
+    }
+  });
+</script>
+
+</body>
+</html>
